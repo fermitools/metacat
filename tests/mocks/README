@@ -1,0 +1,5 @@
+
+These are stub files for dependencies of the server config,
+that we need to cover imports in the code to test metadata
+expression evaluation.
+

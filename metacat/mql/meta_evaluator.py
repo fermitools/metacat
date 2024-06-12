@@ -30,7 +30,7 @@ class MetaEvaluator(object):
         if op == "meta_and":    op = "and"
         if op == "meta_or":     op = "or"
         if op in self.BOOL_OPS:
-            return self.eval_meta_bool(metadata, op, args)
+            return self.eval_meta_bool(f, op, args)
         elif op == "present":
             return meta_expression["name"] in metadata
         elif op == "not_present":
@@ -40,7 +40,7 @@ class MetaEvaluator(object):
             vset = set(meta_expression.get("set", []))
             left = args[0]
             aname = left["name"]
-            if left.T == "scalar":
+            if left.T == "scalar" or left.T == "meta_attribute":
                 v = metadata.get(aname)
                 result = v in vset
             elif left.T == "object_attribute":
@@ -56,7 +56,7 @@ class MetaEvaluator(object):
                         break
                 else:
                     result = False
-            elif left.T == "array_subscript":
+            elif left.T == "array_subscript" or left.T == "subscript":
                 inx = left["index"]
                 if not aname in metadata:  return neg
                 lst = metadata[aname]
@@ -75,7 +75,7 @@ class MetaEvaluator(object):
             low, high = meta_expression["low"], meta_expression["high"]
             left = args[0]
             neg = meta_expression.get("neg", False) != (op == "not_in_range")
-            if left.T == "scalar":
+            if left.T == "scalar" or left.T == "meta_attribute":
                 aname = left["name"]
                 try:    return (aname in metadata and metadata[aname] >= low and metadata[aname] <= high) != neg
                 except: return neg
@@ -93,7 +93,7 @@ class MetaEvaluator(object):
                     if x >= low and x <= high:  return not neg
                 else:
                     return neg
-            elif left.T == "array_subscript":
+            elif left.T == "array_subscript" or left.T == "subscript":
                 aname = left["name"]
                 inx = left["index"]
                 if not aname in metadata:  return neg
@@ -129,6 +129,7 @@ class MetaEvaluator(object):
                     traceback.print_exc()
                     return False
             elif left.T == "array_any":
+                neg = meta_expression.get("neg", False)
                 aname = left["name"]
                 lst = metadata.get(aname)
                 #print("lst:", lst)
@@ -138,14 +139,14 @@ class MetaEvaluator(object):
                 elif isinstance(lst, list):
                     attr_values = lst
                 else:
-                    return False
+                    return neg
                 for av in attr_values:
                     #print("comparing", av, cmp_op, value)
                     if self.do_cmp_op(av, cmp_op, value):
-                        return True
+                        return not neg
                 else:
-                    return False
-            elif left.T == "array_subscript":
+                    return neg
+            elif left.T == "array_subscript" or left.T == "subscript":
                 aname = left["name"]
                 inx = left["index"]
                 lst = metadata.get(aname)

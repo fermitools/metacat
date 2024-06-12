@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import pytest
 
@@ -7,8 +8,9 @@ production=os.environ.get("METACAT_TEST_PRODUCTION", False)
 if not production:
     base = os.path.dirname(os.path.dirname(__file__))
     os.environ["PATH"] = f"{base}/metacat/ui:{os.environ['PATH']}"
-    os.environ["PYTHONPATH"] = f"{base}:{os.environ['PYTHONPATH']}"
-
+    os.environ["PYTHONPATH"] = f"{base}:{base}/tests/mocks:{os.environ.get('PYTHONPATH','')}"
+    sys.path.insert(0,base)
+    sys.path.insert(0,f"{base}/tests/mocks")
 
 @pytest.fixture
 def env():
