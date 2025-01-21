@@ -14,8 +14,7 @@ if not production:
 
 @pytest.fixture
 def env():
-    #if production:
-    if True:
+    if production:
        hostaport = 'https://metacat.fnal.gov:8143'
        hostport = 'https://metacat.fnal.gov:9443'
     else:
