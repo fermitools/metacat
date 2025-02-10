@@ -56,6 +56,8 @@ class MultiGroupTopHandler(WPHandler):
         WPHandler.__init__(self, request, app)
         for group in app.groups():
             self.addHandler(group, AuthHandler(request, app, group))
+        # allow /auth/ on front for direct uwsgi setup
+        self.addHandler('auth', self)
 
 def create_application(config=None):
     if config is None:  config = os.environ.get("AUTH_SERVER_CFG")

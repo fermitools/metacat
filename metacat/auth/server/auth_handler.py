@@ -76,6 +76,16 @@ class AuthHandler(BaseHandler):
             http_status = 302
         return http_status, "", headers
 
+    # draft of adding probe check for monitoring
+    def probe(self, req, relpath, **args):
+        try:    db = self.AuthCore.user_db()
+        except Exception as e:
+            return 500, str(e)
+        c = db.cursor()
+        c.execute("select 1")
+        return "OK" if c.fetchone()[0] == 1 else 500
+
+
 
 class GUIAuthHandler(AuthHandler):
     
