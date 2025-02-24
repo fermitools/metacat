@@ -44,6 +44,15 @@ class TokenAuthClientMixin(object):
     def tokens_saved(self):
         return self.TokenLib is not None and self.TokenLib.exists()
 
+    def token_update(self):
+        if self.tokens_saved():
+            try:
+                curtime = time.time()
+                libtime = os.stat(self.TokenLib.file).st_mtime
+                if self.Token.expiration - 10 < curtime() and libtime > curtime - 10800:
+                     self.Token = self.TokenLib.Token, _  = self.TokenLibload_library([self.TokenLib.location])
+                     self.Token = self.TokenLib.Token
+
     def login_digest(self, username, password, save_token=False):
         """Performs password-based authentication and stores the authentication token locally.
         
