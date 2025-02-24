@@ -49,9 +49,14 @@ class TokenAuthClientMixin(object):
             try:
                 curtime = time.time()
                 libtime = os.stat(self.TokenLib.file).st_mtime
-                if self.Token.expiration - 10 < curtime() and libtime > curtime - 10800:
+                #if self.Token.expiration - 10 < curtime() and libtime > curtime - 10800:
+                # for testing, refresh after 3 hours -10 sec = 10790 sec
+                if self.Token.expiration - 10790  < curtime() and libtime > curtime - 10800:
                      self.Token = self.TokenLib.Token, _  = self.TokenLibload_library([self.TokenLib.location])
                      self.Token = self.TokenLib.Token
+            except:
+                raise
+
 
     def login_digest(self, username, password, save_token=False):
         """Performs password-based authentication and stores the authentication token locally.
