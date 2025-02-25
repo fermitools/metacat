@@ -6,6 +6,7 @@ from metacat.webapi import MetaCatClient, AuthenticationError, MCError
 import pytest
 import time
 import os
+import sys
 
 @pytest.fixture
 def client(token):
@@ -13,6 +14,9 @@ def client(token):
 
 @pytest.fixture
 def bearer_token():
+    return get_bearer_token()
+
+def get_bearer_token():
     token = os.environ.get("BEARER_TOKEN")
     if not token:
         token_file = os.environ.get("BEARER_TOKEN_FILE")
@@ -29,3 +33,22 @@ def test_token_auth(client, bearer_token):
     assert(expiration > time.time())
     print(f"Authenticated as {user}")
 
+def test_token_update(client):
+    print("Starting test_token_update")
+    sys.stdout.flush()
+
+    initial_token = client.Token
+
+    # wait a beat so token library file will have updated time...
+    time.sleep(1)
+
+    print("External auth update...")
+    sys.stdout.flush()
+    os.system("htgettoken -i hypot -a htvaultprod.fnal.gov ")
+    os.system(f"metacat auth login -m token {os.environ['USER']}")  
+    print("External auth update completed")
+    sys.stdout.flush()
+
+    client.token_update()
+
+    assert(initial_token != client.Token)

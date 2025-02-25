@@ -3,6 +3,8 @@ from metacat.common import SignedToken, TokenLib
 import time, requests, json
 
 import urllib3      # disable "Unverified HTTPS request is being made..." warning
+import os
+
 urllib3.disable_warnings()
 del urllib3
 
@@ -47,11 +49,8 @@ class TokenAuthClientMixin(object):
     def token_update(self):
         if self.tokens_saved():
             try:
-                curtime = time.time()
-                libtime = os.stat(self.TokenLib.file).st_mtime
-                #if self.Token.expiration - 10 < curtime() and libtime > curtime - 10800:
-                # for testing, refresh after 3 hours -10 sec = 10790 sec
-                if self.Token.expiration - 10790  < curtime() and libtime > curtime - 10800:
+                libtime = os.stat(self.TokenLib.Location).st_mtime
+                if  libtime > self.TokenLib.LoadTime:
                      self.TokenLib.Tokens, _  = self.TokenLib.load_library([self.TokenLib.Location])
                      self.Token = self.TokenLib.get(self.ServiceURL)
             except:
