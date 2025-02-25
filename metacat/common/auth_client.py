@@ -52,8 +52,8 @@ class TokenAuthClientMixin(object):
                 #if self.Token.expiration - 10 < curtime() and libtime > curtime - 10800:
                 # for testing, refresh after 3 hours -10 sec = 10790 sec
                 if self.Token.expiration - 10790  < curtime() and libtime > curtime - 10800:
-                     self.Token = self.TokenLib.Token, _  = self.TokenLibload_library([self.TokenLib.location])
-                     self.Token = self.TokenLib.Token
+                     self.TokenLib.Tokens, _  = self.TokenLib.load_library([self.TokenLib.Location])
+                     self.Token = self.TokenLib.get(self.ServiceURL)
             except:
                 raise
 
