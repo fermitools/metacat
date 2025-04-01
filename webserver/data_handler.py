@@ -124,20 +124,46 @@ class DataHandler(MetaCatHandler):
     @sanitized
     def create_namespace(self, request, relpath, name=None, owner_role=None, description=None, **args):
         db = self.App.connect()
+        nsrules = self.Cfg.get("namespace_rules", [])
         
         self.sanitize(owner_role, name)
         
         user, error = self.authenticated_user()
         if user is None:
             return 401, error
+
         owner_user = None
+
+        if nsrules:
+            allowed = False
+            for rule in nsrules:
+                cr_regex = re.compile(rule["regex"])
+                if cr_regex.match(name):
+                    rule_user = cr_regex.sub(name, rule["owner"])
+                    rule_roles = list(cr_regex.sub(name, rule["allowed_creator"]).split(","))
+
+                    if user.is_admin() or user.Username in rule_roles:
+                        allowed = True
+
+                    for role in allowed_roles:
+                        r = DBRole.get(db, role)
+                        if user.Username in r.members:
+                             allowed = True
+                    if allowed:
+                        break
+             if allowed:
+                 owner_user = rule_user
+             else:
+                return 403, "Permission denied"
+        else       
+            if owner_role:
+                r = DBRole.get(db, owner_role)
+                if not user.is_admin() and not user.Username in r.members:
+                    return 403, "Permission denied"
+
         if owner_role is None:
             owner_user = user.Username
-        else:
-            r = DBRole.get(db, owner_role)
-            if not user.is_admin() and not user.Username in r.members:
-                return 403, "Permission denied"
-
+       
         if DBNamespace.exists(db, name):
             return 400, "Namespace already exists", "text/plain"
 
