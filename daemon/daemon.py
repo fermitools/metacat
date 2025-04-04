@@ -72,7 +72,7 @@ class MetaCatDaemon(Logged):
             print("\nFerry error:")
             for line in data["ferry_error"]:
                 print(line)
-            sys.exit(1)
+            exit(1)
 
         ferry_users = {item["username"]: item for item in data["ferry_output"][self.VO]}
         self.log("Loaded", len(ferry_users), "users from Ferry")
@@ -86,12 +86,12 @@ class MetaCatDaemon(Logged):
         for username, ferry_user in ferry_users.items():
             db_user = db_users.get(username)
             if db_user is None:
-                new_user = DBUser(db, username, ferry_user.get("fullname", ""), None, "", None, ferry_user.get("uuid"))
+                new_user = DBUser(db, username, ferry_user.get("fullname", ""), None, "", None, ferry_user.get("tokensubject"))
                 new_user.save()
                 ncreated += ncreated
                 created.append(username)
             else:
-                uuid = ferry_user.get("uuid")
+                uuid = ferry_user.get("tokensubject")
                 name = ferry_user.get("fullname")
                 do_update = False
                 if uuid and uuid != db_user.AUID:
