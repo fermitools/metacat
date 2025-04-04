@@ -151,11 +151,11 @@ class DataHandler(MetaCatHandler):
                              allowed = True
                     if allowed:
                         break
-             if allowed:
-                 owner_user = rule_user
-             else:
-                return 403, "Permission denied"
-        else       
+            if allowed:
+                owner_user = rule_user
+            else:
+               return 403, "Permission denied"
+        else:
             if owner_role:
                 r = DBRole.get(db, owner_role)
                 if not user.is_admin() and not user.Username in r.members:
