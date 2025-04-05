@@ -1,5 +1,6 @@
 from webpie import WPApp, WPHandler, Response, WPStaticHandler
 import psycopg2, json, time, secrets, traceback, hashlib, pprint, uuid, random
+import re
 from metacat.db import DBFile, DBDataset, DBFileSet, DBNamedQuery, DBUser, DBNamespace, DBRole, \
     DBParamCategory, parse_name, AlreadyExistsError, IntegrityError, MetaValidationError
 from wsdbtools import ConnectionPool
@@ -124,7 +125,7 @@ class DataHandler(MetaCatHandler):
     @sanitized
     def create_namespace(self, request, relpath, name=None, owner_role=None, description=None, **args):
         db = self.App.connect()
-        nsrules = self.Cfg.get("namespace_rules", [])
+        nsrules = self.App.Cfg.get("namespace_rules", [])
         
         self.sanitize(owner_role, name)
         
@@ -139,15 +140,16 @@ class DataHandler(MetaCatHandler):
             for rule in nsrules:
                 cr_regex = re.compile(rule["regex"])
                 if cr_regex.match(name):
+                    #self.log( f"namespace create: matched rule: {repr(rule)}")
                     rule_user = cr_regex.sub(name, rule["owner"])
                     rule_roles = list(cr_regex.sub(name, rule["allowed_creator"]).split(","))
 
-                    if user.is_admin() or user.Username in rule_roles:
+                    if user.is_admin() or user.Username in rule_roles or '*' in rule_roles:
                         allowed = True
 
-                    for role in allowed_roles:
+                    for role in rule_roles:
                         r = DBRole.get(db, role)
-                        if user.Username in r.members:
+                        if r and user.Username in r.members:
                              allowed = True
                     if allowed:
                         break
