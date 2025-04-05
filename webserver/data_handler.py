@@ -134,6 +134,7 @@ class DataHandler(MetaCatHandler):
             return 401, error
 
         owner_user = None
+        default_owner_user = user.Username
 
         if nsrules:
             allowed = False
@@ -154,7 +155,8 @@ class DataHandler(MetaCatHandler):
                     if allowed:
                         break
             if allowed:
-                owner_user = rule_user
+                if rule_user != '*':
+                    default_owner_user = rule_user
             else:
                return 403, "Permission denied"
         else:
@@ -164,7 +166,7 @@ class DataHandler(MetaCatHandler):
                     return 403, "Permission denied"
 
         if owner_role is None:
-            owner_user = user.Username
+            owner_user = default_owner_user
        
         if DBNamespace.exists(db, name):
             return 400, "Namespace already exists", "text/plain"
