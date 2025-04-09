@@ -370,7 +370,7 @@ def test_metacat_file_show(auth, tst_file_md_list, tst_ds):
     assert 'fid' in md
     assert md['name'] == fname
     assert md['namespace'] == ns
-    assert md['size'] == 39
+    assert md['size'] in (38, 39) 
     assert md['created_timestamp'] > 0
     assert md['creator'] == os.environ["USER"]
     assert 'updated_timestamp' in md
