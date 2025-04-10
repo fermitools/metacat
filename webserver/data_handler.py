@@ -133,9 +133,6 @@ class DataHandler(MetaCatHandler):
         if user is None:
             return 401, error
 
-        owner_user = None
-        default_owner_user = user.Username
-
         code, ns = self.create_common(user, name, owner_role, description)
         if not ns:
                return code, "Permission Denied" if code=="403" else "Namespace already exists"
