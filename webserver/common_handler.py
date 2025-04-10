@@ -200,7 +200,7 @@ class MetaCatHandler(BaseHandler, Logged):
                 if rule_user != '*':
                     default_owner_user = rule_user
             else:
-                return None
+                return 403, None
         else:
             if owner_role:
                 r = DBRole.get(db, owner_role)
