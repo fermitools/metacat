@@ -170,3 +170,57 @@ class MetaCatHandler(BaseHandler, Logged):
             content_type = "text/plain"
         self.log('%s' % message)
         return code, text, content_type
+
+    def namespace_create_common(self, current_user, name, owner_role, description):
+        """ Namespace creation code that was going to be repeated in 
+            both the gui an data handlers"""
+
+        nsrules = self.App.Cfg.get("namespace_rules", [])
+        default_owner_user = current_user.Username
+
+        if nsrules:
+            allowed = False
+            for rule in nsrules:
+                cr_regex = re.compile(rule["regex"])
+                if cr_regex.match(name):
+                    #self.log( f"namespace create: matched rule: {repr(rule)}")
+                    rule_user = cr_regex.sub(name, rule["owner"])
+                    rule_roles = list(cr_regex.sub(name, rule["allowed_creator"]).split(","))
+
+                    if user.is_admin() or user.Username in rule_roles or '*' in rule_roles:
+                        allowed = True
+
+                    for role in rule_roles:
+                        r = DBRole.get(db, role)
+                        if r and user.Username in r.members:
+                             allowed = True
+                    if allowed:
+                        break
+            if allowed:
+                if rule_user != '*':
+                    default_owner_user = rule_user
+            else:
+                return None
+        else:
+            if owner_role:
+                r = DBRole.get(db, owner_role)
+                if not user.is_admin() and not user.Username in r.members:
+                    return 403, None 
+
+        if owner_role is None:
+            owner_user = default_owner_user
+       
+        if DBNamespace.exists(db, name):
+            return  409, None
+
+        if description:
+            description = unquote_plus(description)
+            
+        ns = DBNamespace(db, name, owner_user=owner_user, owner_role = owner_role, description=description)
+        ns.Creator = user.Username
+        ns.create()
+
+        return 200, ns
+
+
+

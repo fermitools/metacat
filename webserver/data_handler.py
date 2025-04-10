@@ -136,47 +136,9 @@ class DataHandler(MetaCatHandler):
         owner_user = None
         default_owner_user = user.Username
 
-        if nsrules:
-            allowed = False
-            for rule in nsrules:
-                cr_regex = re.compile(rule["regex"])
-                if cr_regex.match(name):
-                    #self.log( f"namespace create: matched rule: {repr(rule)}")
-                    rule_user = cr_regex.sub(name, rule["owner"])
-                    rule_roles = list(cr_regex.sub(name, rule["allowed_creator"]).split(","))
-
-                    if user.is_admin() or user.Username in rule_roles or '*' in rule_roles:
-                        allowed = True
-
-                    for role in rule_roles:
-                        r = DBRole.get(db, role)
-                        if r and user.Username in r.members:
-                             allowed = True
-                    if allowed:
-                        break
-            if allowed:
-                if rule_user != '*':
-                    default_owner_user = rule_user
-            else:
-               return 403, "Permission denied"
-        else:
-            if owner_role:
-                r = DBRole.get(db, owner_role)
-                if not user.is_admin() and not user.Username in r.members:
-                    return 403, "Permission denied"
-
-        if owner_role is None:
-            owner_user = default_owner_user
-       
-        if DBNamespace.exists(db, name):
-            return 400, "Namespace already exists", "text/plain"
-
-        if description:
-            description = unquote_plus(description)
-            
-        ns = DBNamespace(db, name, owner_user=owner_user, owner_role = owner_role, description=description)
-        ns.Creator = user.Username
-        ns.create()
+        code, ns = self.create_common(user, name, owner_role, description)
+        if not ns:
+               return code, "Permission Denied" if code=="403" else "Namespace already exists"
         return json.dumps(ns.to_jsonable()), "application/json"
             
     @sanitized
