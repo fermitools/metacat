@@ -177,6 +177,7 @@ class MetaCatHandler(BaseHandler, Logged):
 
         nsrules = self.App.Cfg.get("namespace_rules", [])
         default_owner_user = current_user.Username
+        db = self.App.connect()
 
         if nsrules:
             allowed = False
@@ -187,12 +188,12 @@ class MetaCatHandler(BaseHandler, Logged):
                     rule_user = cr_regex.sub(name, rule["owner"])
                     rule_roles = list(cr_regex.sub(name, rule["allowed_creator"]).split(","))
 
-                    if user.is_admin() or user.Username in rule_roles or '*' in rule_roles:
+                    if current_user.is_admin() or current_user.Username in rule_roles or '*' in rule_roles:
                         allowed = True
 
                     for role in rule_roles:
                         r = DBRole.get(db, role)
-                        if r and user.Username in r.members:
+                        if r and current_user.Username in r.members:
                              allowed = True
                     if allowed:
                         break
@@ -204,7 +205,7 @@ class MetaCatHandler(BaseHandler, Logged):
         else:
             if owner_role:
                 r = DBRole.get(db, owner_role)
-                if not user.is_admin() and not user.Username in r.members:
+                if not current_user.is_admin() and not current_user.Username in r.members:
                     return 403, None 
 
         if owner_role is None:
@@ -217,7 +218,7 @@ class MetaCatHandler(BaseHandler, Logged):
             description = unquote_plus(description)
             
         ns = DBNamespace(db, name, owner_user=owner_user, owner_role = owner_role, description=description)
-        ns.Creator = user.Username
+        ns.Creator = current_user.Username
         ns.create()
 
         return 200, ns

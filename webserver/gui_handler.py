@@ -802,7 +802,7 @@ class GUIHandler(MetaCatHandler):
 
         if ns is None:
             owner_role = request.POST.get("owner_role",None)
-            code, ns = self.namespace_create_common(me, name, owner_role, description, owner_user):
+            code, ns = self.namespace_create_common(me, name, owner_role, description, owner_user)
             if code == 403:
                 self.redirect("./namespaces?error=%s" % (quote_plus("Not authorized"),))                    
         else:

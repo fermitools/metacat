@@ -124,8 +124,6 @@ class DataHandler(MetaCatHandler):
         
     @sanitized
     def create_namespace(self, request, relpath, name=None, owner_role=None, description=None, **args):
-        db = self.App.connect()
-        nsrules = self.App.Cfg.get("namespace_rules", [])
         
         self.sanitize(owner_role, name)
         
@@ -133,7 +131,7 @@ class DataHandler(MetaCatHandler):
         if user is None:
             return 401, error
 
-        code, ns = self.create_common(user, name, owner_role, description)
+        code, ns = self.namespace_create_common(user, name, owner_role, description)
         if not ns:
                return code, "Permission Denied" if code=="403" else "Namespace already exists"
         return json.dumps(ns.to_jsonable()), "application/json"
