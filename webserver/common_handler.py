@@ -185,18 +185,21 @@ class MetaCatHandler(BaseHandler, Logged):
                 cr_regex = re.compile(rule["regex"])
                 if cr_regex.match(name):
                     #self.log( f"namespace create: matched rule: {repr(rule)}")
-                    rule_user = cr_regex.sub(name, rule["owner"])
-                    rule_roles = list(cr_regex.sub(name, rule["allowed_creator"]).split(","))
+                    rule_user = cr_regex.sub(rule["owner"], name,1)
+                    rule_roles = list(cr_regex.sub(rule["allowed_creator"],name,1).split(","))
 
+                    #self.log( f"namespace create: rule_roles: {repr(rule_roles)}")
+                    #self.log( f"namespace create: rule_user: {repr(rule_user)}")
                     if current_user.is_admin() or current_user.Username in rule_roles or '*' in rule_roles:
+                        #self.log( f"username match")
                         allowed = True
 
                     for role in rule_roles:
                         r = DBRole.get(db, role)
                         if r and current_user.Username in r.members:
+                             #self.log( f"role member match")
                              allowed = True
-                    if allowed:
-                        break
+                    break
             if allowed:
                 if rule_user != '*':
                     default_owner_user = rule_user
