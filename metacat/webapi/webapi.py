@@ -1261,7 +1261,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
             return None
 
     def query(self, query, namespace=None, with_metadata=False, with_provenance=False, save_as=None, add_to=None,
-                        include_retired_files=False, summary=None):
+                        include_retired_files=False, summary=None, batch_size=0):
         """Run file query. Requires client authentication if save_as or add_to are used.
         
         Arguments
@@ -1304,6 +1304,8 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
                 url += f"&namespace={namespace}"
             if include_retired_files:
                 url += "&include_retired_files=yes"
+            results = self.post_json(url, query)
+            return results
         else:
             url = "data/query?with_meta=%s&with_provenance=%s" % ("yes" if with_metadata else "no","yes" if with_provenance else "no")
             if namespace:
@@ -1314,9 +1316,21 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
                 url += f"&add_to={add_to}"
             if include_retired_files:
                 url += "&include_retired_files=yes"
-        #print("url:", url)
-        results = self.post_json(url, query)
-        return results
+            if batch_size > 0:
+                offset = 0
+                count = batch_size
+                while count == batch_size:
+                    batch_query = f"({query}) ordered skip {offset} limit {batch_size}"
+                    results = self.post_json(url, batch_query)
+                    count = 0
+                    for item in results:
+                        count = count + 1
+                        yield item
+                    offset = offset + batch_size
+            else:
+                results = self.post_json(url, query)
+                for item in results:
+                    yield item
 
     def async_query(self, query, data=None, **args):
         """Run the query asynchronously. Requires client authentication if save_as or add_to are used.
