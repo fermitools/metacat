@@ -3,6 +3,8 @@ from metacat.common import SignedToken, TokenLib
 import time, requests, json
 
 import urllib3      # disable "Unverified HTTPS request is being made..." warning
+import os
+
 urllib3.disable_warnings()
 del urllib3
 
@@ -43,6 +45,17 @@ class TokenAuthClientMixin(object):
         
     def tokens_saved(self):
         return self.TokenLib is not None and self.TokenLib.exists()
+
+    def token_update(self):
+        if self.tokens_saved():
+            try:
+                libtime = os.stat(self.TokenLib.Location).st_mtime
+                if  libtime > self.TokenLib.LoadTime:
+                     self.TokenLib.Tokens, _  = self.TokenLib.load_library([self.TokenLib.Location])
+                     self.Token = self.TokenLib.get(self.ServiceURL)
+            except:
+                raise
+
 
     def login_digest(self, username, password, save_token=False):
         """Performs password-based authentication and stores the authentication token locally.
