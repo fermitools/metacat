@@ -1329,7 +1329,8 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
                     offset = offset + batch_size
             else:
                 results = self.post_json(url, query)
-                return results
+                for item in results:
+                    yield item
 
     def async_query(self, query, data=None, **args):
         """Run the query asynchronously. Requires client authentication if save_as or add_to are used.
