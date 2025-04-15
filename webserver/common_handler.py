@@ -170,3 +170,61 @@ class MetaCatHandler(BaseHandler, Logged):
             content_type = "text/plain"
         self.log('%s' % message)
         return code, text, content_type
+
+    def namespace_create_common(self, current_user, name, owner_role, description):
+        """ Namespace creation code that was going to be repeated in 
+            both the gui an data handlers"""
+
+        nsrules = self.App.Cfg.get("namespace_rules", [])
+        default_owner_user = current_user.Username
+        db = self.App.connect()
+
+        if nsrules:
+            allowed = False
+            for rule in nsrules:
+                cr_regex = re.compile(rule["regex"])
+                if cr_regex.match(name):
+                    #self.log( f"namespace create: matched rule: {repr(rule)}")
+                    rule_user = cr_regex.sub(rule["owner"], name,1)
+                    rule_roles = list(cr_regex.sub(rule["allowed_creator"],name,1).split(","))
+
+                    #self.log( f"namespace create: rule_roles: {repr(rule_roles)}")
+                    #self.log( f"namespace create: rule_user: {repr(rule_user)}")
+                    if current_user.is_admin() or current_user.Username in rule_roles or '*' in rule_roles:
+                        #self.log( f"username match")
+                        allowed = True
+
+                    for role in rule_roles:
+                        r = DBRole.get(db, role)
+                        if r and current_user.Username in r.members:
+                             #self.log( f"role member match")
+                             allowed = True
+                    break
+            if allowed:
+                if rule_user != '*':
+                    default_owner_user = rule_user
+            else:
+                return 403, None
+        else:
+            if owner_role:
+                r = DBRole.get(db, owner_role)
+                if not current_user.is_admin() and not current_user.Username in r.members:
+                    return 403, None 
+
+        if owner_role is None:
+            owner_user = default_owner_user
+       
+        if DBNamespace.exists(db, name):
+            return  409, None
+
+        if description:
+            description = unquote_plus(description)
+            
+        ns = DBNamespace(db, name, owner_user=owner_user, owner_role = owner_role, description=description)
+        ns.Creator = current_user.Username
+        ns.create()
+
+        return 200, ns
+
+
+

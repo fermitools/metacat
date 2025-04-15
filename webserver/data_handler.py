@@ -1,5 +1,6 @@
 from webpie import WPApp, WPHandler, Response, WPStaticHandler
 import psycopg2, json, time, secrets, traceback, hashlib, pprint, uuid, random
+import re
 from metacat.db import DBFile, DBDataset, DBFileSet, DBNamedQuery, DBUser, DBNamespace, DBRole, \
     DBParamCategory, parse_name, AlreadyExistsError, IntegrityError, MetaValidationError
 from wsdbtools import ConnectionPool
@@ -123,30 +124,16 @@ class DataHandler(MetaCatHandler):
         
     @sanitized
     def create_namespace(self, request, relpath, name=None, owner_role=None, description=None, **args):
-        db = self.App.connect()
         
         self.sanitize(owner_role, name)
         
         user, error = self.authenticated_user()
         if user is None:
             return 401, error
-        owner_user = None
-        if owner_role is None:
-            owner_user = user.Username
-        else:
-            r = DBRole.get(db, owner_role)
-            if not user.is_admin() and not user.Username in r.members:
-                return 403, "Permission denied"
 
-        if DBNamespace.exists(db, name):
-            return 400, "Namespace already exists", "text/plain"
-
-        if description:
-            description = unquote_plus(description)
-            
-        ns = DBNamespace(db, name, owner_user=owner_user, owner_role = owner_role, description=description)
-        ns.Creator = user.Username
-        ns.create()
+        code, ns = self.namespace_create_common(user, name, owner_role, description)
+        if not ns:
+               return code, "Permission Denied" if code=="403" else "Namespace already exists"
         return json.dumps(ns.to_jsonable()), "application/json"
             
     @sanitized
