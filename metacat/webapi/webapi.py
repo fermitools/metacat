@@ -1261,7 +1261,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
             return None
 
     def query(self, query, namespace=None, with_metadata=False, with_provenance=False, save_as=None, add_to=None,
-                        include_retired_files=False, summary=None, batch_size=500):
+                        include_retired_files=False, summary=None, batch_size=0):
         """Run file query. Requires client authentication if save_as or add_to are used.
         
         Arguments
