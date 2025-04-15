@@ -1320,7 +1320,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
                 offset = 0
                 count = batch_size
                 while count == batch_size:
-                    batch_query = f"({query}) skip {offset} limit {batch_size}"
+                    batch_query = f"({query}) ordered skip {offset} limit {batch_size}"
                     results = self.post_json(url, batch_query)
                     count = 0
                     for item in results:
