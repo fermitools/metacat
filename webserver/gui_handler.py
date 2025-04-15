@@ -801,12 +801,10 @@ class GUIHandler(MetaCatHandler):
         assert (owner_user is None) != (owner_role is None)
 
         if ns is None:
-            # create new
-            if not admin:
-                if owner_user and owner_user != me.Username or \
-                    owner_role and not owner_role in me.roles:
-                        self.redirect("./namespaces?error=%s" % (quote_plus("Not authorized"),))                    
-            ns = DBNamespace(db, name, owner_role=owner_role, owner_user=owner_user, description=description).create()
+            owner_role = request.POST.get("owner_role",None)
+            code, ns = self.namespace_create_common(me, name, owner_role, description, owner_user)
+            if code == 403:
+                self.redirect("./namespaces?error=%s" % (quote_plus("Not authorized"),))                    
         else:
             if not admin and not ns.owned_by_user(me):
                 self.redirect("./namespaces?error=%s" % (quote_plus("Not authorized"),))

@@ -81,6 +81,38 @@ Running MetaCat server as a Docker Container
         $ cd <top of cloned MetaCat repository>/docker/server
         $ ./run.sh -c /path/to/config -p <external TCP port>
 
+Configuring Namespace Restriction
+---------------------------------
+
+If you would like to have special namespace creation rules, for example only
+allowing regular users to create a namespace "user.username"
+for their username, and namepaces starting with "production." 
+to the production_group group, and no others you can add a ``namespace_rules`` 
+section to the server configuration file:
+
+    .. code-block::
+       
+        namespace_rules:
+          - regex: 'user\.(.*)'
+            owner: '\\1'
+            allowed_creator: '\\1'
+          - regex: 'production\..*'
+            owner: production_group
+            allowed_creator: production_group
+          - regex: 'calibration\..*'
+            owner: calibration_group
+            allowed_creator: calibration_group
+          - regex: '.*'
+            owner: *
+            allowed_creator: no_such_group_exists
+
+[the '\\1' strings refer to the first parenthisezed match in the regexp]
+
+The first "regex" to match in the list wins, so you can put a
+``regex: '.*'`` case at the at the end for "everything else".
+Note that "admin" users can always create namespaces, regardless
+of such rules.
+
 
 Configuring LDAP Authentication
 -------------------------------
