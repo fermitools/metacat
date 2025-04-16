@@ -29,7 +29,7 @@ not yet implemented).
 
 <div class="autoclass" members="" noindex="" inherited-members="">
 
-[Here](../../wiki/Webapi-pydoc-page#MetaCatClient)
+[Here](../../..//wiki/Webapi-pydoc-page#MetaCatClient)
 
 </div>
 
