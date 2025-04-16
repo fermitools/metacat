@@ -1,11 +1,11 @@
 
-== MetaCat Documentation ==
+## MetaCat Documentation
 
-* [./concepts.rst Concepts]
-* [./mql.rst MQL]
-* [./mql_syntax.rst MQL Syntax]
-* [./ui.rst UI]
-* [./regexp.rst regexp]
-* [./REST_API.rst REST_API]
-* [./server_installation.rst server_installation]
-* [./webapi.rst webapi]
+* [Concepts](./concepts.rst)
+* [MQL](./mql.rst)
+* [MQL Syntax](./mql_syntax.rst)
+* [UI](./ui.rst)
+* [regexp](./regexp.rst)
+* [REST_API](./REST_API.rst)
+* [server_installation](./server_installation.rst)
+* [webapi](./webapi.rst)
