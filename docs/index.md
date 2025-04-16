@@ -8,7 +8,7 @@
 * [UI](./ui.rst)
 * [REST_API](./REST_API.rst)
 * [Server_Installation](./server_installation.rst)
-* [Web API](./webapi.rst)
+* [Web API](./webapi.md)
 
 ### Appendices
 
