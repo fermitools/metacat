@@ -14,8 +14,8 @@ Preferred way to install the client is using pip:
 
   .. code-block:: shell
 
-    $ pip install metacat --user
-    $ pip3 install metacat --user
+    $ pip install metacat-client --user
+    $ pip3 install metacat-client --user
 
 Alternatively, it can be installed from github:
 
@@ -49,7 +49,7 @@ If you use your own Python installation, e.g. Anaconda or Miniconda, then you ca
 General CLI command syntax
 --------------------------
 
-General command looks like this:
+In general, the command looks like this:
 
     .. code-block:: shell
     
@@ -153,8 +153,8 @@ then adding the following DNs to the database has exactly the same effect:
     CN=UID:jjohnson,CN=John Johnson,OU=People,O=FNAL,C=US,DC=cilogon,DC=org,CN=5674,CN=1234
     CN=UID:jjohnson,CN=John Johnson,OU=People,O=FNAL,C=US,DC=cilogon,DC=org
 
-WLCG token authentication
-.........................
+WLCG token/ SciToken authentication
+...................................
 
 MetaCat supports WLCG tokens authentication. MetaCat client will look for the token in the following standard locations:
 
