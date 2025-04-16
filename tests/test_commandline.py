@@ -181,6 +181,12 @@ def test_metacat_query_mql(auth, tst_file_md_list, tst_ds):
     for md in tst_file_md_list[:-1]:
         assert data.find(md["name"]) >= 0
 
+def test_metacat_query_mql_batch_size(auth, tst_file_md_list, tst_ds):
+    with os.popen(f"metacat query --batch_size=2 files from {tst_ds}", "r") as fin:
+        data = fin.read()
+    for md in tst_file_md_list[:-1]:
+        assert data.find(md["name"]) >= 0
+
 
 def test_metacat_dataset_list(auth, tst_ds):
     with os.popen(f"metacat dataset list {os.environ['USER']}:*", "r") as fin:
@@ -370,7 +376,8 @@ def test_metacat_file_show(auth, tst_file_md_list, tst_ds):
     assert 'fid' in md
     assert md['name'] == fname
     assert md['namespace'] == ns
-    assert md['size'] in [38,39]
+
+    assert md['size'] in (38, 39) 
     assert md['created_timestamp'] > 0
     assert md['creator'] == os.environ["USER"]
     assert 'updated_timestamp' in md

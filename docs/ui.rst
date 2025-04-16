@@ -863,10 +863,11 @@ MetaCat queries are written in :doc:`Metadata Query Language <mql>`.
             -S|--save-as=<namespace>:<name>     - save files as a new datset
             -A|--add-to=<namespace>:<name>      - add files to an existing dataset
             -r|--include-retired-files          - include retired files into the query results
+            -b|--batch_size N                   - request results in batches of N files
 
             -x|--explain                        - do not run the query, show resulting SQL only
         
-
+The --batch_size N option is useful for queries that otherwise time out.
     
 Named Queries
 -------------

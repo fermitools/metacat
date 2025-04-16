@@ -1,6 +1,7 @@
 import os, os.path, stat
 from .signed_token_jwt import SignedToken, SignedTokenExpiredError, SignedTokenImmatureError
 from metacat.util import to_bytes, to_str
+import time
 
 class TokenLib(object):
 
@@ -13,6 +14,7 @@ class TokenLib(object):
                 ]
             else:
                 locations = [path]
+            self.LoadTime = 0
             self.Tokens, self.Location = self.load_library(locations)
             if not self.Location and create:
                 # not found
@@ -23,6 +25,7 @@ class TokenLib(object):
                 try:    
                     open(path, "w").close()         # create empty library
                     os.chmod(path, stat.S_IRUSR | stat.S_IWUSR )
+                    self.LoadTime = time.time()
                     return path
                 except: pass
             return None
@@ -35,6 +38,7 @@ class TokenLib(object):
                         #print("loading tokens from:", path)
                         tokens = self.load_from_file(path)
                         #print("tokens loaded from:", path)
+                        self.LoadTime = time.time()
                         return tokens, path
                     except:
                         pass

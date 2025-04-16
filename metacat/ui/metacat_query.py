@@ -9,8 +9,8 @@ class QueryCommand(CLICommand):
 
     GNUStyle = False    
     Opts = (
-        "jim:N:pq:S:A:lPxrL:U:S:R:Q:2t:s", 
-        ["line", "json", "ids", "summary=", "metadata=", "namespace=", "pretty",
+        "b:jim:N:pq:S:A:lPxrL:U:S:R:Q:2t:s", 
+        ["batch_size=", "line", "json", "ids", "summary=", "metadata=", "namespace=", "pretty",
             "with-provenance", "save-as=", "add-to=", "explain", "include-retired-files",
             "list=", "source=", "create=", "update=", "run=", "1024", "timeout="
         ]
@@ -37,6 +37,7 @@ class QueryCommand(CLICommand):
             -S|--save-as=<namespace>:<name>     - save files as a new datset
             -A|--add-to=<namespace>:<name>      - add files to an existing dataset
             -r|--include-retired-files          - include retired files into the query results
+            -b|--batch_size N                   - perform query in batches of N files
             
             -x|--explain                        - dp not run the query, show resulting SQL only
     """
@@ -53,6 +54,8 @@ class QueryCommand(CLICommand):
         include_retired = "-r" in opts or "--include-retired-files" in opts
         summary = opts.get("--summary", "count" if "-s" in opts else None)
         timeout = int(opts.get("-t", opts.get("--timeout", 600)))
+        batch_size = opts.get("-b") or opts.get("--batch_size") or "0"
+        batch_size = int(batch_size)
         if args:
             query_text = " ".join(args)
         else:
@@ -84,18 +87,24 @@ class QueryCommand(CLICommand):
             print(compiled.pretty("    "))
         else:
             client.Timeout = timeout
-            results = client.query(query_text, 
-                        namespace=namespace, with_metadata = with_meta, 
-                        save_as=save_as, add_to=add_to,
+            results = client.query(
+                        query_text, 
+                        namespace=namespace,
+                        with_metadata = with_meta, 
+                        save_as=save_as,
+                        add_to=add_to,
                         with_provenance=with_provenance,
-                        include_retired_files=include_retired, summary=summary
+                        include_retired_files=include_retired, 
+                        summary=summary,
+                        batch_size=batch_size
             )
+
+            #print("client.query results:", repr(results))
 
             in_line = "-l" in opts or "--line" in opts
             print_format = "json" if ("--json" in opts or "-j" in opts) \
                 else ("pprint" if "--pretty" in opts or "-p" in opts else "text")
 
-            #print("response results:", results)
     
             if summary == "count":
                 if print_format == "text":
