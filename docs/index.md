@@ -1,11 +1,16 @@
 
 ## MetaCat Documentation
 
+### Main Chapters
+
 * [Concepts](./concepts.rst)
 * [MQL](./mql.rst)
-* [MQL Syntax](./mql_syntax.rst)
 * [UI](./ui.rst)
-* [regexp](./regexp.rst)
 * [REST_API](./REST_API.rst)
-* [server_installation](./server_installation.rst)
-* [webapi](./webapi.rst)
+* [Server_Installation](./server_installation.rst)
+* [Web API](./webapi.rst)
+
+### Appendices
+
+* [MQL Syntax](./mql_syntax.rst)
+* [Rregexp Cheat Sheet](./regexp.rst)
