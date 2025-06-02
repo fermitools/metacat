@@ -181,6 +181,19 @@ def test_metacat_query_mql(auth, tst_file_md_list, tst_ds):
     for md in tst_file_md_list[:-1]:
         assert data.find(md["name"]) >= 0
 
+def test_metacat_query_mql_count(auth, tst_file_md_list, tst_ds):
+    with os.popen(f"metacat query --summary count files from {tst_ds}", "r") as fin:
+        data = fin.read()
+    lines = data.split("\n")
+    assert int(lines[0][6:]) == len(tst_file_md_list)
+
+def test_metacat_query_mql_keys(auth, tst_file_md_list, tst_ds):
+    with os.popen(f"metacat query --summary keys files from {tst_ds}", "r") as fin:
+        data = fin.read()
+    md = tst_file_md_list[0]["metadata"]
+    for k in md:
+        assert(data.find(k) >= 0)
+
 def test_metacat_query_mql_batch_size(auth, tst_file_md_list, tst_ds):
     with os.popen(f"metacat query --batch_size=2 files from {tst_ds}", "r") as fin:
         data = fin.read()
