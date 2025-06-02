@@ -104,11 +104,10 @@ class QueryCommand(CLICommand):
             print_format = "json" if ("--json" in opts or "-j" in opts) \
                 else ("pprint" if "--pretty" in opts or "-p" in opts else "text")
 
-
+    
             if summary == "count":
                 results = list(results)[0]
                 if print_format == "text":
-                    sys.stdout.flush()
                     nfiles = results["count"]
                     total_size = results["total_size"]
                     print("Files:       ", nfiles)
