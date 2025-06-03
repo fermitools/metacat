@@ -1281,8 +1281,8 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         add_to : str
             namespace:name for an existing dataset to add found files to
         summary : str or None
-            "count" - return file count only as int
-            "keys" - return list of all top level metadata keys for the selected files
+            "count" - return [{"count": n, "total_size": nbytes }]
+            "keys" - return list of list of all top level metadata keys for the selected files
             ``summary`` can not be used together with ``save_as`` or ``add_to``
 
         Returns
@@ -1294,10 +1294,10 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         -----
         Retrieving file provenance and metadata takes slightly longer time
         """
-        
+
         assert not (summary is not None and (add_to or save_as)), "Summary can not be used together with add_to or save_as"
         assert summary in ("count", "keys", None)
-        
+
         if summary:
             url = f"data/query?summary={summary}"
             if namespace:
@@ -1305,7 +1305,8 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
             if include_retired_files:
                 url += "&include_retired_files=yes"
             results = self.post_json(url, query)
-            return results
+            yield results
+            return
         else:
             url = "data/query?with_meta=%s&with_provenance=%s" % ("yes" if with_metadata else "no","yes" if with_provenance else "no")
             if namespace:

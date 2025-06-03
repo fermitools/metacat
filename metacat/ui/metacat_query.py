@@ -99,7 +99,6 @@ class QueryCommand(CLICommand):
                         batch_size=batch_size
             )
 
-            #print("client.query results:", repr(results))
 
             in_line = "-l" in opts or "--line" in opts
             print_format = "json" if ("--json" in opts or "-j" in opts) \
@@ -107,6 +106,7 @@ class QueryCommand(CLICommand):
 
     
             if summary == "count":
+                results = list(results)[0]
                 if print_format == "text":
                     nfiles = results["count"]
                     total_size = results["total_size"]
@@ -134,7 +134,7 @@ class QueryCommand(CLICommand):
                 else:
                     pprint.pprint(results)
             elif summary == "keys":
-                results = list(results)
+                results = list(results)[0]
                 #print(results)
                 results = sorted(results)
                 if print_format == "text":
