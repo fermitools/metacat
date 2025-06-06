@@ -81,7 +81,7 @@ class SQLConverter(Ascender):
                     select {t}.*
                     from (
                         $child_sql
-                    ) {t} order by {t}.id
+                    ) {t} order by {t}.created_timestamp,{t}.id
                 -- end of ordered {t}
             """, child_sql = child_sql)
             return Node("sql", sql=sql)
@@ -174,7 +174,7 @@ class SQLConverter(Ascender):
             c = alias("c")
             pc = alias("pc")
             columns = self.columns(p, with_meta, with_provenance)
-            order = f"order by {p}.id" if ordered else ""
+            order = f"order by {p}.created_timestamp,{p}.id" if ordered else ""
             table = "files_with_provenance" if with_provenance else "files"
             new_sql = insert_sql(f"""\
                 --  parents of {p}
@@ -204,7 +204,7 @@ class SQLConverter(Ascender):
             c = alias("c")
             pc = alias("pc")
             columns = self.columns(c, with_meta, with_provenance)
-            order = f"order by {p}.id" if ordered else ""
+            order = f"order by {p}.created_timestamp,{p}.id" if ordered else ""
             table = "files_with_provenance" if with_provenance else "files"
             new_sql = insert_sql(f"""\
                 -- children of {c}
