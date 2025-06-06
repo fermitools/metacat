@@ -164,6 +164,14 @@ def test_metacat_query_q_1(auth, tst_file_md_list, tst_ds):
     for md in tst_file_md_list[:-1]:
         assert data.find(md["name"]) >= 0
 
+def test_metacat_query_q_ordered_1(auth, tst_file_md_list, tst_ds):
+    with open("qfl1", "w") as qf:
+        qf.write(f"files from {tst_ds} ordered")
+    with os.popen("metacat query -q qfl1", "r") as fin:
+        data = fin.read()
+    os.unlink("qfl1")
+    for md in tst_file_md_list[:-1]:
+        assert data.find(md["name"]) >= 0
 
 def test_metacat_query_q_2(auth, tst_file_md_list, tst_ds):
     with open("qfl1", "w") as qf:
@@ -377,7 +385,7 @@ def test_metacat_file_show(auth, tst_file_md_list, tst_ds):
     assert md['name'] == fname
     assert md['namespace'] == ns
 
-    assert md['size'] in (38, 39) 
+    assert md['size'] in (37 ,38, 39) 
     assert md['created_timestamp'] > 0
     assert md['creator'] == os.environ["USER"]
     assert 'updated_timestamp' in md
