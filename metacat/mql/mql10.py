@@ -1363,10 +1363,10 @@ class MQLQuery(object):
         text = '\n'.join(out)
         try:
             parsed = _Parser.parse(text)
-            print("parsed:\n", parsed.pretty())
+            #print("parsed:\n", parsed.pretty())
             if convert:
                 converted = QueryConverter(db=db, loader=loader, default_namespace=default_namespace).convert(parsed)
-                print("converted:\n", converted.pretty())
+                #print("converted:\n", converted.pretty())
                 if converted.T == "top_file_query":
                     q = FileQuery(converted.C[0], include_retired_files)
                 elif converted.T == "top_dataset_query":
