@@ -3,6 +3,7 @@ from metacat.db import DBUser, DBNamespace, DBRole
 import re, json
 from metacat.logs import Logged, Logger, init
 import traceback
+from urllib.parse import unquote_plus
 
 _StatusReasons = {
     # Status Codes
@@ -171,7 +172,7 @@ class MetaCatHandler(BaseHandler, Logged):
         self.log('%s' % message)
         return code, text, content_type
 
-    def namespace_create_common(self, current_user, name, owner_role, description, owner_user=''):
+    def namespace_create_common(self, current_user, name, owner_role, description, owner_user=None):
         """ Namespace creation code that was going to be repeated in 
             both the gui an data handlers"""
 
