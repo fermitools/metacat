@@ -1298,12 +1298,14 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         assert not (summary is not None and (add_to or save_as)), "Summary can not be used together with add_to or save_as"
         assert summary in ("count", "keys", None)
 
+        trimquery = query[:255]
         if summary:
             url = f"data/query?summary={summary}"
             if namespace:
                 url += f"&namespace={namespace}"
             if include_retired_files:
                 url += "&include_retired_files=yes"
+            url += f"&trimquery={trimquery}"
             results = self.post_json(url, query)
             yield results
             return
@@ -1317,6 +1319,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
                 url += f"&add_to={add_to}"
             if include_retired_files:
                 url += "&include_retired_files=yes"
+            url += f"&trimquery={trimquery}"
             if batch_size > 0:
                 offset = 0
                 count = batch_size
