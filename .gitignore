@@ -6,6 +6,7 @@ metacat.egg-info
 cookie.jar
 token
 .*
+!.github/
 *.bak
 *.bck
 !.gitignore
