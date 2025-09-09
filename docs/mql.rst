@@ -151,7 +151,6 @@ Examples of queries using file and dataset attributes:
     
     datasets matching scope:data_* having frozen=false and math.pi=3.14
 
-
 Safe Strings
 ------------
 String constants containing only letters, digits and symbols ``$@_.-`` (safe string literals) can be entered without
@@ -914,6 +913,17 @@ and the regular expression has to be taken into quotes:
 
         datasets matching regexp prod:"XYZ_3[a-z0-9]+" having type="mc" and detector="near",
                 matching regexp mc:"XYZ.*_4"
+
+Note that the following two queries are different and will therefore not show the same results. Dataset queries only look for datasets
+and not any information about the files within them. They contain an estimated count of the number of files inside them, which is
+updated roughly every hour, and does not account for retired files or files that are in multiple datasets. If more exact information
+is needed about the files, the file query should be used instead.
+
+.. code-block:: sql
+
+    datasets matching namespace:name, summary="count"
+
+    files from namespace:name, summary="count"
 
 Combining File and Dataset Metadata Filtering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
