@@ -3,7 +3,7 @@
 
 Data Catalog designed for use with the [Rucio](https://rucio.cern.ch/) data management system
 
-* [Documentation](docs/index.md)
+* [Documentation](https://fermitools.github.io/metacat/)
 
 ### Related Projects
 
