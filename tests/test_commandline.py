@@ -208,6 +208,19 @@ def test_metacat_query_mql_batch_size(auth, tst_file_md_list, tst_ds):
     for md in tst_file_md_list[:-1]:
         assert data.find(md["name"]) >= 0
 
+def test_metacat_query_ds_1(auth, tst_file_md_list, tst_ds):
+    with os.popen(f"metacat query datasets matching {tst_ds}", "r") as fin:
+        data = fin.read()
+    lines = data.split("\n")
+    print(f"got: {lines}")
+    assert (lines[0].find(tst_ds) >= 0)
+
+def test_metacat_query_ds_2(auth, tst_file_md_list, tst_ds):
+    with os.popen(f"metacat query 'datasets matching {tst_ds} having file_count>0'", "r") as fin:
+        data = fin.read()
+    lines = data.split("\n")
+    print(f"got: {lines}")
+    assert (lines[0].find(tst_ds) >= 0)
 
 def test_metacat_dataset_list(auth, tst_ds):
     with os.popen(f"metacat dataset list {os.environ['USER']}:*", "r") as fin:
