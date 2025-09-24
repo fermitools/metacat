@@ -199,20 +199,16 @@ class CreateDatasetCommand(CLICommand):
             if batchsize and files_query:
                 # if we were given a batch size, we need the count to 
                 # know how many batches, etc.
-                print("batchsize: here1")
 
                 qr = client.query( files_query , summary="count")
                 qr = list(qr)
-                print(f"batchsize: here1.5 qr{repr(qr)}")
                 totfiles = qr[0]["count"]
 
-                print(f"batchsize: here2 totfiles {totfiles}")
                 # if we don't have that many files, just ignore batchsize
                 if batchsize >= totfiles:
                     batchsize = 0
                 else:
                     nbatches = totfiles // batchsize
-                print(f"batchsize: here3 nbatches {nbatches}")
 
             if batchsize and files_query:
                 # if batching, limit initial query and don't freeze yet...
@@ -220,7 +216,6 @@ class CreateDatasetCommand(CLICommand):
                 files_query = f"({base_query}) ordered limit {batchsize}"
                 frozen1 = False
                 frozen2 = frozen
-                print(f"batchsize: here4 files_query{files_query}")
 
             out = client.create_dataset(dataset_spec, monotonic = monotonic, frozen = frozen1, description=desc, metadata = metadata,
                 files_query = files_query
@@ -230,9 +225,7 @@ class CreateDatasetCommand(CLICommand):
                 # now add remaining files in batches
                 for batch in range(1,nbatches+1):
                     files_query = f"({base_query}) ordered skip {batch*batchsize} limit {batchsize}"
-                    print(f"batchsize: here4 batch {batch} files_query {files_query}")
                     af = client.add_files(dataset_spec, query=files_query)
-                    print(f"batchsize: here4.5 af {repr(af)}")
                     out["file_count"] += af
                    
 
