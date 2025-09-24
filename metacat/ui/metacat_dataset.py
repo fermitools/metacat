@@ -191,7 +191,6 @@ class CreateDatasetCommand(CLICommand):
         frozen = flags == "frozen"
         metadata = load_json(opts.get("-m") or opts.get("--metadata")) or {}
         files_query = load_text(opts.get("-q") or opts.get("--query")) or None
-        frozen1 = frozen
         batch = 0
 
         try:
@@ -214,10 +213,10 @@ class CreateDatasetCommand(CLICommand):
                 # if batching, limit initial query and don't freeze yet...
                 base_query = files_query
                 files_query = f"({base_query}) ordered limit {batchsize}"
-                frozen1 = False
                 frozen2 = frozen
+                frozen = False
 
-            out = client.create_dataset(dataset_spec, monotonic = monotonic, frozen = frozen1, description=desc, metadata = metadata,
+            out = client.create_dataset(dataset_spec, monotonic = monotonic, frozen = frozen, description=desc, metadata = metadata,
                 files_query = files_query
             )
 
