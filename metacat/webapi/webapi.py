@@ -131,7 +131,7 @@ class HTTPClient(object):
                 response = requests.get(url, timeout=self.Timeout, **args)
             else:
                 response = requests.post(url, timeout=self.Timeout, **args)
-            if response.status_code != 503:
+            if response.status_code not in [502, 503]:
                 break
             sleep_time = min(random.random() * retry_interval, tend-time.time())
             retry_interval *= self.RetryExponent

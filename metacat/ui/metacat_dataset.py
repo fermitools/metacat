@@ -165,8 +165,9 @@ class AddSubsetCommand(CLICommand):
 
 class CreateDatasetCommand(CLICommand):
 
-    Opts = ("m:q:jf:", ["flags=", "metadata=", "query=", "json"])
+    Opts = ("b:m:q:jf:", ["batchsize=", "flags=", "metadata=", "query=", "json"])
     Usage = """[<options>] <namespace>:<name> [<description>]          -- create dataset
+        -b|--batchsize N                            - optional, add files in batches of N
         -f|--flags (monotonic|frozen)               - optional, dataset flags
         -m|--metadata '<JSON expression>'
         -m|--metadata <JSON file>
@@ -184,24 +185,66 @@ class CreateDatasetCommand(CLICommand):
             desc = " ".join(desc)
         else:
             desc = ""
+        batchsize = int(opts.get("--batchsize") or opts.get("-b") or "0")
         flags = opts.get("-f") or opts.get("--flags")
         monotonic = flags == "monotonic"
         frozen = flags == "frozen"
         metadata = load_json(opts.get("-m") or opts.get("--metadata")) or {}
         files_query = load_text(opts.get("-q") or opts.get("--query")) or None
+        batch = 0
+
         try:
+
+            if batchsize and files_query:
+                # if we were given a batch size, we need the count to 
+                # know how many batches, etc.
+
+                qr = client.query( files_query , summary="count")
+                qr = list(qr)
+                totfiles = qr[0]["count"]
+
+                # if we don't have that many files, just ignore batchsize
+                if batchsize >= totfiles:
+                    batchsize = 0
+                else:
+                    nbatches = totfiles // batchsize
+
+            if batchsize and files_query:
+                # if batching, limit initial query and don't freeze yet...
+                base_query = files_query
+                files_query = f"({base_query}) ordered limit {batchsize}"
+                frozen2 = frozen
+                frozen = False
+
             out = client.create_dataset(dataset_spec, monotonic = monotonic, frozen = frozen, description=desc, metadata = metadata,
                 files_query = files_query
             )
+
+            if batchsize and files_query:
+                # now add remaining files in batches
+                for batch in range(1,nbatches+1):
+                    files_query = f"({base_query}) ordered skip {batch*batchsize} limit {batchsize}"
+                    af = client.add_files(dataset_spec, query=files_query)
+                    out["file_count"] += af
+                   
+
+                # finally set frozen flag if requested
+                if frozen2:
+                    client.update_datset(dataset_spec, frozen=frozen2)
+
         except MCError as e:
-            print(e)
+            if batchsize and files_query:
+                print(f"{e} on batch {batch}")
+            else:
+                print(e)
+
             sys.exit(1)
         else:
             if "-j" in opts or "--json" in opts:
                 print(json.dumps(out, indent=4, sort_keys=True))
             else:
                 nfiles = out.get("file_count")
-                print(f"Dataset {dataset_spec} cteated", f"with {nfiles} files" if nfiles is not None else "")
+                print(f"Dataset {dataset_spec} created", f"with {nfiles} files" if nfiles is not None else "")
 
 class UpdateDatasetCommand(CLICommand):
 
