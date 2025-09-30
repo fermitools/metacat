@@ -439,7 +439,6 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
             # if batching, limit initial query and don't freeze yet...
             base_query = files_query
             files_query = f"({base_query}) ordered limit {batchsize}"
-            print(f"batchsize: query: {files_query}")
             frozen2 = frozen
             frozen = False
 
@@ -452,7 +451,6 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
             while keep_going:
                 batch = batch + 1
                 files_query = f"({base_query}) ordered skip {batch*batchsize} limit {batchsize}"
-                print(f"batchsize: query: {files_query}")
                 af = self.add_files(did, query=files_query)
                 out["file_count"] += af
                 keep_going = (af > 0)
