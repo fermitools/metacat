@@ -206,10 +206,7 @@ class CreateDatasetCommand(CLICommand):
             )
 
         except MCError as e:
-            if batchsize and files_query:
-                print(f"{e} on batch {batch}")
-            else:
-                print(e)
+            print(e)
 
             sys.exit(1)
         else:
