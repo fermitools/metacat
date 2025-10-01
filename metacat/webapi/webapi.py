@@ -430,8 +430,38 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         except NotFoundError:
             return None
         
-        
     def create_dataset(self, did, frozen=False, monotonic=False, metadata=None, metadata_requirements=None, 
+            files_query=None, subsets_query=None,
+            description="", batchsize=0):
+
+        if batchsize and files_query:
+
+            # if batching, limit initial query and don't freeze yet...
+            base_query = files_query
+            files_query = f"({base_query}) ordered limit {batchsize}"
+            frozen2 = frozen
+            frozen = False
+
+        out = self._create_dataset(did, frozen=frozen, monotonic=monotonic, metadata=metadata, metadata_requirements=metadata_requirements, files_query=files_query, subsets_query=subsets_query, description=description)
+
+        if batchsize and files_query:
+            keep_going = True
+            batch = 0
+            # now add remaining files in batches
+            while keep_going:
+                batch = batch + 1
+                files_query = f"({base_query}) ordered skip {batch*batchsize} limit {batchsize}"
+                af = self.add_files(did, query=files_query)
+                out["file_count"] += af
+                keep_going = (af > 0)
+
+            # finally set frozen flag if requested
+            if frozen2:
+                self.update_datset(did, frozen=frozen2)
+
+        return out
+        
+    def _create_dataset(self, did, frozen=False, monotonic=False, metadata=None, metadata_requirements=None, 
             files_query=None, subsets_query=None,
             description=""):
 

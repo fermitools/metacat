@@ -195,42 +195,15 @@ class CreateDatasetCommand(CLICommand):
 
         try:
 
-            if batchsize and files_query:
-                # if we were given a batch size, we need the count to 
-                # know how many batches, etc.
-
-                qr = client.query( files_query , summary="count")
-                qr = list(qr)
-                totfiles = qr[0]["count"]
-
-                # if we don't have that many files, just ignore batchsize
-                if batchsize >= totfiles:
-                    batchsize = 0
-                else:
-                    nbatches = totfiles // batchsize
-
-            if batchsize and files_query:
-                # if batching, limit initial query and don't freeze yet...
-                base_query = files_query
-                files_query = f"({base_query}) ordered limit {batchsize}"
-                frozen2 = frozen
-                frozen = False
-
-            out = client.create_dataset(dataset_spec, monotonic = monotonic, frozen = frozen, description=desc, metadata = metadata,
+            out = client.create_dataset(
+                dataset_spec,
+                monotonic = monotonic, 
+                frozen = frozen,
+                description=desc,
+                metadata = metadata, 
+                batchsize = batchsize,
                 files_query = files_query
             )
-
-            if batchsize and files_query:
-                # now add remaining files in batches
-                for batch in range(1,nbatches+1):
-                    files_query = f"({base_query}) ordered skip {batch*batchsize} limit {batchsize}"
-                    af = client.add_files(dataset_spec, query=files_query)
-                    out["file_count"] += af
-                   
-
-                # finally set frozen flag if requested
-                if frozen2:
-                    client.update_datset(dataset_spec, frozen=frozen2)
 
         except MCError as e:
             if batchsize and files_query:
