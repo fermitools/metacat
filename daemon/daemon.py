@@ -3,6 +3,18 @@ from pythreader import TaskQueue
 from metacat.db import DBUser, DBNamespace, DBDataset, DBFile
 from metacat.logs import Logged, init as init_logs
 from wsdbtools import ConnectionWithTransactions
+import functools, traceback
+
+def log_exceptions(f):
+    ''' decorator logging exceptions and not letting them past '''
+    @functools.wraps(f)
+    def wrapper( self,  *args, **kwargs ):
+        try:
+           return f( self, *args, **kwargs )
+        except Exception:
+           self.Log(traceback.format_exc())
+           return None
+    return wrapper
 
 class MetaCatDaemon(Logged):
     
@@ -40,6 +52,7 @@ class MetaCatDaemon(Logged):
             db.cursor().execute(f"set search_path to {self.Schema}")
         return ConnectionWithTransactions(db)
         
+    @log_exceptions
     def update_dataset_file_counts(self):
         db = self.db()
         counts = DBDataset.file_count_by_dataset(db)
@@ -49,6 +62,7 @@ class MetaCatDaemon(Logged):
         db.close()
         self.log("Dataset file counts updated")
 
+    @log_exceptions
     def update_namespace_file_counts(self):
         db = self.db()
         counts = DBFile.file_count_by_namespace(db)
@@ -58,6 +72,7 @@ class MetaCatDaemon(Logged):
         db.close()
         self.log("Namespace file counts updated")
 
+    @log_exceptions
     def ferry_update(self):
         self.debug("ferry_update...")
         url = f"{self.FerryURL}/getAffiliationMembersRoles?unitname={self.VO}"
