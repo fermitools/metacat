@@ -12,7 +12,7 @@ def log_exceptions(f):
         try:
            return f( self, *args, **kwargs )
         except Exception:
-           self.Log(traceback.format_exc())
+           self.log(traceback.format_exc())
            return None
     return wrapper
 
