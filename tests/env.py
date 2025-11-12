@@ -20,6 +20,7 @@ def env():
     else:
        hostaport = 'https://metacat.fnal.gov:8143'
        hostport = 'http://fermicloud761.fnal.gov:9094'
+       #hostport = 'http://dbdev703.fnal.gov:9443'
 
 
     os.environ['METACAT_AUTH_SERVER_URL'] = f'{hostaport}/auth/hypot_dev'
