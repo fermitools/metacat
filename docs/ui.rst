@@ -281,8 +281,13 @@ Removing a dataset
 
     $ metacat dataset remove <namespace>:<name>
     
-To remove a dataset, the user has to be an owner of the dataset namespace either directly or through
-a role.
+To remove a dataset, the user has to be an owner of the dataset namespace either directly or through a role.
+
+This removes the dataset from any other datasets it is related to, removes all the files from the dataset, and removes the dataset itself.   It has no other effect on any files that were in the dataset.
+
+Once a dataset is removed, the user can make a new one with the same name later, etc.; it is completely forgotten about.
+
+This can result in files that are not contained in any dataset.  
 
 Adding files to dataset
 .......................
