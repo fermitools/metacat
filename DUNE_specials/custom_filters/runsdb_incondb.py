@@ -32,7 +32,8 @@ class RunsDBinConDB(MetaCatFilter):
         self.ConnPool = ConnectionPool(postgres=self.Connection, max_idle_connections=1)
         self.FolderName = self.Config["folder"]
         self.MetaPrefix = self.Config.get("meta_prefix", "runs_history")
-        
+        self.FolderName1 = self.Config.get("folder1")   
+        self.MetaPrefix1 = self.Config.get("meta_prefix1", f"{self.MetaPrefix}_vd")
         #
         # get column names
         #
@@ -40,6 +41,11 @@ class RunsDBinConDB(MetaCatFilter):
         db = ConDB(self.ConnPool)
         folder = db.openFolder(self.FolderName)
         self.ColumnTypes = folder.data_column_types() if folder is not None else None
+        
+        self.ColumnTypes1 = None
+        if self.FolderName1:
+            folder1 = db.openFolder(self.FolderName1)
+            self.ColumnTypes1 = folder1.data_column_types() if folder1 is not None else None
 
     def hide(self, conn, *fields):
         for f in fields:
@@ -59,8 +65,14 @@ class RunsDBinConDB(MetaCatFilter):
         # Conect to db via condb python API
         db = ConDB(self.ConnPool)
         folder = db.openFolder(self.FolderName)
+
+        #Open folder1 if configured
+        folder1 = None
+        if self.FolderName1:
+            folder1 = db.openFolder(self.FolderName1)
         
         data_by_run = {}        # cache data by run number across chunks
+        data_by_run1 = {}       # cache for folder 1 if needed
 
         # Get files from metacat input
         file_set = inputs[0]
@@ -81,15 +93,33 @@ class RunsDBinConDB(MetaCatFilter):
                     runnum, data = row[1], row[4:]
                     if runnum not in data_by_run:
                         data_by_run[runnum] = data
+
+                #folder1 (optional)
+                if folder1:
+                    data_runhist1 = folder1.getData(min(need_run_nums), t1=max(need_run_nums))
+                    for row in data_runhist1:
+                        runnum, data = row[1], row[4:]
+                        if runnum not in data_by_run1:
+                            data_by_run1[runnum] = data
         
             # Insert run hist data to Metacat
             for f in chunk:
                 runnum = self.file_run_number(f.Metadata)
+                if runnum is None:
+                    continue
+                #insert metadata from folder
                 if runnum is not None and runnum in data_by_run and data_by_run[runnum] is not None:
                     for (col, typ), value in zip(self.ColumnTypes, data_by_run[runnum]):
                         if typ.startswith("timestamp") and value is not None:
                             value = value.timestamp()
                         f.Metadata[f"{self.MetaPrefix}.{col}"] = value
+
+                #insert metadata from folder1
+                if self.ColumnTypes1 and runnum in data_by_run1 and data_by_run1[runnum] is not None:
+                    for (col, typ), value in zip(self.ColumnTypes1, data_by_run1[runnum]):
+                        if typ.startswith("timestamp") and value is not None:
+                            value = value.timestamp()
+                        f.Metadata[f"{self.MetaPrefix1}.{col}"] = value
 
             yield from chunk
  
