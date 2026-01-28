@@ -22,13 +22,14 @@ class MetaCatDaemon(Logged):
         Logged.__init__(self, "MetaCatDaemon")
 
         ssl_config = config.get("ssl", {})
-        self.CertFile = ssl_config.get("cert")
+        self.CertFile = ssl_config.get("cert", None)
         self.KeyFile = ssl_config.get("key", self.CertFile)
+        self.KeyFile = ssl_config.get("token", None)
         
         daemon_config = config["daemon"]
         self.FerryURL = daemon_config["ferry_url"]
-        if self.FerryURL.lower().startswith("https:") and not (self.CertFile and self.KeyFile):
-            raise ValueError("X.509 cert and key files are not in the conficuration")
+        if self.FerryURL.lower().startswith("https:") and not ((self.CertFile and self.KeyFile) or self.TokenFile):
+            raise ValueError("Token file, or X.509 cert and key files are not in the conficuration")
         
         self.FerryUpdateInterval = daemon_config.get("ferry_update_interval", 1*3600)
         self.CountsUpdateInterval = daemon_config.get("counts_update_interval", 1*3600)
@@ -77,8 +78,21 @@ class MetaCatDaemon(Logged):
         self.debug("ferry_update...")
         url = f"{self.FerryURL}/getAffiliationMembersRoles?unitname={self.VO}"
 
+        # Authentication...
         self.debug("ferry URL:", url)
-        response = requests.get(url, verify=False, cert=(self.CertFile, self.KeyFile))
+        if self.CertFile:
+            cert=(self.CertFile, self.KeyFile)
+        else:
+            cert = None
+
+        if self.TokenFile:
+            with open(self.TokenFile, "r") as tf:
+                token = tf.read().strip()
+            headers = { "Authorization": "Bearer " + token }
+        else
+            headers = None
+
+        response = requests.get(url, verify=False, cert=cert, headers=headers )
         data = response.json()
         self.debug("data received")
 
