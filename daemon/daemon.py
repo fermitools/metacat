@@ -5,19 +5,22 @@ from metacat.logs import Logged, init as init_logs
 from wsdbtools import ConnectionWithTransactions
 import functools, traceback
 
+
 def log_exceptions(f):
-    ''' decorator logging exceptions and not letting them past '''
+    """decorator logging exceptions and not letting them past"""
+
     @functools.wraps(f)
-    def wrapper( self,  *args, **kwargs ):
+    def wrapper(self, *args, **kwargs):
         try:
-           return f( self, *args, **kwargs )
+            return f(self, *args, **kwargs)
         except Exception:
-           self.log(traceback.format_exc())
-           return None
+            self.log(traceback.format_exc())
+            return None
+
     return wrapper
 
+
 class MetaCatDaemon(Logged):
-    
     def __init__(self, config):
         Logged.__init__(self, "MetaCatDaemon")
 
@@ -25,14 +28,16 @@ class MetaCatDaemon(Logged):
         self.CertFile = ssl_config.get("cert", None)
         self.KeyFile = ssl_config.get("key", self.CertFile)
         self.KeyFile = ssl_config.get("token", None)
-        
+
         daemon_config = config["daemon"]
         self.FerryURL = daemon_config["ferry_url"]
-        if self.FerryURL.lower().startswith("https:") and not ((self.CertFile and self.KeyFile) or self.TokenFile):
+        if self.FerryURL.lower().startswith("https:") and not (
+            (self.CertFile and self.KeyFile) or self.TokenFile
+        ):
             raise ValueError("Token file, or X.509 cert and key files are not in the conficuration")
-        
-        self.FerryUpdateInterval = daemon_config.get("ferry_update_interval", 1*3600)
-        self.CountsUpdateInterval = daemon_config.get("counts_update_interval", 1*3600)
+
+        self.FerryUpdateInterval = daemon_config.get("ferry_update_interval", 1 * 3600)
+        self.CountsUpdateInterval = daemon_config.get("counts_update_interval", 1 * 3600)
         self.VO = daemon_config["vo"]
 
         db_config = config["database"]
@@ -43,16 +48,20 @@ class MetaCatDaemon(Logged):
 
         self.Queue = TaskQueue(5, delegate=self)
         self.Queue.append(self.ferry_update, interval=self.FerryUpdateInterval, after=time.time())
-        self.Queue.append(self.update_dataset_file_counts, interval=self.CountsUpdateInterval, after=0) #self.CountsUpdateInterval//3)
-        self.Queue.append(self.update_namespace_file_counts, interval=self.CountsUpdateInterval, after=0) #2*self.CountsUpdateInterval//3)
+        self.Queue.append(
+            self.update_dataset_file_counts, interval=self.CountsUpdateInterval, after=0
+        )  # self.CountsUpdateInterval//3)
+        self.Queue.append(
+            self.update_namespace_file_counts, interval=self.CountsUpdateInterval, after=0
+        )  # 2*self.CountsUpdateInterval//3)
         self.debug("tasks enqueued")
-        
+
     def db(self):
         db = psycopg2.connect(self.DBConnect)
         if self.Schema:
             db.cursor().execute(f"set search_path to {self.Schema}")
         return ConnectionWithTransactions(db)
-        
+
     @log_exceptions
     def update_dataset_file_counts(self):
         db = self.db()
@@ -81,18 +90,18 @@ class MetaCatDaemon(Logged):
         # Authentication...
         self.debug("ferry URL:", url)
         if self.CertFile:
-            cert=(self.CertFile, self.KeyFile)
+            cert = (self.CertFile, self.KeyFile)
         else:
             cert = None
 
         if self.TokenFile:
             with open(self.TokenFile, "r") as tf:
                 token = tf.read().strip()
-            headers = { "Authorization": "Bearer " + token }
+            headers = {"Authorization": "Bearer " + token}
         else:
             headers = None
 
-        response = requests.get(url, verify=False, cert=cert, headers=headers )
+        response = requests.get(url, verify=False, cert=cert, headers=headers)
         data = response.json()
         self.debug("data received")
 
@@ -108,14 +117,22 @@ class MetaCatDaemon(Logged):
 
         db = self.db()
         db_users = {u.Username: u for u in DBUser.list(db)}
-        
+
         ncreated = nupdated = 0
         updated = []
         created = []
         for username, ferry_user in ferry_users.items():
             db_user = db_users.get(username)
             if db_user is None:
-                new_user = DBUser(db, username, ferry_user.get("fullname", ""), None, "", None, ferry_user.get("tokensubject"))
+                new_user = DBUser(
+                    db,
+                    username,
+                    ferry_user.get("fullname", ""),
+                    None,
+                    "",
+                    None,
+                    ferry_user.get("tokensubject"),
+                )
                 new_user.save()
                 ncreated += ncreated
                 created.append(username)
@@ -138,27 +155,30 @@ class MetaCatDaemon(Logged):
         self.log("updated:", len(updated), "" if not updated else ",".join(updated))
         db.close()
 
+
 Usage = """
 daemon.py -c <config.yaml> [-d] [-l <log path>]
 """
-        
+
+
 def main():
     import sys, getopt, yaml, time
 
     opts, args = getopt.getopt(sys.argv[1:], "l:c:dh?", ["help"])
     opts = dict(opts)
-    
+
     if "-c" not in opts or "-?" in opts or "-h" in opts or "--help" in opts:
         print(Usage)
         sys.exit(2)
-    
+
     config = yaml.load(open(opts["-c"], "r"), Loader=yaml.SafeLoader)
     log_file = opts.get("-l", "-")
     init_logs(log_file, error_out=log_file, debug_out=log_file, debug_enabled="-d" in opts)
-    
+
     daemon = MetaCatDaemon(config)
     while True:
         time.sleep(10)
-        
+
+
 if __name__ == "__main__":
     main()
