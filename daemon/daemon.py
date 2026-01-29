@@ -27,7 +27,7 @@ class MetaCatDaemon(Logged):
         ssl_config = config.get("ssl", {})
         self.CertFile = ssl_config.get("cert", None)
         self.KeyFile = ssl_config.get("key", self.CertFile)
-        self.KeyFile = ssl_config.get("token", None)
+        self.TokenFile = ssl_config.get("token", None)
 
         daemon_config = config["daemon"]
         self.FerryURL = daemon_config["ferry_url"]
