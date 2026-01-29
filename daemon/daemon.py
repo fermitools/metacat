@@ -89,7 +89,7 @@ class MetaCatDaemon(Logged):
             with open(self.TokenFile, "r") as tf:
                 token = tf.read().strip()
             headers = { "Authorization": "Bearer " + token }
-        else
+        else:
             headers = None
 
         response = requests.get(url, verify=False, cert=cert, headers=headers )
