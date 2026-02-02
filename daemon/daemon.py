@@ -34,7 +34,7 @@ class MetaCatDaemon(Logged):
         if self.FerryURL.lower().startswith("https:") and not (
             (self.CertFile and self.KeyFile) or self.TokenFile
         ):
-            raise ValueError("Token file, or X.509 cert and key files are not in the conficuration")
+            raise ValueError("Token file, or X.509 cert and key files are not in the configuration")
 
         self.FerryUpdateInterval = daemon_config.get("ferry_update_interval", 1 * 3600)
         self.CountsUpdateInterval = daemon_config.get("counts_update_interval", 1 * 3600)
