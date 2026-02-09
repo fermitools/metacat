@@ -1591,3 +1591,16 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         url = "data/create_named_query"
         if update: url += "?update=yes"
         return self.post_json(url, data)
+
+    def report_metadata_keys(self):
+        url = "data/report_metadata_keys"
+        return self.get_json(url)
+
+    def report_metadata_counts_ranges(self, keylist):
+        url = "data/report_metadata_counts_ranges"
+        data = dict(keylist= keylist)
+        return self.post_json(url, data)
+
+    def report_metadata_values(self, key):
+        url = "data/report_metadata_values?key={key}"
+        return self.get_json(url)

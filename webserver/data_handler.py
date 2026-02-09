@@ -1525,5 +1525,24 @@ class DataHandler(MetaCatHandler):
             out = cat.to_jsonable()
         return json.dumps(out), "application/json"
         
-        
-        
+    @sanitized
+    def report_metadata_keys(self, **args):
+        db = self.App.connect()
+        fobj = DBFile(db)
+        out = fobj.report_metadata_keys()
+        return json.dumps(out), "application/json"
+
+    @sanitized
+    def report_metadata_counts_ranges(self, keylist, **args):
+        db = self.App.connect()
+        fobj = DBFile(db)
+        out = fobj.report_metadata_counts,ranges(keylist)
+        return json.dumps(out), "application/json"
+
+    @sanitized
+    def report_metadata_values(self, key, **args):
+        db = self.App.connect()
+        fobj = DBFile(db)
+        out = fobj.report_metadata_values,ranges(key)
+        return json.dumps(out), "application/json"
+
