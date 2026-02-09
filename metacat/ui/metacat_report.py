@@ -50,15 +50,15 @@ class ReportMetadata(CLICommand):
                    jval['summary'] = summary_values
             else:
                 if with_summary:
-                    print("key\t\t\tcount\tmin\t\t\tmax")
-                    print("--------\t\t-------\t---\t\t\t---")
+                    print("key\t\t\tcount\tmin\t\t\t\tmax")
+                    print("--------\t\t-------\t---\t\t\t\t---")
                 else:
                     print("key")
                     print("---")
                 #print(f"{summary_values=}")
                 for key in metacat_keys:
                     if with_summary:
-                        print(f"{key:23} {summary_values[key+'.count']:7} {summary_values[key+'.min']:23} {summary_values[key+'.max']}")
+                        print(f"{key:23} {summary_values[key+'.count']:7} {summary_values[key+'.min']:31} {summary_values[key+'.max']}")
                     else:
                         print(key)
         
