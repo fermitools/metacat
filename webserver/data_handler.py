@@ -1526,23 +1526,24 @@ class DataHandler(MetaCatHandler):
         return json.dumps(out), "application/json"
         
     @sanitized
-    def report_metadata_keys(self, **args):
+    def report_metadata_keys(self, request, replpath,  **args):
         db = self.App.connect()
         fobj = DBFile(db)
         out = fobj.report_metadata_keys()
-        return json.dumps(out), "application/json"
+        return json.dumps(list(out)), "application/json"
 
     @sanitized
-    def report_metadata_counts_ranges(self, keylist, **args):
+    def report_metadata_counts_ranges(self, request, relpath, keylist="", **args):
         db = self.App.connect()
         fobj = DBFile(db)
-        out = fobj.report_metadata_counts,ranges(keylist)
-        return json.dumps(out), "application/json"
+        keylist = keylist.split(",")
+        out = fobj.report_metadata_counts_ranges(keylist)
+        return json.dumps(dict(out)), "application/json"
 
     @sanitized
-    def report_metadata_values(self, key, **args):
+    def report_metadata_values(self, request, relpath, key=None, **args):
         db = self.App.connect()
         fobj = DBFile(db)
-        out = fobj.report_metadata_values,ranges(key)
+        out = list(fobj.report_metadata_values(key))
         return json.dumps(out), "application/json"
 

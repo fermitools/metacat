@@ -199,7 +199,7 @@ def main():
         "version", VersionCommand(),
         "503", Simulate503Command(),
         "validate", ValidateMetadataCommand(),
-        "report", ReportMetadataCommand()
+        "report", ReportMetadataCommand,
     )
     try:
         cli.run(sys.argv, argv0="metacat")

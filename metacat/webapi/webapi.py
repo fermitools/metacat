@@ -1597,10 +1597,9 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         return self.get_json(url)
 
     def report_metadata_counts_ranges(self, keylist):
-        url = "data/report_metadata_counts_ranges"
-        data = dict(keylist= keylist)
-        return self.post_json(url, data)
+        url = "data/report_metadata_counts_ranges?keylist=%s" % ",".join(keylist)
+        return self.get_json(url)
 
-    def report_metadata_values(self, key):
-        url = "data/report_metadata_values?key={key}"
+    def report_metadata_values(self, key, *args, **kwargs):
+        url = f"data/report_metadata_values?key={key}"
         return self.get_json(url)

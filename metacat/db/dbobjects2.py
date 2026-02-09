@@ -963,7 +963,7 @@ class DBFile(DBObject):
                   group by key 
                   order by key;
         """, (self.Name,))
-        return fetch_generator(c)
+        return [x[0] for x in fetch_generator(c)]
 
     def report_metadata_counts_ranges(self, keylist):
         """ return 
@@ -978,15 +978,15 @@ class DBFile(DBObject):
         for key in keylist:
             colkey = key.replace(".","_")
             reskeys.extend([f"{key}.count", f"{key}.max", f"{key}.min" ])
-            csl.append(f"""     SUM(CASE WHEN metadata ? '{key}' THEN 1 ELSE 0) as {colkey}_count,
-                MAX(metadata->>{key} as {colkey}_max,
-                MIN(metadata->>{key} as {colkey}_min """
+            csl.append(f"""     SUM(CASE WHEN metadata ? '{key}' THEN 1 ELSE 0 END) as {colkey}_count,
+                MAX(metadata->>'{key}') as {colkey}_max,
+                MIN(metadata->>'{key}') as {colkey}_min """
             )
-        csj = csl.join(",\n")
+        csj = ",\n".join(csl)
         c.execute( f""" select {csj} from {table}; """ )
         tl = c.fetchone()
         res = {}
-        for i in len(reskeys):
+        for i in range(len(reskeys)):
             res[reskeys[i]] = tl[i]
         return res
 
@@ -996,7 +996,7 @@ class DBFile(DBObject):
         c.execute( f""" select distinct metadata->>'{key}' as dval 
                                from {table}
                                order by dval; """)
-        return fetch_generator(c)
+        return [x[0] for x in fetch_generator(c) if x[0]]
 
 class _DatasetParentToChild(DBManyToMany):
     
