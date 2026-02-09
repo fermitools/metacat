@@ -966,18 +966,54 @@ To include the query metadata into the search criteria, add `where` clause:
         where file.quality > 1 and file.type = "hdf5"
 
     
-    
+Metadata Reports
+----------------
+
+``MetaCat`` can give reports summarizing the metadata that is stored, with 'metacat report'
+
+.. code-block:: shell
+
+$ metacat report --list
+keys:
+-----
+core.content_status
+core.event_count
+core.file_type
+core.run_number
+ ...
+
+The --list argument returns the list of all metadata keys used in all files in the store.
+
+.. code-block:: shell
+
+$ metacat report --summary
+ keys summary:
+ ===============================================================================
+ key			count	min				max
+ --------		-------	---				---
+ core.content_status       1528 bad                             good
+ core.event_count            25 0                               1521009
+ core.file_type            1899 test                            unknown
+ core.run_number            115 1                               9
+ ...
+
+The --summary argument returns for each key used in the store, the count of files which
+used the key, and the minimum and maximum (string-ordered) value for each. 
+
+.. code-block:: shell
+
+$ metacat report --values fn.owner
+all values:
+========================================
+key		values
+---		------
+fn.owner        dtucker
+                hypotpro
+                hypotraw
+
+The --values flag can give you the list of all distinct values for a given key in the store. 
+You can request multiple keys by giving a comma-separated list to the --values parameter.
+This can be very helpful if you are planning to restrict a given key to a list of values, to
+see what values are already in use.
 
 
-
-        
-
-
-
-
-
-
- 
-
-      
-        
