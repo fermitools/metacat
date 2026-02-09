@@ -50,11 +50,13 @@ class ReportMetadata(CLICommand):
                    jval['summary'] = summary_values
             else:
                 if with_summary:
+                    print("keys summary:")
+                    print("="*79)
                     print("key\t\t\tcount\tmin\t\t\t\tmax")
                     print("--------\t\t-------\t---\t\t\t\t---")
                 else:
-                    print("key")
-                    print("---")
+                    print("keys:")
+                    print("-----")
                 #print(f"{summary_values=}")
                 for key in metacat_keys:
                     if with_summary:
@@ -62,11 +64,16 @@ class ReportMetadata(CLICommand):
                     else:
                         print(key)
         
+        if values and (list_keys or with_summary) and not json_out and not pretty:
+            # separator line between sections
+            print("")
+
         if values:
             if json_out or pretty:
                jval["values"] = {}
             else:
-               print("\nall values table:\n")
+               print("all values:")
+               print("="*40)
                print("key\t\tvalues")
                print("---\t\t------")
 
