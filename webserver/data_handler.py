@@ -1525,5 +1525,34 @@ class DataHandler(MetaCatHandler):
             out = cat.to_jsonable()
         return json.dumps(out), "application/json"
         
-        
-        
+    @sanitized
+    def report_metadata_keys(self, request, replpath,  **args):
+        db = self.App.connect()
+        user, error = self.authenticated_user()
+        if not (user and user.is_admin()): 
+            return 403, "Permission denied -- must be admin"
+        fobj = DBFile(db)
+        out = fobj.report_metadata_keys()
+        return json.dumps(list(out)), "application/json"
+
+    @sanitized
+    def report_metadata_counts_ranges(self, request, relpath, keylist="", **args):
+        db = self.App.connect()
+        user, error = self.authenticated_user()
+        if not (user and user.is_admin()): 
+            return 403, "Permission denied -- must be admin"
+        fobj = DBFile(db)
+        keylist = keylist.split(",")
+        out = fobj.report_metadata_counts_ranges(keylist)
+        return json.dumps(dict(out)), "application/json"
+
+    @sanitized
+    def report_metadata_values(self, request, relpath, key=None, **args):
+        db = self.App.connect()
+        user, error = self.authenticated_user()
+        if not (user and user.is_admin()): 
+            return 403, "Permission denied -- must be admin"
+        fobj = DBFile(db)
+        out = list(fobj.report_metadata_values(key))
+        return json.dumps(out), "application/json"
+

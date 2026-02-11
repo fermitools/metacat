@@ -482,3 +482,17 @@ def test_metacat_named_query_search(auth):
     ) as fin:
         data = fin.read()
     assert data.find(nqn) >= 0
+
+def test_metacat_report(auth):
+    with os.popen(
+        "metacat report --summary --values core.run_type", "r"
+    ) as fin:
+        data = fin.read()
+    assert data.find('core.run_type') > 0
+
+def test_metacat_report_json(auth):
+    with os.popen(
+        "metacat report --json --summary --values core.run_type", "r"
+    ) as fin:
+        data = fin.read()
+    assert data.find('core.run_type') > 0

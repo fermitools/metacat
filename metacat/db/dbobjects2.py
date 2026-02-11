@@ -953,6 +953,51 @@ class DBFile(DBObject):
         """)
         return dict(fetch_generator(c))
 
+    def report_metadata_keys(self):
+        """ return all metadata keys present in files table """
+        table = DBFile.Table
+        c = self.DB.cursor()
+        c.execute("""
+            select jsonb_object_keys(metadata) as key 
+                  from files 
+                  group by key 
+                  order by key;
+        """, (self.Name,))
+        return [x[0] for x in fetch_generator(c)]
+
+    def report_metadata_counts_ranges(self, keylist):
+        """ return 
+             * count of files having key, 
+             * max value for key
+             * min values for key 
+            for listed keys in file metadata """
+        table = DBFile.Table
+        c = self.DB.cursor()
+        csl = []      # list of column spec parts
+        reskeys = []  # list of dictionary keys for result
+        for key in keylist:
+            colkey = key.replace(".","_")
+            reskeys.extend([f"{key}.count", f"{key}.max", f"{key}.min" ])
+            csl.append(f"""     SUM(CASE WHEN metadata ? '{key}' THEN 1 ELSE 0 END) as {colkey}_count,
+                MAX(metadata->>'{key}') as {colkey}_max,
+                MIN(metadata->>'{key}') as {colkey}_min """
+            )
+        csj = ",\n".join(csl)
+        c.execute( f""" select {csj} from {table}; """ )
+        tl = c.fetchone()
+        res = {}
+        for i in range(len(reskeys)):
+            res[reskeys[i]] = tl[i]
+        return res
+
+    def report_metadata_values(self, key):
+        table = DBFile.Table
+        c = self.DB.cursor()
+        c.execute( f""" select distinct metadata->>'{key}' as dval 
+                               from {table}
+                               order by dval; """)
+        return [x[0] for x in fetch_generator(c) if x[0]]
+
 class _DatasetParentToChild(DBManyToMany):
     
     def __init__(self, db, parent):
@@ -1973,3 +2018,4 @@ class DBNamespace(DBObject):
         tup = c.fetchone()
         if not tup: return 0
         else:       return tup[0]
+

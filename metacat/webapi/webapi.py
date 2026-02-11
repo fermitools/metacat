@@ -1587,7 +1587,66 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         return self.get_json(url)
 
     def create_named_query(self, namespace, name, source, parameters=[], update=False):
+        """
+        Arguments
+        ---------
+        namepsace: str
+        name: str
+             Namespace and name to store query under
+        source:
+             Query text
+        parameters:
+             Values to substitute into query
+
+        update: bool
+             Update the exising named query
+
+        Returns
+        -------
+             JSON dump of data used to create query
+        """
         data = dict(namespace=namespace, name=name, source=source, parameters=parameters)
         url = "data/create_named_query"
         if update: url += "?update=yes"
         return self.post_json(url, data)
+
+    def report_metadata_keys(self):
+        """
+        Arguments
+        ---------
+            None
+
+        Returns
+        -------
+            JSON List of all metadata dictionary keys in database
+        """
+        url = "data/report_metadata_keys"
+        return self.get_json(url)
+
+    def report_metadata_counts_ranges(self, keylist):
+        """
+        Arguments
+        ---------
+            keylist: str
+                comma separated list of metadata keys
+
+        Returns
+        -------
+            JSON dictionary of {"key.min": value, "key.max": value, and "key.count": n } values
+            for each key in the input.
+        """
+        url = "data/report_metadata_counts_ranges?keylist=%s" % ",".join(keylist)
+        return self.get_json(url)
+
+    def report_metadata_values(self, key, *args, **kwargs):
+        """
+        Arguments
+        ---------
+            key: str
+                Metadata key
+        Returns
+        -------
+            JSON list of all distinct values for key in the various metadata dictionaries.
+        """
+        url = f"data/report_metadata_values?key={key}"
+        return self.get_json(url)

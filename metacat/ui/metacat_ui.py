@@ -9,6 +9,7 @@ from .metacat_namespace import NamespaceCLI
 from .metacat_auth import AuthCLI
 from .metacat_admin import AdminCLI
 from .metacat_query import QueryInterpreter
+from .metacat_report import ReportMetadataCommand
 from .metacat_category import CategoryCLI
 from .metacat_named_query import NamedQueriesCLI
 from metacat.util import validate_metadata
@@ -31,6 +32,7 @@ Usage:
         namespace  create, list, show
         file       declare, update, show, add
         query
+        report     
 """
 
 class MetaCatCLI(CLI):
@@ -181,7 +183,7 @@ class ValidateMetadataCommand(CLICommand):
         else:
             sys.exit(0)
 
-Commands = ["admin","auth","dataset","query","namespace","file"]
+Commands = ["admin","auth","dataset","query","namespace","file","report"]
 
 def main():
 
@@ -196,7 +198,8 @@ def main():
         "named_query", NamedQueriesCLI,
         "version", VersionCommand(),
         "503", Simulate503Command(),
-        "validate", ValidateMetadataCommand()
+        "validate", ValidateMetadataCommand(),
+        "report", ReportMetadataCommand,
     )
     try:
         cli.run(sys.argv, argv0="metacat")

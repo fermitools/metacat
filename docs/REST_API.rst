@@ -299,3 +299,46 @@ Queries
     the request will fail with an error.
 	
     
+Reports
+-------
+
+There are several sets of metadata report information that can be accessed by
+users with admin permissions:
+
+metadata keys
+~~~~~~~~~~~~~
+
+    .. code-block::
+
+    GET data/report_metadata_keys
+
+    Returns: JSON list of all metadata keys for all files
+
+
+metadata summary 
+~~~~~~~~~~~~~~~~
+
+    .. code-block::
+
+    GET data/report_metadata_counts_ranges?key1,key2,...
+
+    Returns: Json dictionary with 
+
+    .. code-block::
+
+      { 
+        key1.count: n, 
+        key1.min: val, 
+        key1.max: val, 
+        key2.count: n 
+        ... 
+      }
+
+metadata values 
+~~~~~~~~~~~~~~~
+
+    .. code-block::
+
+    GET data/report_metadata_values?key=key1
+
+    Returns JSON list of all values for key1 in the metadata dictionary
