@@ -1529,7 +1529,7 @@ class DataHandler(MetaCatHandler):
     def report_metadata_keys(self, request, replpath,  **args):
         db = self.App.connect()
         user, error = self.authenticated_user()
-        if not user.is_admin() and not ns.owned_by_user(user):
+        if not (user and user.is_admin()): 
             return 403, "Permission denied -- must be admin"
         fobj = DBFile(db)
         out = fobj.report_metadata_keys()
@@ -1539,7 +1539,7 @@ class DataHandler(MetaCatHandler):
     def report_metadata_counts_ranges(self, request, relpath, keylist="", **args):
         db = self.App.connect()
         user, error = self.authenticated_user()
-        if not user.is_admin() and not ns.owned_by_user(user):
+        if not (user and user.is_admin()): 
             return 403, "Permission denied -- must be admin"
         fobj = DBFile(db)
         keylist = keylist.split(",")
@@ -1550,7 +1550,7 @@ class DataHandler(MetaCatHandler):
     def report_metadata_values(self, request, relpath, key=None, **args):
         db = self.App.connect()
         user, error = self.authenticated_user()
-        if not user.is_admin() and not ns.owned_by_user(user):
+        if not (user and user.is_admin()): 
             return 403, "Permission denied -- must be admin"
         fobj = DBFile(db)
         out = list(fobj.report_metadata_values(key))

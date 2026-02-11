@@ -969,7 +969,7 @@ To include the query metadata into the search criteria, add `where` clause:
 Metadata Reports
 ----------------
 
-``MetaCat`` can give reports summarizing the metadata that is stored, with 'metacat report'
+``MetaCat`` can give users in the admin group reports summarizing the metadata that is stored, with 'metacat report'.  These reports are restricted to admins because they are very expensive database queries.
 
 .. code-block:: shell
 

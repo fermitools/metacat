@@ -302,6 +302,9 @@ Queries
 Reports
 -------
 
+There are several sets of metadata report information that can be accessed by
+users with admin permissions:
+
 metadata keys
 ~~~~~~~~~~~~~
 
