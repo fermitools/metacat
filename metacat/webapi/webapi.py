@@ -1634,9 +1634,10 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         -------
             JSON dictionary 3 values for each category and key in the input.
 
-            .. code-block:: python
+        .. code-block:: python
 
-                { "cat.key.min": value, "cat.key.max": value, "cat.key.count": n, ...  } 
+            { "cat.key.min": value, "cat.key.max": value, "cat.key.count": n, ...  } 
+
         """
         url = "data/report_metadata_counts_ranges?keylist=%s" % ",".join(keylist)
         return self.get_json(url)
