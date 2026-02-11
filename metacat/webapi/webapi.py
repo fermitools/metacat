@@ -1636,12 +1636,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
 
             .. code-block:: python
 
-                {
-                    "cat.key.min": value,
-                    "cat.key.max": value, 
-                    "cat.key.count": n,
-                    ...
-                } 
+                { "cat.key.min": value, "cat.key.max": value, "cat.key.count": n, ...  } 
         """
         url = "data/report_metadata_counts_ranges?keylist=%s" % ",".join(keylist)
         return self.get_json(url)
