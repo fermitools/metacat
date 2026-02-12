@@ -1,3 +1,4 @@
+-- Change experiment_web to the proper web account before running.
 
 create table users
 (
@@ -175,6 +176,12 @@ create table parameter_categories
     definitions         jsonb
 );
 
+grant select, insert, update, delete, truncate, references, trigger on all tables in schema metacat to dm_admin;
+grant select, insert, update, delete, truncate, references, trigger on all views in schema metacat to dm_admin;
+grant select, update on all sequences in schema metacat to dm_admin;    
 
+grant select, insert, update, delete, truncate, references, trigger on all tables in schema metacat to experiment_web;
+grant select, insert, update, delete, truncate, references, trigger on all views in schema metacat to experiment_web;
+grant select, update on all sequences in schema metacat to experiment_web;
 
 
