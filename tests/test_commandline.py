@@ -189,6 +189,12 @@ def test_metacat_query_mql(auth, tst_file_md_list, tst_ds):
     for md in tst_file_md_list[:-1]:
         assert data.find(md["name"]) >= 0
 
+def test_metacat_query_mql_checksums(auth, tst_file_md_list, tst_ds):
+    with os.popen(f"metacat query \"files from {tst_ds} where checksums != '{{}}'\"", "r") as fin:
+        data = fin.read()
+    for md in tst_file_md_list[:-1]:
+        assert data.find(md["name"]) >= 0
+
 def test_metacat_query_mql_count(auth, tst_file_md_list, tst_ds):
     with os.popen(f"metacat query --summary count files from {tst_ds}", "r") as fin:
         data = fin.read()
