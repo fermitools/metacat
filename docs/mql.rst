@@ -123,6 +123,7 @@ The following are file attributes which can be used in a file query:
      * id
      * namespace
      * name
+     * checksums
      * creator
      * updated_by
      * created_timestamp
