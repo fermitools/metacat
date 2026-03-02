@@ -222,7 +222,7 @@ class GUIHandler(MetaCatHandler):
     def index(self, request, relpath, error=None, message=None, **args):
         me, auth_error = self.authenticated_user()
         if not me:
-            self.redirect(self.scriptUri() + "/auth/login?redirect=" + self.scriptUri() + "/app/gui/datasets")
+            self.redirect(self.scriptUri() + "/auth/login?redirect=" + self.scriptUri() + "/gui/datasets")
         url = "./datasets"
         if error or message:
             messages = []
