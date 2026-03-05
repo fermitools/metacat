@@ -94,8 +94,8 @@ class WhoAmICommand(CLICommand):
             print ("Expires:", time.ctime(expiration))
         
 def get_x509_cert_key(opts):
-    cert = opts.get("-c") or os.environ.get("X509_USER_PROXY") or os.environ.get("X509_USER_CERT")
-    key = opts.get("-k") or os.environ.get("X509_USER_KEY") or cert
+    cert = opts.get("-c") or opts.get("--cert") or os.environ.get("X509_USER_PROXY") or os.environ.get("X509_USER_CERT")
+    key = opts.get("-k") or opts.get("--key") or os.environ.get("X509_USER_KEY") or cert
     if not cert:
         print("X.509 certificate file is unspecified.\n")
         print("  Use -c <cert file> or set env. variable X509_USER_PROXY or X509_USER_CERT")
@@ -140,7 +140,7 @@ class LoginCommand(CLICommand):
 
     def __call__(self, command, client, opts, args):
         username = args[0]
-        mechanism = opts.get("-m", "password")
+        mechanism = opts.get("-m", opts.get("--method", "password"))
         if mechanism == "password":
             password = getpass.getpass("Password:")
             user, expiration = client.login_password(username, password)
