@@ -49,6 +49,13 @@ def test_metacat_version_(auth):
 #        assert(data.find("Expires") >= 0)
 
 
+def test_metacat_auth_login_long_token(auth, token):
+    with os.popen(f"metacat auth login --method token {os.environ['USER']}", "r") as fin:
+        data = fin.read()
+        assert data.find(os.environ["USER"]) > 0
+        assert data.find("User") >= 0
+        assert data.find("Expires") >= 0
+
 def test_metacat_auth_login_token(auth, token):
     with os.popen(f"metacat auth login -m token {os.environ['USER']}", "r") as fin:
         data = fin.read()
