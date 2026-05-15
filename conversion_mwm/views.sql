@@ -38,7 +38,7 @@ create view meta_users_roles as
    and working_groups.work_grp_id = persons_working_groups.work_grp_id;
       
 
--- still needs application info,  runs(?) ...
+-- metacat files table view
 create view meta_files as
   select 
     data_files.file_id as id,
@@ -69,6 +69,9 @@ create view meta_files as
           and param_types.param_type_id = num_data_files_param_values.param_type_id
           and param_categories.param_category_id = param_types.param_category_id
     union (select  'core.process_id'::text , to_jsonb(data_files.process_id ))
+    union (select  'core.application.family'::text , to_jsonb(application_families.family ))
+    union (select  'core.application.version'::text , to_jsonb(application_families.version))
+    union (select  'core.application.name'::text , to_jsonb(application_families.appl_name))
     union (select  'core.first_event_number'::text , to_jsonb(data_files.first_event_number ))
     union (select  'core.last_event_number'::text , to_jsonb(data_files.last_event_number ))
     union (select  'core.event_count'::text , to_jsonb(data_files.event_count ))
@@ -82,6 +85,18 @@ create view meta_files as
     union (select  'core.data_tier'::text , to_jsonb(data_tiers.data_tier))
     union (select  'core.retired_date'::text , to_jsonb(data_files.retired_date ))
     union (select  'core.scope'::text , to_jsonb(scope))
+    union (select  'core.runs'::text , (
+       select jsonb_agg(to_jsonb(run_number))
+         from  data_files_runs, runs
+        where  data_files_runs.file_id = data_files.file_id
+          and  data_files_runs.run_id = runs.run_id
+     ))
+    union (select  'core.runs_subruns'::text , (
+       select jsonb_agg(to_jsonb(run_number * 100000 + subrun_number))
+         from  data_files_runs, runs
+        where  data_files_runs.file_id = data_files.file_id
+          and  data_files_runs.run_id = runs.run_id
+     ))
     ) as meta_inner) as metadata,
     cpersons.username as creator,
     data_files.file_size_in_bytes as size,
@@ -105,9 +120,11 @@ create view meta_files as
     file_formats,
     persons as cpersons, 
     persons as upersons,
-    file_types
+    file_types,
+    application_families
  where 
       cpersons.person_id = data_files.create_user_id
+  and application_families.appl_family_id = data_files.appl_family_id
   and upersons.person_id = data_files.update_user_id
   and file_types.file_type_id = data_files.file_type_id
   and data_tiers.data_tier_id = data_files.data_tier_id
