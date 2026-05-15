@@ -11,4 +11,4 @@ This is my attempt at a different migration approach, to wit:
 The view queries are a bit hair-raising looking (especially the metadata generation)
 but seem to acutall work okay (in samdev, at least).
 
-Have so far done users, groups, and (mostly)files as far as views.
+Have so far done users, roles, and (mostly)files as far as views.
