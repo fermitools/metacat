@@ -12,3 +12,12 @@ The view queries are a bit hair-raising looking (especially the metadata generat
 but seem to acutall work okay (in samdev, at least).
 
 Have so far done users, roles, and (mostly)files as far as views.
+
+migration then goes like:
+
+psql_samdev < create_views.sql
+for table in users roles namespaces files
+do
+    psql_samdev --csv -c "copy (select * from meta_${table}) TO stdout;" | 
+       psql -c "copy ${table} from stdin"  
+done

@@ -5,6 +5,7 @@ create view meta_users as
     max(username) as username, 
     max(first_name||' '||last_name) as name, 
     max(email_address) as email, 
+    '' as flags,
     json_build_object('x509', json_agg(grid_subject)) as auth_info, 
     max(regexp_replace(
           case 
@@ -21,9 +22,18 @@ create view meta_users as
 create view meta_roles as 
   select 
     work_grp_name as name, 
-    '' as parent_role, 
-    '' as description
+    null as parent_role, 
+    null as description
   from working_groups;
+
+create view meta_namespaces as
+   select 'default' as name,
+          'default namespace for migraton' as description,
+          null as owner_user,
+          'admin_role' as owner_role,
+          'mengel' as creator,
+          now() as created_timestamp,
+          0 as file_count;
 
 create view meta_users_roles as
   select 
@@ -113,7 +123,7 @@ create view meta_files as
     data_files.update_date as updated_timestamp,
     retired_date is not null as retired,
     retired_date as retired_timestamp,
-    '' as retired_by
+    null as retired_by
   from 
     data_files, 
     data_tiers,
