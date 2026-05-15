@@ -29,13 +29,16 @@ create view meta_users_roles as
   select 
     persons.username as username,
     working_groups.work_grp_name as role_name
-  from persons, persons_working_groups, working_groups 
+  from 
+    persons, 
+    persons_working_groups, 
+    working_groups 
   where
        persons.person_id = persons_working_groups.person_id 
    and working_groups.work_grp_id = persons_working_groups.work_grp_id;
       
 
--- still needs application info, checksums, runs(?), file_types, file_formats...
+-- still needs application info,  runs(?) ...
 create view meta_files as
   select 
     data_files.file_id as id,
@@ -74,15 +77,22 @@ create view meta_files as
     union (select  'core.file_partition'::text , to_jsonb(data_files.file_partition ))
     union (select  'core.file_content_status_id'::text , to_jsonb(data_files.file_content_status_id ))
     union (select  'core.responsible_working_group_id'::text , to_jsonb(data_files.responsible_working_group_id ))
-    union (select  'core.file_type_id'::text , to_jsonb(data_files.file_type_id ))
-    union (select  'core.file_format_id'::text , to_jsonb(data_files.file_format_id ))
-    union (select  'core.data_tier_id'::text , to_jsonb(data_files.data_tier_id ))
+    union (select  'core.file_type'::text , to_jsonb(file_types.file_type_desc ))
+    union (select  'core.file_format'::text , to_jsonb(file_formats.file_format ))
+    union (select  'core.data_tier'::text , to_jsonb(data_tiers.data_tier))
     union (select  'core.retired_date'::text , to_jsonb(data_files.retired_date ))
     union (select  'core.scope'::text , to_jsonb(scope))
     ) as meta_inner) as metadata,
     cpersons.username as creator,
     data_files.file_size_in_bytes as size,
-    '{}'::jsonb as checksums,
+    (select jsonb_object_agg(checksum_inner.key, checksum_inner.value) from
+       (select
+          checksum_name as key, checksum_value as value
+        from checksums, checksum_types
+        where 
+             checksums.file_id = data_files.file_id
+         and checksum_types.checksum_type_id = checksums.checksum_type_id
+       ) as checksum_inner) as checksums,
     data_files.create_date as created_timestamp,
     upersons.username as updated_by,
     data_files.update_date as updated_timestamp,
@@ -91,9 +101,15 @@ create view meta_files as
     '' as retired_by
   from 
     data_files, 
+    data_tiers,
+    file_formats,
     persons as cpersons, 
-    persons as upersons
+    persons as upersons,
+    file_types
  where 
       cpersons.person_id = data_files.create_user_id
-  and upersons.person_id = data_files.update_user_id;
+  and upersons.person_id = data_files.update_user_id
+  and file_types.file_type_id = data_files.file_type_id
+  and data_tiers.data_tier_id = data_files.data_tier_id
+  and file_formats.file_format_id = data_files.file_format_id;
 
