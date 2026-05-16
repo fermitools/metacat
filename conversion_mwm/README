@@ -1,7 +1,7 @@
 
 This is my attempt at a different migration approach, to wit:
 
-* Make views for a SAM database that directly generate the desired MetaCat and
+* Make views on a SAM database that directly generate the desired MetaCat and
   DataDispatcher table data
 * Have 2 psql clients running, one dumping the SAM database with those views and
   piped into one loading the generated data into the Metacat /  DataDispatcher
@@ -15,9 +15,11 @@ Have so far done users, roles, and (mostly)files as far as views.
 
 migration then goes like:
 
-psql_samdev < create_views.sql
+```
+psql_sam < views.sql
 for table in users roles namespaces files
 do
-    psql_samdev --csv -c "copy (select * from meta_${table}) TO stdout;" | 
-       psql -c "copy ${table} from stdin"  
+    psql_sam --csv -c "copy (select * from meta_${table}) TO stdout;" | 
+       psql_meta -c "copy ${table} from stdin"  
 done
+```
