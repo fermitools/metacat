@@ -19,7 +19,7 @@ migration then goes like:
 psql_sam < views.sql
 for table in users roles namespaces files
 do
-    psql_sam --csv -c "copy (select * from meta_${table}) TO stdout;" | 
+    psql_sam  -c "copy (select * from meta_${table}) TO stdout;" | 
        psql_meta -c "copy ${table} from stdin"  
 done
 ```
