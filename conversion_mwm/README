@@ -9,7 +9,7 @@ This is my attempt at a different migration approach, to wit:
 * Will of course have to generate the tables in dependency order
 
 The view queries are a bit hair-raising looking (especially the metadata generation)
-but seem to acutall work okay (in samdev, at least).
+but seem to actually work okay (in samdev, at least).
 
 Have so far done users, roles, and (mostly)files as far as views.
 
