@@ -140,3 +140,9 @@ create view meta_files as
   and data_tiers.data_tier_id = data_files.data_tier_id
   and file_formats.file_format_id = data_files.file_format_id;
 
+create view meta_parent_child as
+  select 
+    file_lineages.file_id_source as parent_id, 
+    file_lineages.file_id_dest as child_id
+  from
+    file_lineages;

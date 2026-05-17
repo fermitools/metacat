@@ -17,7 +17,7 @@ migration then goes like:
 
 ```
 psql_sam < views.sql
-for table in users roles namespaces files
+for table in users roles namespaces files parent_child
 do
     psql_sam  -c "copy (select * from meta_${table}) TO stdout;" | 
        psql_meta -c "copy ${table} from stdin"  
