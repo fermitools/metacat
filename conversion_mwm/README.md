@@ -11,7 +11,7 @@ This is my attempt at a different migration approach, to wit:
 The view queries are a bit hair-raising looking (especially the metadata generation)
 but seem to actually work okay (in samdev, at least).
 
-Have so far done users, roles, and (mostly)files as far as views.
+Have so far done users, roles, files and parent_child as far as views.
 
 migration then goes like:
 
