@@ -93,6 +93,7 @@ create view meta_files as
     union (select  'core.file_type'::text , to_jsonb(file_types.file_type_desc ))
     union (select  'core.file_format'::text , to_jsonb(file_formats.file_format ))
     union (select  'core.data_tier'::text , to_jsonb(data_tiers.data_tier))
+    union (select  'core.data_stream'::text , to_jsonb(data_streams.data_stream))
     union (select  'core.retired_date'::text , to_jsonb(data_files.retired_date ))
     union (select  'core.scope'::text , to_jsonb(scope))
     union (select  'core.runs'::text , (
@@ -127,6 +128,7 @@ create view meta_files as
   from 
     data_files, 
     data_tiers,
+    data_streams,
     file_formats,
     persons as cpersons, 
     persons as upersons,
@@ -138,6 +140,7 @@ create view meta_files as
   and upersons.person_id = data_files.update_user_id
   and file_types.file_type_id = data_files.file_type_id
   and data_tiers.data_tier_id = data_files.data_tier_id
+  and data_streams.data_stream_id = data_streams.data_stream_id
   and file_formats.file_format_id = data_files.file_format_id;
 
 create view meta_parent_child as
