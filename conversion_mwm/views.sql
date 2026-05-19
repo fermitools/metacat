@@ -59,7 +59,11 @@ create view meta_files as
     data_files.file_id as id,
     'default' as namespace,
     data_files.file_name as name,
+    -- Roll up "name value" rows into a metadata dictionary:
     (select jsonb_object_agg(meta_inner.key, meta_inner.value) from
+    -- Union together a bunch of queries to to get name value rows
+    --  that make our metadata
+    --  first string parameters...
        (select
          param_categories.param_category||'.'|| param_types.param_type as key,
          to_jsonb(param_values.param_value) as value
@@ -73,8 +77,9 @@ create view meta_files as
         and data_files_param_values.param_value_id = param_values.param_value_id
         and param_types.param_type_id = data_files_param_values.param_type_id
         and param_categories.param_category_id = param_types.param_category_id
+    --  then numeric parameters...
     union
-        select
+       select
            param_categories.param_category||'.'|| param_types.param_type as key,
            to_jsonb(num_data_files_param_values.param_value) as value
          from num_data_files_param_values,
@@ -83,6 +88,7 @@ create view meta_files as
               num_data_files_param_values.file_id = data_files.file_id
           and param_types.param_type_id = num_data_files_param_values.param_type_id
           and param_categories.param_category_id = param_types.param_category_id
+    --  then a bunch of single name value pairs
     union (select  'core.process_id'::text , to_jsonb(data_files.process_id ))
     union (select  'core.application.family'::text , to_jsonb(application_families.family ))
     union (select  'core.application.version'::text , to_jsonb(application_families.version))
@@ -101,12 +107,14 @@ create view meta_files as
     union (select  'core.data_stream'::text , to_jsonb(datastreams.datastream_name))
     union (select  'core.retired_date'::text , to_jsonb(data_files.retired_date ))
     union (select  'core.scope'::text , to_jsonb(scope))
+    -- then run numbers smushed into a list
     union (select  'core.runs'::text , (
        select jsonb_agg(to_jsonb(run_number))
          from  data_files_runs, runs
         where  data_files_runs.file_id = data_files.file_id
           and  data_files_runs.run_id = runs.run_id
      ))
+    -- then and runs-subruns numbers smushed into a list
     union (select  'core.runs_subruns'::text , (
        select jsonb_agg(to_jsonb(run_number * 100000 + subrun_number))
          from  data_files_runs, runs
@@ -116,6 +124,7 @@ create view meta_files as
     ) as meta_inner) as metadata,
     cpersons.username as creator,
     data_files.file_size_in_bytes as size,
+    -- smush checksums together into a jason dict
     (select jsonb_object_agg(checksum_inner.key, checksum_inner.value) from
        (select
           checksum_name as key, checksum_value as value

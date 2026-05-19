@@ -41,11 +41,11 @@ while(<>) {
     }
 
     if ( m/^[^-]* snapshot_id / ) {
-        s/(.*) snapshot_id ([0-9]+) (.*)/ files from default:snapshot_$2 where $1 $3 /;
+        s/(.*) snapshot_id[ =]*([0-9]+) (.*)/ files from default:snapshot_$2 where $1 $3 /;
     }
     if ( m/ - .* snapshot_id / ) {
         print(" - snapshot_id case");
-        s/(.*) - (.*) snapshot_id ([0-9]+) (.*)/ $1 - files from default:snapshot_$3 where $2 $4 /;
+        s/(.*) - (.*) snapshot_id[=]*([0-9]+) (.*)/ $1 - files from default:snapshot_$3 where $2 $4 /;
     }
 
     if ( m/^ *defname:/) {
@@ -70,9 +70,12 @@ while(<>) {
         s/and +and/and/g;
         s/where *\)/)/;
     }
+    # clean up goofiness that ensues...
     s/ files where parents / parents /g;
     s/ files where children / children /g;
     s/ where and / where /g;
     s/ where or / where /g;
+    s/ files +where +files +from / files from /g;
+    s/ where +$//;
     print;
 }
