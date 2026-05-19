@@ -20,14 +20,14 @@ while(<>) {
 
     # fix name value to name = value  
     # 6 and greater chars
-    s/( [a-zA-Z_.]{4,}) +([a-zA-Z][a-zA-Z0-9_.-]{6,}) / $1 = $2 /g; 
+    s/( [a-zA-Z_.]{4,}) +([a-zA-Z0-9_.-]{6,}) / $1 = $2 /g; 
     # 5 chars but not "w(here)" nor "l(imit)"
-    s/( [a-zA-Z_.]{4,}) +([a-km-vx-zA-Z][a-zA-Z0-9_.-]{5}) / $1 = $2 /g; 
+    s/( [a-zA-Z_.]{4,}) +([a-km-vx-zA-Z][a-zA-Z0-9_.-]{4}) / $1 = $2 /g; 
     # 4 chars
     s/( [a-zA-Z_.]{4,}) +([a-zA-Z0-9_.-]{4}) / $1 = $2 /g; 
-    # 3 chars but no and
+    # 3 chars but not 'and'
     s/( [a-zA-Z_.]{4,}) +([b-zA-Z][a-zA-Z0-9_.-]{2}) / $1 = $2 /g; 
-    # 2 chars but not in nor or
+    # 2 chars but neither 'in' nor 'or'
     s/( [a-zA-Z_.]{4,}) +([a-hj-np-zA-Z][a-zA-Z0-9_.-]) / $1 = $2 /g; 
     s/( [a-zA-Z_.]{4,}) +('[^']*') / $1 = $2 /g; 
     s/( [a-zA-Z_.]{4,}) +([0-9.]+ )/ $1 = $2 /g;
@@ -58,6 +58,8 @@ while(<>) {
         s/(.*) - (.*) snapshot_id[=]*([0-9]+) (.*)/ $1 - files from default:snapshot_$3 where $2 $4 /;
     }
 
+
+   
     if ( m/^ *defname:/) {
         s/ *defname: *([^ ]*) (.*)/ files selected by $1 where $2/;
     } elsif ( m/ and +defname:/) {
@@ -73,6 +75,15 @@ while(<>) {
         s/and +and/and/g;
         s/where *\)/)/;
     }
+    if (m/(.*) full_path +(=|like) +([^ ]*) (.*) full_path +(=|like) +([^ ]*) (.*)/) {
+        $comp = $2;
+        $comp =~ s/like/~/;
+        $comp2 = $5;
+        $comp =~ s/like/~/;
+        $_ = "filter rucio_replicas() ( $1 $4 $7 ) where rucio.lfn $comp $3 and rucio.lfn $comp $6";
+        s/and +and/and/g;
+        s/where *\)/)/;
+    }
     if (m/(.*) full_path +(=|like) +([^ ]*) (.*)/) {
         $comp = $2;
         $comp =~ s/like/~/;
@@ -80,12 +91,22 @@ while(<>) {
         s/and +and/and/g;
         s/where *\)/)/;
     }
+    if ( m/(.*) files where (.*) snapshot_for_project_name *= *([^ ]+) (.*)/ ) {
+        $_ = "$1 files from sam_projects:$3 where $2 $4";
+    }
+    s/ full_path / rucio.lfn /g;
     # clean up goofiness that ensues...
-    s/ files where parents / parents /g;
-    s/ files where children / children /g;
-    s/ where and / where /g;
-    s/ where or / where /g;
+    s/ limit +=/ limit /g;
+    s/ offset +=/ offset /g;
+    s/ files +where +parents / parents /g;
+    s/ files +where +children / children /g;
+    s/ where +and / where /g;
+    s/ where +or / where /g;
     s/ files +where +files +from / files from /g;
     s/ where +$//;
+    s/ where +=/ where /;
+    # combine multiple dataset refs
+    s/ files from ([^ ]*) files from ([^ ]*) / files from $1,$2 /g;
+    s/ files from ([^ ]*) files from ([^ ]*) / files from $1,$2 /g;
     print;
 }
