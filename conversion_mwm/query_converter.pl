@@ -13,19 +13,29 @@ while(<>) {
 
     s/with +limit/limit/g;
 
+    s/ like / ~ /g;
+
     # in foo, bar, baz -> in (foo, bar, baz)
     s/ in +([a-zA-Z0-9_.-]+ *(, *[a-zA-Z0-9_.-]+)*)/ in ($1) /g;
 
     # fix name value to name = value  
+    # 6 and greater chars
     s/( [a-zA-Z_.]{4,}) +([a-zA-Z][a-zA-Z0-9_.-]{6,}) / $1 = $2 /g; 
-    s/( [a-zA-Z_.]{4,}) +([a-vx-zA-Z][a-zA-Z0-9_.-][a-zA-Z0-9_.-][a-zA-Z0-9_.-][a-zA-Z0-9_.-]) / $1 = $2 /g; 
-    s/( [a-zA-Z_.]{4,}) +([a-zA-Z0-9_.-][a-zA-Z0-9_.-][a-zA-Z0-9_.-][a-zA-Z0-9_.-]) / $1 = $2 /g; 
-    s/( [a-zA-Z_.]{4,}) +([b-zA-Z][a-zA-Z0-9_.-][a-zA-Z0-9_.-]) / $1 = $2 /g; 
+    # 5 chars but not "w(here)" nor "l(imit)"
+    s/( [a-zA-Z_.]{4,}) +([a-km-vx-zA-Z][a-zA-Z0-9_.-]{5}) / $1 = $2 /g; 
+    # 4 chars
+    s/( [a-zA-Z_.]{4,}) +([a-zA-Z0-9_.-]{4}) / $1 = $2 /g; 
+    # 3 chars but no and
+    s/( [a-zA-Z_.]{4,}) +([b-zA-Z][a-zA-Z0-9_.-]{2}) / $1 = $2 /g; 
+    # 2 chars but not in nor or
     s/( [a-zA-Z_.]{4,}) +([a-hj-np-zA-Z][a-zA-Z0-9_.-]) / $1 = $2 /g; 
     s/( [a-zA-Z_.]{4,}) +('[^']*') / $1 = $2 /g; 
     s/( [a-zA-Z_.]{4,}) +([0-9.]+ )/ $1 = $2 /g;
 
-    s/and not isparentof: *\(/ - parents ( files where/g;
+    s/and not *isparentof: *\(/ - parents ( files where/g;
+    s/and not *\( *isparentof: *\(/ - (parents ( files where/g;
+    s/and not *ischildof: *\(/ - children ( files where/g;
+    s/and not *\( *ischildof: *\(/ - (childs ( files where/g;
     s/and not ischildof: *\(/ - children ( files where/g;
     s/ischildof: *\(/children ( files where/g;
     s/isparentof: *\(/parents ( files where/g;

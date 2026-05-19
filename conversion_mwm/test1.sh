@@ -6,7 +6,7 @@ get_recent() {
    for exp in nova mu2e dune
    do
        echo "Getting recent defs for $exp..."
-       htgettoken -i $exp -a htvaultprod.fnal.gov
+       htgettoken -i ${exp} -a htvaultprod.fnal.gov
 
        samweb -e $exp list-definitions --after=2023-01-01T00:00:00 | 
           head -100 | 
@@ -25,7 +25,7 @@ then
     get_recent
 fi
 
-htgettoken -i $exp -a htvaultprod.fnal.gov
+htgettoken -i hypot -a htvaultprod.fnal.gov
 metacat auth login -mtoken $USER
 
 ./query_converter.pl *_definitions.txt |  (

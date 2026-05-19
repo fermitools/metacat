@@ -99,8 +99,8 @@ create view meta_files as
     union (select  'core.end_time'::text , to_jsonb(data_files.end_time ))
     union (select  'core.start_time'::text , to_jsonb(data_files.start_time ))
     union (select  'core.file_partition'::text , to_jsonb(data_files.file_partition ))
-    union (select  'core.file_content_status_id'::text , to_jsonb(data_files.file_content_status_id ))
-    union (select  'core.responsible_working_group_id'::text , to_jsonb(data_files.responsible_working_group_id ))
+    union (select  'core.file_content_status'::text , to_jsonb(file_content_statuses.file_content_status ))
+    union (select  'core.responsible_working_group'::text , to_jsonb(working_groups.work_grp_name))
     union (select  'core.file_type'::text , to_jsonb(file_types.file_type_desc ))
     union (select  'core.file_format'::text , to_jsonb(file_formats.file_format ))
     union (select  'core.data_tier'::text , to_jsonb(data_tiers.data_tier))
@@ -159,6 +159,12 @@ create view meta_files as
   left outer join
     file_types on
       file_types.file_type_id = data_files.file_type_id
+  left outer join
+    working_groups on
+      data_files.responsible_working_group_id = working_groups.work_grp_id
+  left outer join
+    file_content_statuses on
+      file_content_statuses.file_content_status_id = data_files.file_content_status_id 
   left outer join
     application_families on
       application_families.appl_family_id = data_files.appl_family_id;
