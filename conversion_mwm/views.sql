@@ -1,5 +1,6 @@
 
 -- views to build in SAM database to generate the Metacat table data
+drop view if exists meta_users;
 create view meta_users as 
   select 
     max(username) as username, 
@@ -19,6 +20,7 @@ create view meta_users as
   where persons.person_id = grid_subjects.person_id 
   group by grid_subjects.person_id;
 
+drop view if exists meta_roles;
 create view meta_roles as 
   select 
     work_grp_name as name, 
@@ -26,6 +28,7 @@ create view meta_roles as
     null as description
   from working_groups;
 
+drop view if exists meta_namespaces;
 create view meta_namespaces as
    select 'default' as name,
           'default namespace for migraton' as description,
@@ -35,6 +38,7 @@ create view meta_namespaces as
           now() as created_timestamp,
           0 as file_count;
 
+drop view if exists meta_users_roles;
 create view meta_users_roles as
   select 
     persons.username as username,
@@ -49,6 +53,7 @@ create view meta_users_roles as
       
 
 -- metacat files table view
+drop view if exists meta_files;
 create view meta_files as
   select 
     data_files.file_id as id,
@@ -93,7 +98,7 @@ create view meta_files as
     union (select  'core.file_type'::text , to_jsonb(file_types.file_type_desc ))
     union (select  'core.file_format'::text , to_jsonb(file_formats.file_format ))
     union (select  'core.data_tier'::text , to_jsonb(data_tiers.data_tier))
-    union (select  'core.data_stream'::text , to_jsonb(data_streams.data_stream))
+    union (select  'core.data_stream'::text , to_jsonb(datastreams.datastream_name))
     union (select  'core.retired_date'::text , to_jsonb(data_files.retired_date ))
     union (select  'core.scope'::text , to_jsonb(scope))
     union (select  'core.runs'::text , (
@@ -126,23 +131,30 @@ create view meta_files as
     retired_date as retired_timestamp,
     null as retired_by
   from 
-    data_files, 
-    data_tiers,
-    data_streams,
-    file_formats,
-    persons as cpersons, 
-    persons as upersons,
-    file_types,
-    application_families
- where 
+    data_files 
+  left outer join
+    data_tiers on
+      data_tiers.data_tier_id = data_files.data_tier_id
+  left outer join
+    datastreams on
+      datastreams.stream_id = data_files.stream_id
+  left outer join
+    file_formats on
+      file_formats.file_format_id = data_files.file_format_id
+  left outer join
+    persons as cpersons on
       cpersons.person_id = data_files.create_user_id
-  and application_families.appl_family_id = data_files.appl_family_id
-  and upersons.person_id = data_files.update_user_id
-  and file_types.file_type_id = data_files.file_type_id
-  and data_tiers.data_tier_id = data_files.data_tier_id
-  and data_streams.data_stream_id = data_streams.data_stream_id
-  and file_formats.file_format_id = data_files.file_format_id;
+  left outer join
+    persons as upersons on
+      upersons.person_id = data_files.update_user_id
+  left outer join
+    file_types on
+      file_types.file_type_id = data_files.file_type_id
+  left outer join
+    application_families on
+      application_families.appl_family_id = data_files.appl_family_id;
 
+drop view if exists meta_parent_child;
 create view meta_parent_child as
   select 
     file_lineages.file_id_source as parent_id, 
