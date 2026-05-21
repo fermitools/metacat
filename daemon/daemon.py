@@ -110,7 +110,7 @@ class MetaCatDaemon(Logged):
             print("\nFerry error:")
             for line in data["ferry_error"]:
                 print(line)
-            exit(1)
+            raise ValueError(f"Ferry error: {data['ferry_error']}")
 
         ferry_users = {item["username"]: item for item in data["ferry_output"][self.VO]}
         self.log("Loaded", len(ferry_users), "users from Ferry")

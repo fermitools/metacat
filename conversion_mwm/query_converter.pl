@@ -13,8 +13,13 @@ while(<>) {
 
     s/with +limit/limit/g;
 
+    s/ like % / present /g;
+
     s/ like / ~ /g;
 
+    # MQL doesn't do "not a = "x" you have to use "a != x"...
+    s/ not ([a-zA-Z0-9_.-]+) +([~=]) +([^ ]+) / $1 !$2 $3 /g;
+    s/ not ([a-zA-Z0-9_.-]+) +present / $1 not present /g;
     # in foo, bar, baz -> in (foo, bar, baz)
     s/ in +([a-zA-Z0-9_.-]+ *(, *[a-zA-Z0-9_.-]+)*)/ in ($1) /g;
 
@@ -50,63 +55,91 @@ while(<>) {
        s/(.*) and children /union $1 children/;
     }
 
+
     if ( m/^[^-]* snapshot_id / ) {
+        s/(.*) snapshot_id[ =]*([0-9]+) (.*)/ files from default:snapshot_$2 where $1 $3 /;
+        s/(.*) snapshot_id[ =]*([0-9]+) (.*)/ files from default:snapshot_$2 where $1 $3 /;
         s/(.*) snapshot_id[ =]*([0-9]+) (.*)/ files from default:snapshot_$2 where $1 $3 /;
     }
     if ( m/ - .* snapshot_id / ) {
-        print(" - snapshot_id case");
-        s/(.*) - (.*) snapshot_id[=]*([0-9]+) (.*)/ $1 - files from default:snapshot_$3 where $2 $4 /;
+        s/(.*) - (.*) snapshot_id[ =]*([0-9]+) (.*)/ $1 - files from default:snapshot_$3 where $2 $4 /;
+        s/(.*) - (.*) snapshot_id[ =]*([0-9]+) (.*)/ $1 - files from default:snapshot_$3 where $2 $4 /;
     }
 
-
-   
-    if ( m/^ *defname:/) {
-        s/ *defname: *([^ ]*) (.*)/ files selected by $1 where $2/;
+    if (m/(.*?) (full_path +[=~] +[^ ]* (.*)full_path +[=~] +[^ ]*) (.*?)/) {
+        $comp = $2;
+        $comp2 = $5;
+        $_ = "filter rucio_replicas() ( files where $1 $3 ) where $2";
+        s/full_path/rucio.lfn/g;
+        s/and +and/and/g;
+        s/where *\)/)/;
+    } elsif (m/(.*) full_path +(=|~) +([^ ]*) (.*)/) {
+        $comp = $2;
+        $_ = "filter rucio_replicas() (files where $1 $4 ) where rucio.lfn $comp $3";
+        s/and +and/and/g;
+        s/where *\)/)/;
+    } elsif ( m/^ *defname:/) {
+        s/ *defname: *([^ ]*) (.*)/ files selected by default:$1 where $2/;
     } elsif ( m/ and +defname:/) {
-        s/(.*)and +defname: *([^ ]*) (.*)/ files selected by $2 where $1 $3/;
+        s/(.*)and +defname: *([^ ]*) (.*)/ files selected by default:$2 where $1 $3/;
     } else {
         s/^/ files where /;
     }
-    s/ where +limit / limit /;
+
+    if (m / snapshot_for_project_name[= ]*([^ ]+) / ) {
+        s/ snapshot_for_project_name[= ]*([^ ]+) / sam_projects:$1 /g;
+        s/ files where / files from /;
+    }
 
     # now special cases done with filters(?)
-    if (m/(.*) tape_label *= *([^ ]*) (.*)/) {
-        $_ = "filter tape_label() ( $1 $3 ) where tape_label = $2\n";
-        s/and +and/and/g;
+    if (m/(.*) tape_label *([=~]) *([^ ]*) (.*)/) {
+        $_ = "filter tape_label() ( $1 $4 ) where label.tape_label $2 $3\n";
         s/where *\)/)/;
     }
-    if (m/(.*) full_path +(=|like) +([^ ]*) (.*) full_path +(=|like) +([^ ]*) (.*)/) {
-        $comp = $2;
-        $comp =~ s/like/~/;
-        $comp2 = $5;
-        $comp =~ s/like/~/;
-        $_ = "filter rucio_replicas() ( $1 $4 $7 ) where rucio.lfn $comp $3 and rucio.lfn $comp $6";
-        s/and +and/and/g;
-        s/where *\)/)/;
-    }
-    if (m/(.*) full_path +(=|like) +([^ ]*) (.*)/) {
-        $comp = $2;
-        $comp =~ s/like/~/;
-        $_ = "filter rucio_replicas() ( $1 $4 ) where rucio.lfn $comp $3";
-        s/and +and/and/g;
-        s/where *\)/)/;
-    }
-    if ( m/(.*) files where (.*) snapshot_for_project_name *= *([^ ]+) (.*)/ ) {
-        $_ = "$1 files from sam_projects:$3 where $2 $4";
+    if ( m/(.*) files where (.*) dataset_def_name_newest_snapshot *= *([^ ]+) (.*)/ ) {
+        $_ = "$1 files from sam_definitions:$3 where $2 $4";
     }
     s/ full_path / rucio.lfn /g;
+
     # clean up goofiness that ensues...
+    # files from        children ( files where   sam_projects:
+    s/ sam_projects:'([^']*)' / sam_projects:$1 /g;
+    s/ files from = / files from /g;
+    s/ files +from +children / children /g;
+    s/ files +where +sam_projects:/ files from sam_projects:/;
+    s/ files +from ([^ ]*) +(where +)?files +from ([^ ]*) / files from $1,$3 /g;
+    s/ files +from ([^ ]*) +(where +)?files +from ([^ ]*) / files from $1,$3 /g;
+    s/ and +\( +not +parents / - ( parents /;
+    s/ and +\( +not +children / - ( parents /;
+    s/ \( +and / ( /g;
+    s/ \( +or / ( /g;
+    s/ and +$//;
+    s/ or +$//;
+    s/ and +and / and /g;
+    s/ and +not +and / and /g;
+    s/ or +not +or / or /g;
+    s/ or +and / or /g;
+    s/ or +or / or /g;
+    s/ and +and / and /g;
+    s/ or +and / or /g;
+    s/ or +or / or /g;
     s/ limit +=/ limit /g;
     s/ offset +=/ offset /g;
     s/ files +where +parents / parents /g;
     s/ files +where +children / children /g;
+    s/ files +where +filter / filter /g;
+    s/ files +where +files / files /g;
+    s/ where +files +where / where /g;
     s/ where +and / where /g;
     s/ where +or / where /g;
     s/ files +where +files +from / files from /g;
+    s/ where +- / - /g;
     s/ where +$//;
     s/ where +=/ where /;
     # combine multiple dataset refs
-    s/ files from ([^ ]*) files from ([^ ]*) / files from $1,$2 /g;
-    s/ files from ([^ ]*) files from ([^ ]*) / files from $1,$2 /g;
+    s/ where +limit / limit /;
+
+    # factored out a minus something? 
+    s/(.*) +- +files +where +\) (.*) where / $1 ) $2 where not /;
     print;
 }
