@@ -1,0 +1,8 @@
+
+[env]
+PGPASSFILE=/some/place/.pgpass 
+
+[psql_commands]
+sam_db = psql -h sampgdbdev.fnal.gov -p 5433 -d samdev -U samdbs 
+# meta_db = psql -h ifdb10.fnal.gov -p 5462 -d hypot_dm_dev -U hypot_web 
+meta_db = psql 

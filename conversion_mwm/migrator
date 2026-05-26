@@ -1,0 +1,23 @@
+#!/usr/bin/env perl
+
+import configparser
+import os
+import sys
+
+def migrate(cnf):
+    psql_sam = cnf.get("psql_commands", "sam_db")
+    psql_meta = cnf.get("psql_commands", "meta_db")
+
+    # create views in SAM side
+    os.system(f"{psql_sam} < views.sql")
+
+    # schlep data...
+    for table in ['users', 'roles', 'namespaces', 'files', 'parent_child']:
+
+       os.system(f'''
+           {psql_sam}  -c "copy (select * from meta_{table}) TO stdout;" |  
+              {psql_meta} -c "copy {table} from stdin" 
+       ''')
+
+if __name__ == '__main__':
+    migrate("migrate.ini")
