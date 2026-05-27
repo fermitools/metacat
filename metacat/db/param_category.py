@@ -116,6 +116,12 @@ class DBParamCategory(DBObject):
         )
         self.CreatedTimestamp = transaction.fetchone()[0]
         return self
+
+    @transactioned
+    def delete(self, transaction=None):
+        transaction.execute("""
+            delete from parameter_categories where path = %s;
+        """, (self.Path,))
     
     @staticmethod
     def from_tuple(db, tup):

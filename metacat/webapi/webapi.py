@@ -1514,7 +1514,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
                 yield item
                 
     #
-    # Categiries
+    # Categories
     #
     def list_categories(self, root=None):
         """List namespaces
@@ -1546,7 +1546,72 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         """
         out = self.get_json(f"data/category/{path}")
         return out
+
+    def create_category(self, path=None, owner_role=None, restricted=False, description=None, definitions=None):
+        """Create a category
+
+        Arguments
+        ---------
+        path: string
+        parent_path: string, optional
+        owner_role: str, optional
+            if unspecified, the new category will be owned by the user
+        restricted: bool
+        description: string
+        definitions: dict
+        Returns
+        -------
+        dict
+            created category attributes
+        """
+
+        params = {
+            "path": path,
+            "owner_role": owner_role,
+            "restricted": restricted,
+            "description": description,
+            "definitions": definitions
+        }
+        return self.post_json(f"data/create_category", params)
+
+    def remove_category(self, path):
+        """Remove a category
+
+        Arguments
+        _________
+
+        category : str
         
+        """
+        return self.get_text(f"data/remove_category/{path}")
+
+    def update_category(self, path=None, owner_role=None, restricted=None, description=None, definitions=None, mode="update"):
+        """Update a category
+
+        Arguments
+        ---------
+        path: string
+        owner_role: str, optional
+        restricted: bool, optional
+        description: string, optional
+        definitions: dict, optional
+        mode: str, optional - "update" to merge, "replace" to overwrite (default: "update")
+
+        Returns
+        -------
+        dict
+            updated category attributes
+        """
+        params = {
+            "path": path,
+            "owner_role": owner_role,
+            "restricted": restricted,
+            "description": description,
+            "definitions": definitions,
+            "mode": mode
+        }
+        return self.post_json(f"data/update_category", params)
+
     #
     # Named queries
     #

@@ -124,7 +124,7 @@ class GUICategoryHandler(MetaCatHandler):
             self.redirect(self.scriptUri() + "/auth/login?redirect=" + self.scriptUri() + "/gui/categories/index")
         rpath = request.POST["rpath"]
         if '.' in rpath and rpath != '.':
-            self.redirect("./index?error=%s" % (quote_plus("Invaid relative category path. Can not contain dot."),))
+            self.redirect("./index?error=%s" % (quote_plus("Invalid relative category path. Can not contain dot."),))
         parent_path = request.POST.get("parent_path")
         if not parent_path:
             if not me.is_admin():
@@ -731,7 +731,7 @@ class GUIHandler(MetaCatHandler):
     def namespaces(self, request, relpath, all="no", **args):
         user, auth_error = self.authenticated_user()
         if not user: 
-            self.redirect(self.scriptUri() + "/auth/login?redirect=" + self.scriptUri() + f"gui/namespaces?all={all}")
+            self.redirect(self.scriptUri() + "/auth/login?redirect=" + self.scriptUri() + f"/gui/namespaces?all={all}")
         db = self.App.connect()
         all = all == "yes"
         if all:
