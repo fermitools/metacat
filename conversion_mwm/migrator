@@ -1,0 +1,40 @@
+#!/usr/bin/env perl
+
+import configparser
+import os
+import sys
+
+class migrator:
+
+    def __init__(self, cnf):
+        self.psql_sam = cnf.get("psql_commands", "sam_db")
+        self.psql_meta = cnf.get("psql_commands", "meta_db")
+        self.ordered_tables = [
+            'users',
+            'roles',
+            'namespaces',
+            'files',
+            'parent_child'
+        ]
+
+    def schlep_table(self, table):
+       os.system(f'''
+           {self.psql_sam}  -c "copy (select * from meta_{table}) TO stdout;" | 
+              {self.psql_meta} -c "copy {table} from stdin" 
+       ''')
+
+    def migrate(self):
+
+        # create views in SAM side
+        os.system(f"{psql_sam} < views.sql")
+
+        # schlep data...
+        for table in self.ordered_tables: :
+            self.schlep_table(table)
+
+
+if __name__ == '__main__':
+    cp = configparser.ConfigParser()
+    cp.read("migrate.ini")
+    migrator(cp).migrate()
+
