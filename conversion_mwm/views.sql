@@ -1,6 +1,14 @@
 
--- views to build in SAM database to generate the Metacat table data
+-- drop these before re-adding
+drop view if exists meta_queries;
+drop view if exists meta_parent_child;
+drop view if exists meta_files;
+drop view if exists meta_users_roles;
+drop view if exists meta_namespaces;
+drop view if exists meta_roles;
 drop view if exists meta_users;
+
+-- views to build in SAM database to generate the Metacat table data
 create view meta_users as 
   select 
     max(username) as username, 
@@ -20,7 +28,6 @@ create view meta_users as
   where persons.person_id = grid_subjects.person_id 
   group by grid_subjects.person_id;
 
-drop view if exists meta_roles;
 create view meta_roles as 
   select 
     work_grp_name as name, 
@@ -28,7 +35,6 @@ create view meta_roles as
     null as description
   from working_groups;
 
-drop view if exists meta_namespaces;
 create view meta_namespaces as
    select 'default' as name,
           'default namespace for migraton' as description,
@@ -38,7 +44,6 @@ create view meta_namespaces as
           now() as created_timestamp,
           0 as file_count;
 
-drop view if exists meta_users_roles;
 create view meta_users_roles as
   select 
     persons.username as username,
@@ -53,7 +58,6 @@ create view meta_users_roles as
       
 
 -- metacat files table view
-drop view if exists meta_files;
 create view meta_files as
   select 
     data_files.file_id as id,
@@ -169,10 +173,27 @@ create view meta_files as
     application_families on
       application_families.appl_family_id = data_files.appl_family_id;
 
-drop view if exists meta_parent_child;
 create view meta_parent_child as
   select 
     file_lineages.file_id_source as parent_id, 
     file_lineages.file_id_dest as child_id
   from
     file_lineages;
+
+
+create view meta_queries as
+  select
+    'default' as namespace,
+    project_definitions.proj_def_name as name,
+    null as parameters,
+    project_definitions.query_string as source,
+    persons.username as creator,
+    project_definitions.create_date as created_timestamp,
+    project_definitions.proj_def_desc as description,
+    '{}'::jsonb as metadata
+  from
+    project_definitions
+      left outer join
+        persons on
+          persons.person_id = project_definitions.create_user_id;
+
