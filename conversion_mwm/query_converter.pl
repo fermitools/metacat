@@ -1,6 +1,10 @@
 #!/usr/bin/perl
 
 while(<>) {
+    if ( m/^$/ ) {
+       print;
+       continue;
+    }
 
     if (m/^([^,]*,){3}/) {
        $leading_csv_cols= $&;
@@ -192,5 +196,7 @@ while(<>) {
 
     s/\n//g;
 
-    print "$leading_csv_cols $_ $trailing_csv_cols\n";
+    s/"/""/g;
+
+    print "$leading_csv_cols\"$_\"$trailing_csv_cols";
 }

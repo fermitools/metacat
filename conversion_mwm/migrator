@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/python3
 
 import configparser
 import os
@@ -9,6 +9,7 @@ class migrator:
     def __init__(self, cnf):
         self.psql_sam = cnf.get("psql_commands", "sam_db")
         self.psql_meta = cnf.get("psql_commands", "meta_db")
+        os.environ.update(dict(cnf['env']))
         self.ordered_tables = [
             'users',
             'roles',
@@ -20,33 +21,38 @@ class migrator:
             'datasets_parent_child',
             'files_datasets',
         ]
-        os.environ.update(dict(cnf['env']))
 
-    def schlep_table(self, table, filter = "cat"):
+    def schlep_table(self, table, filter = "cat", format=""):
 
        os.system(f'''
-           {self.psql_sam}  -c "copy (select * from meta_{table}) TO stdout csv;" | 
+           set -x;
+           {self.psql_sam}  -c "copy (select * from meta_{table}) TO stdout {format};" | 
               {filter} |
-              {self.psql_meta} -c "copy {table} from stdin csv;" 
+              {self.psql_meta} -c "set search_path=metacat; copy {table} from stdin {format};" 
        ''')
 
     def migrate(self):
 
         # create views in SAM side
-        os.system(f"{psql_sam} < views.sql")
+        os.system(f"{self.psql_sam} < views.sql")
+        os.system(f"{self.psql_meta} < clean_slate.sql")
 
         # schlep data...
         for table in self.ordered_tables: 
 
             if table == 'queries':
                 filter = 'perl ./query_converter.pl'  
+                format = 'csv'
+            else:
+                filter = 'cat'  
+                format = ''
 
-            self.schlep_table(table)
+            self.schlep_table(table, filter=filter, format=format)
 
 
 if __name__ == '__main__':
     cp = configparser.ConfigParser()
     cp.optionxform = lambda option: option
-    cp.read("migrate.ini")
+    cp.read("migrator.ini")
     migrator(cp).migrate()
 

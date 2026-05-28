@@ -1,6 +1,5 @@
 
 -- drop these before re-adding
-drop view if exists meta_queries;
 drop view if exists meta_parent_child;
 drop view if exists meta_files;
 drop view if exists meta_users_roles;
@@ -28,9 +27,10 @@ create view meta_users as
           'token:',
           '')
          ) as auid 
-  from persons, grid_subjects 
-  where persons.person_id = grid_subjects.person_id 
-  group by grid_subjects.person_id;
+  from persons 
+    left outer join grid_subjects on
+      persons.person_id = grid_subjects.person_id 
+  group by persons.person_id;
 
 create view meta_roles as 
   select 
@@ -66,7 +66,7 @@ create view meta_files as
   select 
     data_files.file_id::text as id,
     'default' as namespace,
-    data_files.file_name as name,
+    data_files.file_name||coalesce(retired_date::text,'') as name,
     -- Roll up "name value" rows into a metadata dictionary:
     (select jsonb_object_agg(meta_inner.key, meta_inner.value) from
     -- Union together a bunch of queries to to get name value rows
@@ -190,7 +190,7 @@ create view meta_queries as
     'default' as namespace,
     project_definitions.proj_def_name as name,
     null as parameters,
-    project_definitions.query_string as source,
+    replace(project_definitions.query_string, CHR(10),' ') as source,
     persons.username as creator,
     project_definitions.create_date as created_timestamp,
     project_definitions.proj_def_desc as description,
@@ -211,6 +211,7 @@ create view meta_datasets as
       false as frozen,
       false as monotonic,
       '{}'::jsonb as metadata,
+      null as required_metadata,
       persons.username as creator,
       project_snapshots.create_date as created_timestamp,
       null as expiration,
@@ -232,6 +233,7 @@ create view meta_datasets as
       false as frozen,
       false as monotonic,
       '{}'::jsonb as metadata,
+      null as required_metadata,
       persons.username as creator,
       analysis_projects.start_time as created_timestamp,
       null as expiration,
