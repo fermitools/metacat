@@ -51,8 +51,12 @@ class migrator:
 
 
 if __name__ == '__main__':
+
     cp = configparser.ConfigParser()
+
+    # don't lowercase config entries, so env variables are right...
     cp.optionxform = lambda option: option
+
     cp.read("migrator.ini")
     migrator(cp).migrate()
 

@@ -6,20 +6,16 @@ This is my attempt at a different migration approach, to wit:
 * Have 2 psql clients running, one dumping the SAM database with those views and
   piped into one loading the generated data into the Metacat /  DataDispatcher
   databases.
-* Will of course have to generate the tables in dependency order
 
-The view queries are a bit hair-raising looking (especially the metadata generation)
+The view queries are a bit hair-raising looking (especially the file table w/metadata)
 but seem to actually work okay (in samdev, at least).
 
-Have so far done users, roles, files and parent_child as far as views.
+Now have a migrator script ("migrator") which gets psql commands for each end, etc. from
+a config file ("migrator.ini") and does the whole thing. 
 
-migration then goes like:
-
-```
-psql_sam < views.sql
-for table in users roles namespaces files parent_child
-do
-    psql_sam  -c "copy (select * from meta_${table}) TO stdout;" | 
-       psql_meta -c "copy ${table} from stdin"  
-done
-```
+NOTE:  
+                 DANGER                 DANGER 
+    Currently drops and and re-creates the destination metacat tables !!!  
+    Do not point this at a real Metacat destination with its own data!!!
+                 DANGER                 DANGER 
+    
