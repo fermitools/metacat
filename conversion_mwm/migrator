@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!python
 
 import configparser
 import os
@@ -14,8 +14,13 @@ class migrator:
             'roles',
             'namespaces',
             'files',
-            'parent_child'
+            'parent_child',
+            'queries',
+            'datasets',
+            'datasets_parent_child',
+            'files_datasets',
         ]
+        os.environ.update(dict(cnf['env']))
 
     def schlep_table(self, table, filter = "cat"):
 
@@ -41,6 +46,7 @@ class migrator:
 
 if __name__ == '__main__':
     cp = configparser.ConfigParser()
+    cp.optionxform = lambda option: option
     cp.read("migrate.ini")
     migrator(cp).migrate()
 
