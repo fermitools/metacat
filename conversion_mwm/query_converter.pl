@@ -1,6 +1,20 @@
 #!/usr/bin/perl
 
 while(<>) {
+
+    if (m/^([^,]*,){3}/) {
+       $leading_csv_cols= $&;
+       s/^([^,]*,){3}//;
+    } else {
+       $leading_csv_cols='';
+    }
+    if (m/(,[^,]*){4}$/) {
+       $trailing_csv_cols= $&;
+       s/(,[^,]*){4}$//;
+    } else {
+       $trailing_csv_cols= '';
+    }
+
     # space pad so blank matches below work at ends
     s/.*/ $& /;
     s/[()]/ $& /g;
@@ -176,8 +190,7 @@ while(<>) {
 
     s/ files +where +snapshot_for_project_name +=? *'?([^' ]*)'? / files from default:snapshot_for_project_$1 /g;
 
-    # make sure we have a newline
-    s/\n*$/\n/;
+    s/\n//g;
 
-    print;
+    print "$leading_csv_cols $_ $trailing_csv_cols\n";
 }

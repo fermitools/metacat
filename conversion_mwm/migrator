@@ -17,10 +17,12 @@ class migrator:
             'parent_child'
         ]
 
-    def schlep_table(self, table):
+    def schlep_table(self, table, filter = "cat"):
+
        os.system(f'''
-           {self.psql_sam}  -c "copy (select * from meta_{table}) TO stdout;" | 
-              {self.psql_meta} -c "copy {table} from stdin" 
+           {self.psql_sam}  -c "copy (select * from meta_{table}) TO stdout csv;" | 
+              {filter} |
+              {self.psql_meta} -c "copy {table} from stdin csv;" 
        ''')
 
     def migrate(self):
@@ -29,7 +31,11 @@ class migrator:
         os.system(f"{psql_sam} < views.sql")
 
         # schlep data...
-        for table in self.ordered_tables: :
+        for table in self.ordered_tables: 
+
+            if table == 'queries':
+                filter = 'perl ./query_converter.pl'  
+
             self.schlep_table(table)
 
 

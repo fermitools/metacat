@@ -7,6 +7,10 @@ drop view if exists meta_users_roles;
 drop view if exists meta_namespaces;
 drop view if exists meta_roles;
 drop view if exists meta_users;
+drop view if exists meta_queries;
+drop view if exists meta_datasets;
+drop view if exists meta_datasets_parent_child;
+drop view if exists meta_files_datasets;
 
 -- views to build in SAM database to generate the Metacat table data
 create view meta_users as 
@@ -60,7 +64,7 @@ create view meta_users_roles as
 -- metacat files table view
 create view meta_files as
   select 
-    data_files.file_id as id,
+    data_files.file_id::text as id,
     'default' as namespace,
     data_files.file_name as name,
     -- Roll up "name value" rows into a metadata dictionary:
@@ -197,3 +201,70 @@ create view meta_queries as
         persons on
           persons.person_id = project_definitions.create_user_id;
 
+
+-- making datasets for SAM snapshots, and parent datasets to containin those
+-- snapshots for SAM projects (snapshot_for_project_...) 
+create view meta_datasets as
+    select
+      'default' as namespace,
+      'snapshot_'||project_snapshots.proj_snap_id::text as name,
+      false as frozen,
+      false as monotonic,
+      '{}'::jsonb as metadata,
+      persons.username as creator,
+      project_snapshots.create_date as created_timestamp,
+      null as expiration,
+      project_snapshots.snapshot_name as description,
+      '{}'::jsonb as file_metadata_requirements,
+      0 as file_count,
+      project_snapshots.create_date as updated_timestamp,
+      persons.username as updated_by
+      
+    from 
+      project_snapshots
+	left outer join
+	  persons on
+	    persons.person_id = project_snapshots.person_id
+  union
+    select 
+      'default' as namespace,
+      'snapshot_for_project_'||analysis_projects.project_name as name,
+      false as frozen,
+      false as monotonic,
+      '{}'::jsonb as metadata,
+      persons.username as creator,
+      analysis_projects.start_time as created_timestamp,
+      null as expiration,
+      analysis_projects.project_desc as description,
+      '{}'::jsonb as file_metadata_requirements,
+      0 as file_count,
+      analysis_projects.start_time as updated_timestamp,
+      persons.username as updated_by
+      
+    from 
+      analysis_projects
+	left outer join
+	  persons on
+	    persons.person_id = analysis_projects.person_id;
+
+-- now make the parent-child bits for project_snapshots to their snapshots
+create view meta_datasets_parent_child as
+    select
+      'default' as parent_namespace,
+      'snapshot_for_project_'||analysis_projects.project_name as parent_name,
+      'default' as child_namespace,
+      'snapshot_'||analysis_projects.proj_snap_id::text as child_name
+    from 
+      analysis_projects;
+      
+-- and put the files in the snapshots
+create view meta_files_datasets as
+  select
+    project_files.file_id::text as file_id,
+    'default' as dataset_namespace,
+    'snapshot_'||project_snapshots.proj_snap_id::text as dataset_name
+  from
+    project_files
+      left outer join
+	project_snapshots on
+          project_snapshots.proj_snap_id = project_files.proj_snap_id;
