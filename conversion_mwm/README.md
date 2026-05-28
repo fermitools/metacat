@@ -17,8 +17,8 @@ NOTE:
 
 `                 DANGER                 DANGER                `
 
-    Currently drops and and re-creates the destination metacat tables !!!  
-    Do not point this at a real Metacat destination with its own data!!!
+Currently drops and and re-creates the destination metacat tables !!!  
+Do not point this at a real Metacat destination with its own data!!!
 
 `                 DANGER                 DANGER                `
     
