@@ -3,6 +3,5 @@
 PGPASSFILE=/some/place/.pgpass 
 
 [psql_commands]
-sam_db = psql -h sampgdbdev.fnal.gov -p 5433 -d samdev -U samdbs 
-# meta_db = psql -h ifdb10.fnal.gov -p 5462 -d hypot_dm_dev -U hypot_web 
-meta_db = psql 
+sam_db = psql -h sam.dev.host -p 1234 -d sam_db -U sam_user
+meta_db = psql -h meta.dev.host -p 5678 -d meta_db -U meta_user
