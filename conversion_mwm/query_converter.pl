@@ -16,12 +16,14 @@ while(<>) {
        $trailing_csv_cols= $&;
        s/(,[^,]*){4}$//;
     } else {
-       $trailing_csv_cols= '';
+       $trailing_csv_cols= "\n";
     }
 
     # space pad so blank matches below work at ends
     s/.*/ $& /;
     s/[()]/ $& /g;
+
+    s/"/'/g;
 
     # map assorted SAM field names to metadata core. names
     s/ (data_stream|run_number|run_type|data_tier|end_time|event_count|file_content_status|file_format|file_partition|file_type|first_event_number|last_event_number|process_id|retired_date|runs|scope|start_time) / core.$1 /g;
@@ -167,6 +169,8 @@ while(<>) {
     s/ or +or / or /g;
     s/ limit +=/ limit /g;
     s/ skip +=/ skip /g;
+    s/ where +skip / skip /g;
+    s/ where +limit / limit /g;
     s/ files +where +parents / parents /g;
     s/ files +where +children / children /g;
     s/ files +where +filter / filter /g;
