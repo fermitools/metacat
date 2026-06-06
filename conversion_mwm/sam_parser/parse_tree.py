@@ -114,6 +114,23 @@ class ListNodeBase(NodeBase):
 # set ops have left associativity; everything else is right
 _associativity = { 4: -1 }
 
+def _meta_infix_render(op, nodes, precedence):
+    # render infix operator output, taking into account precedence and associativity
+    tokens = []
+    if op == 'minus':
+        op = '-'   # mwm -- XXX not exactly right here...
+    for i, n in enumerate(nodes):
+        if i > 0:
+            yield op
+        r = n.meta_render()
+        associativity = _associativity.get(precedence,0)
+        addparens = _determine_needs_parens(i, n, precedence, associativity)
+        if addparens:
+            yield '('
+        for t in r: yield t
+        if addparens:
+            yield ')'
+
 def _infix_render(op, nodes, precedence):
     # render infix operator output, taking into account precedence and associativity
     tokens = []
@@ -159,7 +176,7 @@ class UnaryNode(NodeBase):
 class BinaryOperatorNode(ListNodeBase):
 
     def meta_render(self):
-        return _infix_render(self.op, self.nodes, self.precedence)
+        return _meta_infix_render(self.op, self.nodes, self.precedence)
     def render(self):
         return _infix_render(self.op, self.nodes, self.precedence)
     def __eq__(self, other):
@@ -259,10 +276,10 @@ class WithNode(UnaryNode):
     def meta_render(self):
         if self.node.precedence is not None and self.node.precedence >= self.precedence:
             yield '('
-        for t in self.node.render(): yield t
+        for t in self.node.meta_render(): yield t
         if self.node.precedence is not None and self.node.precedence >= self.precedence:
             yield ')'
-        yield 'with'
+        # yield 'with'
         for k in sorted(self.params):
             v = self.params[k]
             if v is None: continue
@@ -339,7 +356,7 @@ class NotNode(UnaryNode):
         else:
             return hash( ('not', self.node) )
     def meta_render(self):
-        r = list(self.node.render())
+        r = list(self.node.meta_render())
         if self.node.precedence is None:
             addparen = False
         else:
@@ -421,6 +438,19 @@ class DimNode(NegatableNode):
         else: v = self.value
         return hash((self.dim, self.op, v, self.negated))
 
+    def meta_trans(self, name):
+        name = re.sub( '^(data_stream|run_number|run_type|data_tier|end_time|event_count|file_content_status|file_format|file_partition|file_type|first_event_number|last_event_number|process_id|retired_date|runs|scope|start_time)$', 'core.\\1', name)
+        name = re.sub( '^(appl_name|application)$', 'application.name', name)
+        name = re.sub( '^(family|version)$', 'core.application.\\1', name)
+
+        # map file_name, file_size 
+        name = re.sub( '^file_(name|size)$', '\\1', name)
+        name = re.sub( '^(create|update)_date$', '\\1d_timestamp', name)
+        name = re.sub( '^project_name$', 'project.name', name)
+        name = re.sub( '^consumer$', 'project.worker', name)
+        name = re.sub( '^full_path$', 'rse.path', name)
+        return '[' + name  + ']'
+
     def meta_render(self):
         if self.negated:
             yield 'not'
@@ -440,7 +470,7 @@ class DimNode(NegatableNode):
             val = [_quote_value(self.value)]
 
         if self.op == '=':
-            yield self.dim
+            yield self.meta_trans(self.dim)
             yield '='  # mwm -- kluge to get equals back
             for v in val: yield v
         else:
@@ -448,7 +478,7 @@ class DimNode(NegatableNode):
                 op = 'not %s' % self.op[3:].strip()
             else:
                 op = self.op
-            yield self.dim
+            yield self.meta_trans(self.dim)
             yield op
             for v in val: yield v
 
@@ -544,7 +574,7 @@ class IsRelativeOfNode(NegatableNode):
     def meta_render(self):
         if self.negated: yield "not"
         yield "%s:( " % self.relation
-        for t in self.subtree.render():
+        for t in self.subtree.meta_render():
             yield t
         yield " )"
     def render(self):
