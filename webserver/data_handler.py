@@ -5,7 +5,7 @@ from metacat.db import DBFile, DBDataset, DBFileSet, DBNamedQuery, DBUser, DBNam
     DBParamCategory, parse_name, AlreadyExistsError, IntegrityError, MetaValidationError
 from wsdbtools import ConnectionPool
 from urllib.parse import quote_plus, unquote_plus
-from metacat.util import to_str, to_bytes, ObjectSpec
+from metacat.util import to_str, to_bytes, ObjectSpec, validate_metadata
 from metacat.mql import MQLQuery, MQLSyntaxError, MQLExecutionError, MQLCompilationError, MQLError
 from metacat import Version
 from datetime import datetime, timezone
@@ -600,27 +600,28 @@ class DataHandler(MetaCatHandler):
             return tuple(path.rsplit(".",1))
         else:
             return ".", path
-        
-    def validate_metadata(self, data):
-        categories = self.load_categories()
-        invalid = []
-        for k, v in data.items():
-            path, name = self.split_cat(k)
-            cat = categories.get(path)
-            if cat is None:
-                while True:
-                    path, _ = self.split_cat(path)
-                    if path in categories:
-                        if categories[path].Restricted:
-                            invalid.append({"name":k, "value":v, "reason":f"Category {path} is restricted"})
-                        break
-                    if path == ".":
-                        break
-            else:
-                valid, reason = cat.validate_parameter(name, v)
-                if not valid:
-                    invalid.append({"name":k, "value":v, "reason":reason})
-        return invalid
+
+# should be using metadata validation code from util/validation.py        
+#    def validate_metadata(self, data):
+#        categories = self.load_categories()
+#        invalid = []
+#        for k, v in data.items():
+#            path, name = self.split_cat(k)
+#            cat = categories.get(path)
+#            if cat is None:
+#                while True:
+#                    path, _ = self.split_cat(path)
+#                    if path in categories:
+#                        if categories[path].Restricted:
+#                            invalid.append({"name":k, "value":v, "reason":f"Category {path} is restricted"})
+#                        break
+#                    if path == ".":
+#                        break
+#            else:
+#                valid, reason = cat.validate_parameter(name, v)
+#                if not valid:
+#                    invalid.append({"name":k, "value":v, "reason":reason})
+#        return invalid
         
     @sanitized
     def declare_files(self, request, relpath, namespace=None, dataset=None, dry_run="no", **args):
@@ -951,8 +952,9 @@ class DataHandler(MetaCatHandler):
         return json.dumps({"files_moved": nmoved, "errors":errors[:self.MAX_ERRORS], "nerrors":nerrors}), "application/json"
 
     def __update_meta_bulk(self, db, user, new_meta, mode, names=None, ids=None):
-        metadata_errors = self.validate_metadata(new_meta)
+        metadata_errors = DBParamCategory.validate_metadata_bulk(db, [new_meta])
         if metadata_errors:
+            metadata_errors = metadata_errors[0][1]  # Get errors from first (only) item
             return METADATA_ERROR_CODE, json.dumps({
                 "message":"Metadata validation errors",
                 "metadata_errors":metadata_errors

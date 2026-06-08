@@ -195,7 +195,7 @@ To see available MetaCat authentication tokens:
 
 Export token to a file or to stdout
     
-    .. code-block:: shell
+.. code-block:: shell
     
     metacat auth export [-o|--out <token file>] [<token id>|<server url>]
 	
@@ -227,23 +227,6 @@ To list existing namespaces:
         -d                          - exclude namespaces owned by the user via a role
         -r|--role <role>            - list namespaces owned by the role
 
-
-Parameter Categories
---------------------
-
-To list existing parameter categories:
-
-.. code-block:: shell
-
-        $ metacat category list [options] [<root category>]
-                  -j|--json           - print as JSON
-
-To get particular category information:
-
-.. code-block:: shell
-
-        $ metacat category show [options] <category>
-                  -j|--json           - print as JSON
 
 Datasets
 --------
@@ -805,27 +788,39 @@ quietly exit with 0 or 1 status.
 Metadata Categories
 -------------------
 
+Metadata categories define the structure and constraints for metadata parameters. 
+They are used to validate metadata values when files are declared or updated.
+
+MetaCat metadata has the format ``<category>.parameter>``.
+
+Listing categories
+...................
+
 Existing parameter categories can be listed using:
 
 .. code-block:: shell
 
-    $ metacat category list
-    .
-    DUNE
-    DUNE_MC
-    ivm
-    ...
-    
-    
+    $ metacat category list [options] [<root category>]
+              -j|--json           - print as JSON
+
+If a root category is specified, only categories under that path will be listed.
+
 Information about an individual category can be printed using:
 
-.. code-block::
+.. code-block:: shell
+
+    $ metacat category show [options] <category>
+              -j|--json           - print as JSON
+
+The output shows:
+
+.. code-block:: none
 
     $ metacat category show ivm
     Path:             ivm
     Description:      ivm test category
     Owner user:       ivm
-    Owner role:       
+    Owner role:
     Creator:          ivm
     Created at:       2022-09-27 10:51:19 UTC
     Restricted:       no
@@ -836,6 +831,92 @@ Information about an individual category can be printed using:
       pi                                            float [3.0 - 4.0]
       word                                           text ~ '[A-Z].*'
 
+Creating a category
+...................
+
+To create a new parameter category with constraints:
+
+.. code-block:: shell
+
+    $ metacat category create [options] <category>
+              -d|--description <description>
+              -r|--restricted           - make the category restricted (only defined parameters allowed)
+              -o|--owner <owner_role>   - owner role (default: current user)
+              -p|--parameters <file|json>  - parameter definitions as JSON file or inline JSON
+              -j|--json                 - print as JSON
+
+Parameter definitions define the constraints for each parameter. Each parameter can have:
+
+- ``type``: int, float, text, boolean, dict, list, int[], float[], text[], boolean[], or any
+- ``values``: list of allowed values (enum)
+- ``min``: minimum value (for numeric and text)
+- ``max``: maximum value (for numeric and text)
+- ``pattern``: regex pattern for text values
+.. - ``required``: boolean, whether the parameter is required
+
+Example:
+
+.. code-block:: shell
+
+    $ metacat category create -d "Test category" -r \
+        -p '{"run_number": {"type": "int", "min": 1, "max": 1000}, "status": {"type": "text", "values": ["good", "bad"]}}' \
+        test_category
+
+Only admins can create categories.
+
+Updating a category
+...........
+
+To update an existing category:
+
+.. code-block:: shell
+
+    $ metacat category update [options] <category>
+              -d|--description <description>
+              -r|--restricted (true|false)
+              -o|--owner <owner_role>
+              -p|--parameters <file|json>  - parameter definitions (merged by default)
+              -m|--mode (update|replace)    - mode for updating definitions (default: update)
+              -j|--json                 - print as JSON
+
+The ``-m`` option controls how parameter definitions are updated:
+
+- ``update`` (default): Merge new definitions with existing ones (keeps undefined parameters)
+- ``replace``: Replace the entire definitions dictionary
+
+Example (add new parameter definitions while keeping existing ones):
+
+.. code-block:: shell
+
+    $ metacat category update -p '{"new_param": {"type": "int"}}' test_category
+
+Only admins can update categories.
+
+Removing a category
+...........
+
+To remove a category:
+
+.. code-block:: shell
+
+    $ metacat category remove <category>
+
+Only admins can remove categories.
+
+Metadata validation
+...........
+
+MetaCat enforces the category parameter definitions when files are declared or updated.
+
+MetaCat checks that metadata using parameters from that category must follow the defined constraints. 
+For example, if a category defines ``run_number`` as an integer between 1 and 1000, attempting to declare 
+a file with ``run_number`` outside that range will result in a validation error.
+
+When a category is marked as ``restricted``, only parameters in the category's definitions are allowed. 
+Attempting to add a metadata parameter not in the definitions will result in a validation error.
+
+When a definition is marked as ``required``, that parameter must be present in the metadata. 
+Attempting to add metadata without required parameters will result in a validation error.
 
 
 Query

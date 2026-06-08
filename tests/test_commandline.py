@@ -10,7 +10,7 @@ import pytest
 import json
 import time
 
-from env import env, token, auth, start_ds, tst_ds, tst_file_md_list
+from env import env, token, auth, start_ds, tst_ds, tst_file_md_list, tst_defs
 
 
 # need tests for at least:
@@ -302,19 +302,56 @@ def test_metacat_namespace_show(auth, tst_ds):
     assert data.find(ns) >= 0
 
 
-# Categories -- Don't know how to add them, they show up empty
-#    in hypot, nothing to test?!?
-#
-# def x_test_metacat_category_list(auth):
-#    with os.popen("metacat category list", "r") as fin:
-#        data = fin.read()
-#        # check output
-#
-# def x_test_metacat_category_show(auth):
-#    with os.popen("metacat category show", "r") as fin:
-#        data = fin.read()
-#        # check output
-#
+# Categories
+
+def test_metacat_category_create(auth, tst_defs):
+    with open("defs", "w") as defs:
+        json.dump(tst_defs, defs)
+    with os.popen(f"metacat category create -d 'testing' -p defs test_category") as fin:
+        data = fin.read()
+    os.unlink("defs")
+    assert data.find(os.environ["USER"]) > 0
+    assert data.find("test_category") > 0
+    assert data.find("intfield") > 0
+
+def test_metacat_category_list(auth):
+    with os.popen("metacat category list", "r") as fin:
+        data = fin.read()
+    assert data.find("test_category") > 0
+    assert data.find("cat_t1") > 0
+
+def test_metacat_category_show(auth):
+    with os.popen("metacat category show test_category", "r") as fin:
+        data = fin.read()
+    assert data.find("test_category") > 0
+    assert data.find("Restricted") > 0
+    assert data.find("int") > 0
+
+def test_metacat_category_update(auth, tst_defs):
+    tst_defs["newfield"] = {"type": "float", "min": 1.2, "max": 4.7}
+    with open("defs", "w") as defs:
+        json.dump(tst_defs, defs)
+    os.system(f"metacat category update -p defs test_category")
+    os.unlink("defs")
+    with os.popen(f"metacat category show test_category") as fin:
+        data = fin.read()
+    assert data.find("newfield") > 0
+
+def test_metacat_category_validation(auth, tst_ds, tst_file_md_list):
+    ns = tst_file_md_list[1]["namespace"]
+    fname = tst_file_md_list[1]["name"]
+    md = '{"test_category.newfield": 8.9}'
+    with os.popen(f"metacat file update-meta -f {ns}:{name} {md}") as fin:
+        data = fin.read()
+    assert data.find("InvalidMetadataError")
+
+def test_metacat_category_remove(auth):
+    os.system(f"metacat category remove test_category")
+    with os.popen(f"metacat category list") as fin:
+        data = fin.read()
+    assert data.find("test_category") < 0
+
+
 def test_metacat_file_declare_sample(auth):
     with os.popen("metacat file declare-sample", "r") as fin:
         data = fin.read()
