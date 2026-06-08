@@ -224,7 +224,19 @@ class SetNode(BinaryOperatorNode, NegatableNode):
         if self.negated:
             yield 'not'
             yield '('
-        for t in BinaryOperatorNode.meta_render(self): yield t
+        if self.op in ('union', 'intersect'):
+           if (self.op == 'intersect'):
+               m_op = 'join'
+           else: 
+               m_op = self.op
+           yield m_op
+           yield '('
+           for n in self.nodes:
+               for t in n.meta_render():
+                   yield t
+           yield ')'
+        else:
+            for t in BinaryOperatorNode.meta_render(self): yield t
         if self.negated:
             yield ')'
     def render(self):
@@ -573,7 +585,8 @@ class IsRelativeOfNode(NegatableNode):
         return hash( (self.relation, self.subtree, self.negated) )
     def meta_render(self):
         if self.negated: yield "not"
-        yield "%s:( " % self.relation
+        yield {'ischildof': 'children', 'isparentof': 'parents'}[self.relation]
+        yield "(" 
         for t in self.subtree.meta_render():
             yield t
         yield " )"
