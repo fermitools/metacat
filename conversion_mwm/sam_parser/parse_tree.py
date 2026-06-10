@@ -462,7 +462,7 @@ class DimNode(NegatableNode):
         name = re.sub( '^project_name$', 'project.name', name)
         name = re.sub( '^consumer$', 'project.worker', name)
         name = re.sub( '^full_path$', 'rse.path', name)
-        return '[' + name  + ']'
+        return name
 
     def meta_render(self):
         if self.negated:
@@ -561,6 +561,37 @@ class DefinitionNode(NodeBase):
         yield 'defname:'
         yield self.defname
 
+class MetaFilterNode(NodeBase):
+    @classmethod
+    def fromTokens(cls, instr, loc, tokens):
+        return cls(tokens[0])
+    def __init__(self, filter_name, filter_param_nodes, nodes):
+        self.filter_name = filter_name
+        self.filter_param_nodes = filter_param_nodes
+        self.nodes = nodes
+    def __str__(self):
+        return "FilterNode(%s, %s, %s)" % (self.defname, str(filter_param_nodes), str(nodes))
+    def __eq__(self, other):
+        if self.__class__ != other.__class__: return NotImplemented
+        return self.filter_name == other.filter_name  and
+               self.filter_param_nodes == other.filter_param_nodes and
+               self.nodes == other.nodes
+    def meta_render(self):
+        yield 'filter'
+        yield self.filter_name
+        yield '('
+        if self.filter_param_nodes:
+            for t in self.filter_param_nodes.meta_render()
+                yield t
+        yield ')'
+        if self.nodes:
+            yield 'where'
+            for t in self.nodes.meta_render()
+                yield t
+
+    def render(self):
+        return self.meta_render()
+
 class IsRelativeOfNode(NegatableNode):
     precedence = 0 # always binds more tightly than its children
     @classmethod
@@ -631,6 +662,57 @@ class ParseTreeTransformer(ParseTreeVisitor):
     def generic_visit(self, node):
         newnodes = [ self.visit(c) for c in node.nodes ]
         node.nodes = [ c for c in newnodes if c is not None ]
+        return node
+
+def MetaCatTransformer(ParseTreeTransformer):
+    def __init__(self):
+        self.rse_terms = []
+        self.def_terms = []
+        self.proj_id_term = None
+        self.proj_terms = []
+        self.ptdepth = 0
+        self.rse_dims = {
+            'full_path',
+            'tape_label',
+        }
+        self.def_dims = {
+            'dataset_def_id',
+            'dataset_def_name',
+            'dataset_def_name_newest_snapshot',
+            'def_snapshot',
+        }
+        self.projname_dims = {
+            'project_description',
+            'project_id',
+            'project_name',
+        }
+        self.proj_dims = {
+            'consumed_status',
+            'consumer',
+            'consumer_process_description',
+            'consumer_process_id',
+        }
+
+    def visit(self, node):
+        self.ptdepth = self.ptdepth + 1
+        super().visit(node)
+        self.ptdepth = self.ptdepth - 1
+        if self.ptdepth == 0:
+            if self.rse_terms:
+                node = MetaFilterNode('rse', None, node, self.rse_terms) 
+            # similarly for project, definitions
+        return node
+
+    def visit_DimNode(self, node):
+        if self.name in projname_dims:
+           self.project_id_term = node
+           return None
+        if self.name in self.proj_dims:
+           self.proj_terms.append(node)
+           return Node
+        if self.name in self.rse_dims:
+           self.rse_terms.append(node)
+           return None
         return node
 
 def _indenter(func):
