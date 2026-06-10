@@ -5,6 +5,9 @@ on:
     types: 
       - published
   workflow_dispatch:
+    branches:
+    - main
+    - '4.1.4_doc_updates'
 
 permissions:
   contents: read
