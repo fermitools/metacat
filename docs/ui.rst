@@ -670,7 +670,7 @@ The command will modify only those attributes included in the command and will n
 .. code-block:: shell
 
     # update size and add/update adler32 checksum for the file:
-    $ metacat file update -s 12345 -k '{"adler32":"1234abcd"}' my_scope:my_file.hdf5
+    $ metacat file update -s 12345 -k adler32:1234abcd my_scope:my_file.hdf5
 
     # remove any checksums from the file:
     $ metacat file update -r -k - my_scope:my_file.hdf5

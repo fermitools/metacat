@@ -12,7 +12,7 @@ class DimParseTreeError:
 def meta_render_dimensions_tree(tree):
     """ Pretty print the dimensions tree """
     lines = []
-    line = []
+    line = [ 'files where' ]
     linelen = 0
     for token in tree.meta_render():
         if not line:
@@ -118,7 +118,7 @@ def _meta_infix_render(op, nodes, precedence):
     # render infix operator output, taking into account precedence and associativity
     tokens = []
     if op == 'minus':
-        op = '-'   # mwm -- XXX not exactly right here...
+        op = '- files where'   # mwm -- XXX not exactly right here...
     for i, n in enumerate(nodes):
         if i > 0:
             yield op
@@ -232,6 +232,7 @@ class SetNode(BinaryOperatorNode, NegatableNode):
            yield m_op
            yield '('
            for n in self.nodes:
+               yield 'files where'
                for t in n.meta_render():
                    yield t
            yield ')'
