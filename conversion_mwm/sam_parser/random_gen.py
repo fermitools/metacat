@@ -132,7 +132,8 @@ if __name__ == "__main__":
     dims = render_dimensions_tree(t)
     print(dims)
     print("======")
-    meta = meta_render_dimensions_tree(t)
+    mt = MetaCatTransformer().visit(t)
+    meta = meta_render_dimensions_tree(mt)
     print(meta)
     try:
         newt = parser.parse_string(dims)

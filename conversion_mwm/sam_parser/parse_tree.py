@@ -12,8 +12,12 @@ class DimParseTreeError:
 def meta_render_dimensions_tree(tree):
     """ Pretty print the dimensions tree """
     lines = []
+    # XXX this needs fixing later... should depend if we have a set node, etc.
+    # should really put in a files where on transition from set node to a non-set node.
     line = [ 'files where' ]
     linelen = 0
+    if tree is None:
+        return ''
     for token in tree.meta_render():
         if not line:
             line.append(token)
@@ -176,7 +180,13 @@ class UnaryNode(NodeBase):
 class BinaryOperatorNode(ListNodeBase):
 
     def meta_render(self):
-        return _meta_infix_render(self.op, self.nodes, self.precedence)
+        if len(self.nodes) > 1:
+            return _meta_infix_render(self.op, self.nodes, self.precedence)
+        elif len(self.nodes) == 1:
+            return self.nodes[0].meta_render()
+        else:
+            return []
+
     def render(self):
         return _infix_render(self.op, self.nodes, self.precedence)
     def __eq__(self, other):
@@ -460,8 +470,13 @@ class DimNode(NegatableNode):
         name = re.sub( '^file_(name|size)$', '\\1', name)
         name = re.sub( '^(create|update)_date$', '\\1d_timestamp', name)
         name = re.sub( '^project_name$', 'project.name', name)
+        name = re.sub( '^full_path$', 'rucio.rses[0].path', name)
+        name = re.sub( '^tape_label$', 'rucio.rses[0].tape_label', name)
         name = re.sub( '^consumer$', 'project.worker', name)
-        name = re.sub( '^full_path$', 'rse.path', name)
+        name = re.sub( '^consumer_process_id$', 'project.worker', name)
+        name = re.sub( '^consumer_status$', 'project.status', name)
+        name = re.sub( '^consumer_process_description$', 'project.description', name)
+        name = re.sub( '^consumer_status$', 'project.status', name)
         return name
 
     def meta_render(self):
@@ -565,28 +580,35 @@ class MetaFilterNode(NodeBase):
     @classmethod
     def fromTokens(cls, instr, loc, tokens):
         return cls(tokens[0])
-    def __init__(self, filter_name, filter_param_nodes, nodes):
+    def __init__(self, filter_name, filter_param_nodes, nodes, where_nodes):
+        print(f"creating MetaFilterNode( {filter_name}, {filter_param_nodes}, {nodes}, {where_nodes}")
         self.filter_name = filter_name
         self.filter_param_nodes = filter_param_nodes
         self.nodes = nodes
+        self.where_nodes = where_nodes
     def __str__(self):
-        return "FilterNode(%s, %s, %s)" % (self.defname, str(filter_param_nodes), str(nodes))
+        return "MetaFilterNode(%s, %s, %s, %s)" % (self.defname, str(filter_param_nodes), str(nodes), str(where_nodes))
     def __eq__(self, other):
         if self.__class__ != other.__class__: return NotImplemented
-        return self.filter_name == other.filter_name  and
-               self.filter_param_nodes == other.filter_param_nodes and
-               self.nodes == other.nodes
+        return ( self.filter_name == other.filter_name  and
+                 self.filter_param_nodes == other.filter_param_nodes and
+                 self.nodes == other.nodes )
     def meta_render(self):
         yield 'filter'
         yield self.filter_name
         yield '('
         if self.filter_param_nodes:
-            for t in self.filter_param_nodes.meta_render()
+            for t in self.filter_param_nodes.meta_render():
                 yield t
         yield ')'
+        yield '('
         if self.nodes:
+            for t in self.nodes.meta_render():
+                yield t
+        yield ')'
+        if self.where_nodes:
             yield 'where'
-            for t in self.nodes.meta_render()
+            for t in self.where_nodes.meta_render():
                 yield t
 
     def render(self):
@@ -664,7 +686,7 @@ class ParseTreeTransformer(ParseTreeVisitor):
         node.nodes = [ c for c in newnodes if c is not None ]
         return node
 
-def MetaCatTransformer(ParseTreeTransformer):
+class MetaCatTransformer(ParseTreeTransformer):
     def __init__(self):
         self.rse_terms = []
         self.def_terms = []
@@ -695,22 +717,41 @@ def MetaCatTransformer(ParseTreeTransformer):
 
     def visit(self, node):
         self.ptdepth = self.ptdepth + 1
-        super().visit(node)
+        res = super().visit(node)
         self.ptdepth = self.ptdepth - 1
+           
         if self.ptdepth == 0:
+            if self.proj_terms:
+                self.modified = True
+                if len(self.proj_terms) > 1:
+                   pt = AndNode(*self.proj_terms)
+                elif len(self.proj_terms) == 1:
+                   pt = self.proj_terms[0]
+                return MetaFilterNode('data_dispatcher_project', self.proj_id_term, node, pt )
             if self.rse_terms:
-                node = MetaFilterNode('rse', None, node, self.rse_terms) 
+                self.modified = True
+                if len(self.rse_terms) > 1:
+                   rt = AndNode(*self.rse_terms)
+                elif len(self.rse_terms) == 1:
+                   rt = self.rse_terms[0]
+                return MetaFilterNode('rucio_replicas', None, node, rt) 
+            
             # similarly for project, definitions
-        return node
+        return res
 
     def visit_DimNode(self, node):
-        if self.name in projname_dims:
-           self.project_id_term = node
+        if node.dim in self.projname_dims:
+           self.modified = True
+           self.proj_id_term = node
+           print(f"setting proj_id_term= {str(self.proj_id_term)}")
            return None
-        if self.name in self.proj_dims:
+        if node.dim in self.proj_dims:
+           self.modified = True
+           print(f"adding proj_terms {str(node)}")
            self.proj_terms.append(node)
-           return Node
-        if self.name in self.rse_dims:
+           return None
+        if node.dim in self.rse_dims:
+           self.modified = True
            self.rse_terms.append(node)
            return None
         return node
@@ -778,4 +819,5 @@ __all__ = [ 'DimNode', 'WithNode', 'NotNode', 'AndNode',
         'AvailabilityNode', 'RangeNode',
         'DefinitionNode', 'ParseTreeVisitor', 'ParseTreeTransformer', 'DimParseTreeError', 'formatTree',
         'render_dimensions_tree', 'meta_render_dimensions_tree',
+        'MetaCatTransformer',
         ]
