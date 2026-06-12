@@ -703,7 +703,7 @@ class DefinitionNode(NodeBase):
         return hash(self.defname)
 
     def meta_render(self):
-        yield "defname:"
+        yield "files selected by"
         yield self.defname
 
     def render(self):
@@ -860,6 +860,7 @@ class ParseTreeTransformer(ParseTreeVisitor):
 
 
 class MetaCatTransformer(ParseTreeTransformer):
+   
     def __init__(self):
         self.node_path = []
         self.rse_terms = []
@@ -932,6 +933,14 @@ class MetaCatTransformer(ParseTreeTransformer):
                 self.rse_terms = []
                 node = MetaFilterNode("rucio_replicas", None, node, rt)
 
+            if self.def_terms:
+                # xxx this currently assumes defname:whatever is and-ed
+                # or similar; need a separate list of or-ed ones that
+                # we would combine with "union" if needed...
+                self.def_terms.append(node)
+                node = SetNode("intersect", *self.def_terms)
+                self.def_terms = []
+
             # similarly for project, definitions
         return node
 
@@ -951,6 +960,10 @@ class MetaCatTransformer(ParseTreeTransformer):
             self.rse_terms.append(node)
             return None
         return node
+
+    def visit_DefinitionNode(self, node):
+        self.def_terms.append(node)
+        return None
 
 
 def _indenter(func):
