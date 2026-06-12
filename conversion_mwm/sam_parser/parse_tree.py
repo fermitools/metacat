@@ -213,8 +213,8 @@ class UnaryNode(NodeBase):
 
     @nodes.setter
     def nodes(self, newnodes):
-        self.node = newnodes[0]
-
+        if newnodes:
+            self.node = newnodes[0]
 
 class BinaryOperatorNode(ListNodeBase):
     def meta_render(self):
@@ -286,7 +286,7 @@ class SetNode(BinaryOperatorNode, NegatableNode):
         notnonelen = sum([1 for n in self.nodes if n])
         print(f"SetNode meta_render(): {notnonelen=}")
         if  notnonelen == 1:
-            return self.node[0].meta_render()
+            return self.nodes[0].meta_render()
         if self.negated:
             yield "not"
             yield "("
@@ -862,8 +862,10 @@ class ParseTreeTransformer(ParseTreeVisitor):
         self.modified = False
 
     def generic_visit(self, node):
-        newnodes = [self.visit(c) for c in node.nodes]
-        node.nodes = [c for c in newnodes if c is not None]
+        if node.nodes:
+            newnodes = [self.visit(c) for c in node.nodes]
+            if newnodes:
+                node.nodes = [c for c in newnodes if c is not None]
         return node
 
 

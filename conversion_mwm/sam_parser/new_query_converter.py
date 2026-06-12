@@ -1,0 +1,19 @@
+
+import sys
+import os
+from parse_tree import *
+from random import random, randint, choice, seed
+from parser import DimParserError
+import parser
+
+ 
+if __name__ == "__main__":
+    for dims in sys.stdin.readlines():
+        print("=-=-=-=-=-=-=-=-=-=")
+        t = parser.parse_string(dims)
+        print("parse tree: ", str(t), "\n\n")
+        mt = MetaCatTransformer().visit(t)
+        meta = meta_render_dimensions_tree(mt)
+        print("=-=-=-=-=-=-=-=-=-=")
+        print(meta)
+        print("===================")
