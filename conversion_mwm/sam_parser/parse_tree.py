@@ -15,8 +15,11 @@ def meta_render_dimensions_tree(tree):
     lines = []
     # XXX this needs fixing later... should depend if we have a set node, etc.
     # should really put in a files where on transition from set node to a non-set node.
-    line = ["files where"]
+    line = []
     linelen = 0
+    if not isinstance(tree, SetNode) and not isinstance(tree, DefinitionNode):
+        line.append("files where")
+        linelen += 12
     if tree is None:
         return ""
     for token in tree.meta_render():
@@ -280,6 +283,10 @@ class SetNode(BinaryOperatorNode, NegatableNode):
         return hash((BinaryOperatorNode.__hash__(self), self.negated))
 
     def meta_render(self):
+        notnonelen = sum([1 for n in self.nodes if n])
+        print(f"SetNode meta_render(): {notnonelen=}")
+        if  notnonelen == 1:
+            return self.node[0].meta_render()
         if self.negated:
             yield "not"
             yield "("
@@ -291,7 +298,8 @@ class SetNode(BinaryOperatorNode, NegatableNode):
             yield m_op
             yield "("
             for n in self.nodes:
-                yield "files where"
+                if not isinstance(n, SetNode) and not isinstance(n, DefinitionNode):
+                    yield "files where"
                 for t in n.meta_render():
                     yield t
             yield ")"
