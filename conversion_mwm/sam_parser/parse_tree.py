@@ -10,7 +10,7 @@ class DimParseTreeError:
     pass
 
 
-def set_level_nodes( tree ):
+def is_set_level_node( tree ):
     for t in [ SetNode, DefinitionNode, MetaFilterNode, IsRelativeOfNode, WithNode, MetaDatasetNode ]:
         if isinstance(tree, t):
             return t
@@ -22,7 +22,7 @@ def meta_render_dimensions_tree(tree):
     # should really put in a files where on transition from set node to a non-set node.
     line = []
     linelen = 0
-    if not set_level_nodes(tree):
+    if not is_set_level_node(tree):
         line.append("files where")
         linelen += 12
     if tree is None:
@@ -166,8 +166,6 @@ def _meta_infix_render(op, nodes, precedence):
     for i, n in enumerate(nodes):
         if i > 0:
             yield op
-        if not set_level_nodes(n):
-            yield "files where"
         r = n.meta_render()
         associativity = _associativity.get(precedence, 0)
         addparens = _determine_needs_parens(i, n, precedence, associativity)
@@ -308,13 +306,18 @@ class SetNode(BinaryOperatorNode, NegatableNode):
                 if cflag:
                     yield ",\n"
                 cflag=True
-                if not set_level_nodes(n):
+                if not is_set_level_node(n):
+                    print(f"not sln {n.__class__}")
                     yield "files where"
+                else:
+                    print(f"sln {n.__class__}")
                 for t in n.meta_render():
                     yield t
             yield ")"
         else:
             for t in BinaryOperatorNode.meta_render(self):
+                if not is_set_level_node(t):
+                    yield "files where"
                 yield t
         if self.negated:
             yield ")"
@@ -377,9 +380,10 @@ class WithNode(UnaryNode):
 
     def meta_render(self):
         yield "("
+        if not is_set_level_node(self.node):
+            yield "files where"
         for t in self.node.meta_render():
             yield t
-        yield ")"
         # yield 'with'
         for k in sorted(self.params):
             v = self.params[k]
@@ -392,6 +396,7 @@ class WithNode(UnaryNode):
             else:
                 v = _quote_value(str(v))
             yield "%s %s" % (k, v)
+        yield ")"
 
     def render(self):
         if self.node.precedence is not None and self.node.precedence >= self.precedence:
@@ -875,20 +880,23 @@ class ParseTreeVisitor(object):
     """Visitor base class for the AST"""
 
     def visit(self, node):
-        try:
-            meth = self.__cache.get(node.__class__)
-        except AttributeError:
-            meth = None
-            self.__cache = {}
+        #try:
+        #    meth = self.__cache.get(node.__class__)
+        #except AttributeError:
+        #    meth = None
+        #    self.__cache = {}
+        meth = None
         if not meth:
             for cls in node.__class__.mro():
                 meth_name = "visit_" + cls.__name__
                 meth = getattr(self, meth_name, None)
                 if meth:
                     break
+
             if not meth:
                 meth = self.generic_visit
-            self.__cache[node.__class__] = meth
+
+            # self.__cache[node.__class__] = meth
         return meth(node)
 
     def generic_visit(self, node):
@@ -947,9 +955,9 @@ class MetaCatTransformer(ParseTreeTransformer):
             "snapshot_id",
         }
 
-    def allsets(self):
-        for n in self.node_path[:self.ptdepth]:
-            if not set_level_nodes(n):
+    def allsets(self, offset = 0):
+        for n in self.node_path[:self.ptdepth - offset]:
+            if not is_set_level_node(n):
                   return False
         return True
 
@@ -973,7 +981,7 @@ class MetaCatTransformer(ParseTreeTransformer):
             self.node_path[self.ptdepth] = node
         self.ptdepth = self.ptdepth + 1
         #actually visit
-        node = super().visit(node)
+        node = ParseTreeTransformer.visit(self, node)
         #bookkeeping
         self.ptdepth = self.ptdepth - 1
 
@@ -1016,11 +1024,12 @@ class MetaCatTransformer(ParseTreeTransformer):
             # similarly for project, definitions
         return node
 
-    def visit_WithNode(self, node):
-        return node
 
     def visit_DimNode(self, node):
+        print("entering visit_DimNode")
         if self.allsets():
+           print("allsets...not hoisting(?)")
+           sys.stdout.flush()
            return node
         if node.dim in self.projname_dims:
             self.modified = True
@@ -1037,9 +1046,17 @@ class MetaCatTransformer(ParseTreeTransformer):
             self.rse_terms.append(node)
             return None
         if node.dim in self.snapshot_dims:
-            self.snapshot_terms.append(node)
-            return None
+            self.modified = True
+            print(f"adding snapshot term {str(node)} ")
+            if self.allsets(1):
+                return MetaDatasetNode(node.value)
+            else:
+                self.snapshot_terms.append(node)
+                return None
         return node
+
+    def visit_WithNode(self, node):
+        return WithNode(self.visit(node.node), node.params)
 
     def visit_DefinitionNode(self, node):
         if self.allsets():
