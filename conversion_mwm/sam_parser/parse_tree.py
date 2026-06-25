@@ -17,7 +17,7 @@ def meta_render_dimensions_tree(tree):
     # should really put in a files where on transition from set node to a non-set node.
     line = []
     linelen = 0
-    if not isinstance(tree, SetNode) and not isinstance(tree, DefinitionNode):
+    if not isinstance(tree, SetNode) and not isinstance(tree, DefinitionNode) and not isinstance(tree, MetaFilterNode):
         line.append("files where")
         linelen += 12
     if tree is None:
@@ -587,7 +587,9 @@ class DimNode(NegatableNode):
         # map file_name, file_size
         name = re.sub("^file_(name|size)$", "\\1", name)
         name = re.sub("^(create|update)_date$", "\\1d_timestamp", name)
-        name = re.sub("^project_name$", "project.name", name)
+        # this one is a parameter to the project filter, so don't dot-ify it
+        #name = re.sub("^project_name$", "project.name", name)
+        name = re.sub("^consumed_status$", "consumed.status", name)
         name = re.sub("^full_path$", "rucio.rses[0].path", name)
         name = re.sub("^tape_label$", "rucio.rses[0].tape_label", name)
         name = re.sub("^consumer$", "project.worker", name)
@@ -735,10 +737,10 @@ class MetaFilterNode(NodeBase):
 
     def __str__(self):
         return "MetaFilterNode(%s, %s, %s, %s)" % (
-            self.defname,
-            str(filter_param_nodes),
-            str(nodes),
-            str(where_nodes),
+            self.filter_name,
+            str(self.filter_param_nodes),
+            str(self.nodes),
+            str(self.where_nodes),
         )
 
     def __eq__(self, other):
@@ -789,7 +791,10 @@ class IsRelativeOfNode(NegatableNode):
 
     @nodes.setter
     def nodes(self, newnodes):
-        self.subtree = newnodes[0]
+        if newnodes:
+            self.subtree = newnodes[0]
+        else:
+            self.subtree = None
 
     def __repr__(self):
         return "%s(%s, %s)" % (self.get_name(), self.relation, self.subtree)
@@ -814,8 +819,11 @@ class IsRelativeOfNode(NegatableNode):
             yield "not"
         yield {"ischildof": "children", "isparentof": "parents"}[self.relation]
         yield "("
-        for t in self.subtree.meta_render():
-            yield t
+        if self.subtree:
+            r = self.subtree.meta_render()
+            if r:
+                for t in r:
+                    yield t
         yield " )"
 
     def render(self):
