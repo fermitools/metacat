@@ -10,6 +10,11 @@ class DimParseTreeError:
     pass
 
 
+def set_level_nodes( tree ):
+    for t in [ SetNode, DefinitionNode, MetaFilterNode, IsRelativeOfNode, WithNode, MetaDatasetNode ]:
+        if isinstance(tree, t):
+            return t
+
 def meta_render_dimensions_tree(tree):
     """Pretty print the dimensions tree"""
     lines = []
@@ -17,7 +22,7 @@ def meta_render_dimensions_tree(tree):
     # should really put in a files where on transition from set node to a non-set node.
     line = []
     linelen = 0
-    if not isinstance(tree, SetNode) and not isinstance(tree, DefinitionNode) and not isinstance(tree, MetaFilterNode):
+    if not set_level_nodes(tree):
         line.append("files where")
         linelen += 12
     if tree is None:
@@ -157,10 +162,12 @@ def _meta_infix_render(op, nodes, precedence):
     # render infix operator output, taking into account precedence and associativity
     tokens = []
     if op == "minus":
-        op = "- files where"  # mwm -- XXX not exactly right here...
+        op = "-"  
     for i, n in enumerate(nodes):
         if i > 0:
             yield op
+        if not set_level_nodes(n):
+            yield "files where"
         r = n.meta_render()
         associativity = _associativity.get(precedence, 0)
         addparens = _determine_needs_parens(i, n, precedence, associativity)
@@ -284,7 +291,6 @@ class SetNode(BinaryOperatorNode, NegatableNode):
 
     def meta_render(self):
         notnonelen = sum([1 for n in self.nodes if n])
-        print(f"SetNode meta_render(): {notnonelen=}")
         if  notnonelen == 1:
             return self.nodes[0].meta_render()
         if self.negated:
@@ -297,8 +303,12 @@ class SetNode(BinaryOperatorNode, NegatableNode):
                 m_op = self.op
             yield m_op
             yield "("
+            cflag = False
             for n in self.nodes:
-                if not isinstance(n, SetNode) and not isinstance(n, DefinitionNode):
+                if cflag:
+                    yield ",\n"
+                cflag=True
+                if not set_level_nodes(n):
                     yield "files where"
                 for t in n.meta_render():
                     yield t
@@ -366,12 +376,10 @@ class WithNode(UnaryNode):
         return ", ".join(r)
 
     def meta_render(self):
-        if self.node.precedence is not None and self.node.precedence >= self.precedence:
-            yield "("
+        yield "("
         for t in self.node.meta_render():
             yield t
-        if self.node.precedence is not None and self.node.precedence >= self.precedence:
-            yield ")"
+        yield ")"
         # yield 'with'
         for k in sorted(self.params):
             v = self.params[k]
@@ -721,6 +729,33 @@ class DefinitionNode(NodeBase):
         yield self.defname
 
 
+class MetaDatasetNode(NodeBase):
+    @classmethod
+    def fromTokens(cls, instr, loc, tokens):
+        return cls(tokens[0])
+
+    def __init__(self, defname):
+        self.defname = defname
+
+    def __str__(self):
+        return "MetaDatasetNode(%s)" % self.defname
+
+    def __eq__(self, other):
+        if self.__class__ != other.__class__:
+            return NotImplemented
+        return self.defname == other.defname
+
+    def __hash__(self):
+        return hash(self.defname)
+
+    def meta_render(self):
+        yield "files from"
+        yield "default:snapshot_"+self.defname
+
+    def render(self):
+        yield "snapshot_id"
+        yield self.defname
+
 class MetaFilterNode(NodeBase):
     @classmethod
     def fromTokens(cls, instr, loc, tokens):
@@ -883,6 +918,7 @@ class MetaCatTransformer(ParseTreeTransformer):
         self.node_path = []
         self.rse_terms = []
         self.def_terms = []
+        self.snapshot_terms = []
         self.proj_id_term = None
         self.proj_terms = []
         self.ptdepth = 0
@@ -907,12 +943,23 @@ class MetaCatTransformer(ParseTreeTransformer):
             "consumer_process_description",
             "consumer_process_id",
         }
+        self.snapshot_dims = {
+            "snapshot_id",
+        }
+
+    def allsets(self):
+        for n in self.node_path[:self.ptdepth]:
+            if not set_level_nodes(n):
+                  return False
+        return True
 
     def setboundary(self):
         if self.ptdepth > 0:
-            if isinstance(self.node_path[self.ptdepth - 1], SetNode) and not isinstance(
-                self.node_path[self.ptdepth], SetNode
-            ):
+            
+            tree = self.node_path[self.ptdepth - 1]
+            subtree = self.node_path[self.ptdepth]
+            if ( (isinstance(tree, SetNode) or isinstance(tree, DefinitionNode) or isinstance(tree, MetaFilterNode) or isinstance(tree, IsRelativeOfNode) ) and not 
+            (isinstance(subtree, SetNode) or isinstance(subtree, DefinitionNode) or isinstance(subtree, MetaFilterNode) or isinstance(tree, IsRelativeOfNode))):
                 return True
         elif self.ptdepth == 0 and not isinstance(self.node_path[0], SetNode):
             return True
@@ -951,6 +998,13 @@ class MetaCatTransformer(ParseTreeTransformer):
                 self.rse_terms = []
                 node = MetaFilterNode("rucio_replicas", None, node, rt)
 
+            if self.snapshot_terms:
+                if len( self.snapshot_terms ) == 1:
+                    n1 = MetaDatasetNode( self.snapshot_terms[0].value)
+                else:
+                    n1 = SetNode("intersect", *[ MetaDatasetNode(n.value) for n in self.snapshot_terms] )
+                node = SetNode("intersect", n1, node)
+                   
             if self.def_terms:
                 # xxx this currently assumes defname:whatever is and-ed
                 # or similar; need a separate list of or-ed ones that
@@ -962,7 +1016,12 @@ class MetaCatTransformer(ParseTreeTransformer):
             # similarly for project, definitions
         return node
 
+    def visit_WithNode(self, node):
+        return node
+
     def visit_DimNode(self, node):
+        if self.allsets():
+           return node
         if node.dim in self.projname_dims:
             self.modified = True
             self.proj_id_term = node
@@ -977,9 +1036,14 @@ class MetaCatTransformer(ParseTreeTransformer):
             self.modified = True
             self.rse_terms.append(node)
             return None
+        if node.dim in self.snapshot_dims:
+            self.snapshot_terms.append(node)
+            return None
         return node
 
     def visit_DefinitionNode(self, node):
+        if self.allsets():
+           return node
         self.def_terms.append(node)
         return None
 
