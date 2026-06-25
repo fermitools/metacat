@@ -307,10 +307,8 @@ class SetNode(BinaryOperatorNode, NegatableNode):
                     yield ",\n"
                 cflag=True
                 if not is_set_level_node(n):
-                    print(f"not sln {n.__class__}")
                     yield "files where"
-                else:
-                    print(f"sln {n.__class__}")
+
                 for t in n.meta_render():
                     yield t
             yield ")"
@@ -767,9 +765,6 @@ class MetaFilterNode(NodeBase):
         return cls(tokens[0])
 
     def __init__(self, filter_name, filter_param_nodes, nodes, where_nodes):
-        print(
-            f"creating MetaFilterNode( {filter_name}, {filter_param_nodes}, {nodes}, {where_nodes}"
-        )
         self.filter_name = filter_name
         self.filter_param_nodes = filter_param_nodes
         self.nodes = nodes
@@ -929,6 +924,7 @@ class MetaCatTransformer(ParseTreeTransformer):
         self.snapshot_terms = []
         self.proj_id_term = None
         self.proj_terms = []
+        self.parentage_terms = []
         self.ptdepth = 0
         self.rse_dims = {
             "full_path",
@@ -1006,6 +1002,9 @@ class MetaCatTransformer(ParseTreeTransformer):
                 self.rse_terms = []
                 node = MetaFilterNode("rucio_replicas", None, node, rt)
 
+            if self.parentage_terms:
+                node = SetNode("intersect", node, *self.parentage_terms)
+
             if self.snapshot_terms:
                 if len( self.snapshot_terms ) == 1:
                     n1 = MetaDatasetNode( self.snapshot_terms[0].value)
@@ -1026,19 +1025,15 @@ class MetaCatTransformer(ParseTreeTransformer):
 
 
     def visit_DimNode(self, node):
-        print("entering visit_DimNode")
         if self.allsets():
-           print("allsets...not hoisting(?)")
            sys.stdout.flush()
            return node
         if node.dim in self.projname_dims:
             self.modified = True
             self.proj_id_term = node
-            print(f"setting proj_id_term= {str(self.proj_id_term)}")
             return None
         if node.dim in self.proj_dims:
             self.modified = True
-            print(f"adding proj_terms {str(node)}")
             self.proj_terms.append(node)
             return None
         if node.dim in self.rse_dims:
@@ -1047,7 +1042,6 @@ class MetaCatTransformer(ParseTreeTransformer):
             return None
         if node.dim in self.snapshot_dims:
             self.modified = True
-            print(f"adding snapshot term {str(node)} ")
             if self.allsets(1):
                 return MetaDatasetNode(node.value)
             else:
@@ -1062,6 +1056,12 @@ class MetaCatTransformer(ParseTreeTransformer):
         if self.allsets():
            return node
         self.def_terms.append(node)
+        return None
+
+    def visit_IsRelativeOfNode(self, node):
+        if self.allsets():
+           return node
+        self.parentage_terms.append(node)
         return None
 
 
