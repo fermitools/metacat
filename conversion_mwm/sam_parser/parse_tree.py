@@ -949,6 +949,7 @@ class MetaCatTransformer(ParseTreeTransformer):
         }
         self.snapshot_dims = {
             "snapshot_id",
+            "snapshot_for_project_name",
         }
 
     def allsets(self, offset = 0):
@@ -956,6 +957,11 @@ class MetaCatTransformer(ParseTreeTransformer):
             if not is_set_level_node(n):
                   return False
         return True
+
+    def parent_sets(self, offset = 0):
+        if self.ptdepth  < 2:
+            return True
+        return is_set_level_node(self.node_path[self.ptdepth - 2])
 
     def setboundary(self):
         if self.ptdepth > 0:
@@ -1042,7 +1048,7 @@ class MetaCatTransformer(ParseTreeTransformer):
             return None
         if node.dim in self.snapshot_dims:
             self.modified = True
-            if self.allsets(1):
+            if self.parent_sets():
                 return MetaDatasetNode(node.value)
             else:
                 self.snapshot_terms.append(node)
@@ -1053,15 +1059,15 @@ class MetaCatTransformer(ParseTreeTransformer):
         return WithNode(self.visit(node.node), node.params)
 
     def visit_DefinitionNode(self, node):
-        if self.allsets():
+        if self.parent_sets():
            return node
         self.def_terms.append(node)
         return None
 
     def visit_IsRelativeOfNode(self, node):
-        if self.allsets():
-           return node
-        self.parentage_terms.append(node)
+        if self.parent_sets():
+           return IsRelativeOfNode(node.relation, self.visit(node.subtree))
+        self.parentage_terms.append(IsRelativeOfNode(node.relation,self.visit(node.subtree)))
         return None
 
 
