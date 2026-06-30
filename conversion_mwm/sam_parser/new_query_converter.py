@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 
 import sys
 import os
@@ -27,6 +28,7 @@ if __name__ == "__main__":
                 trailing_cols = ''
         else:
             leading_cols = ''
+            trailing_cols = ''
 
 
         print("=-=-=-=-=-=-=-=-=-=")

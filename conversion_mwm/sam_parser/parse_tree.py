@@ -382,6 +382,7 @@ class WithNode(UnaryNode):
         if self.node:
             for t in self.node.meta_render():
                 yield t
+        yield ")"
         # yield 'with'
         for k in sorted(self.params):
             v = self.params[k]
@@ -394,7 +395,6 @@ class WithNode(UnaryNode):
             else:
                 v = _quote_value(str(v))
             yield "%s %s" % (k, v)
-        yield ")"
 
     def render(self):
         if self.node.precedence is not None and self.node.precedence >= self.precedence:
@@ -545,6 +545,19 @@ class DimNode(NegatableNode):
     def __init__(self, dim, op, value):
         self.dim, self.op, self.value = dim, op.replace(" ", ""), value
 
+        self.notmap = {
+            "=": "!=",
+            "!=": "=",
+            "<": ">=",
+            "<=": ">",
+            ">=": "<",
+            ">": "<=",
+            "in": "not in",
+            "not in": "in",
+            "not like": "!~",
+            "like": "~",
+        }
+
         # if an alias, update with the real name
         # from ..dimensions import get_dimension_name
         # self.dim = get_dimension_name(self.dim)
@@ -611,8 +624,6 @@ class DimNode(NegatableNode):
         return name
 
     def meta_render(self):
-        if self.negated:
-            yield "not"
         if isinstance(self.value, list):
 
             def _gen():
@@ -632,12 +643,15 @@ class DimNode(NegatableNode):
 
         if self.op == "=":
             yield self.meta_trans(self.dim)
-            yield "="  # mwm -- kluge to get equals back
+            if self.negated:
+                yield "!="
+            else:
+                yield "="  # mwm -- kluge to get equals back
             for v in val:
                 yield v
         else:
-            if self.op.startswith("not"):
-                op = "not %s" % self.op[3:].strip()
+            if self.op.startswith("not") or self.negated:
+                op = self.notmap[op]
             else:
                 op = self.op
             yield self.meta_trans(self.dim)
@@ -710,7 +724,7 @@ class DefinitionNode(NodeBase):
         return cls(tokens[0])
 
     def __init__(self, defname):
-        self.defname = defname
+        self.defname = "default:" + defname.replace('-','_')
 
     def __str__(self):
         return "Defname(%s)" % self.defname
@@ -851,8 +865,6 @@ class IsRelativeOfNode(NegatableNode):
 
     def meta_render(self):
         if self.subtree:
-            if self.negated:
-                yield "not"
             yield {"ischildof": "children", "isparentof": "parents"}[self.relation]
             yield "("
             r = self.subtree.meta_render()
@@ -1032,7 +1044,6 @@ class MetaCatTransformer(ParseTreeTransformer):
 
     def visit_DimNode(self, node):
         if self.allsets():
-           sys.stdout.flush()
            return node
         if node.dim in self.projname_dims:
             self.modified = True
