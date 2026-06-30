@@ -135,6 +135,7 @@ if __name__ == "__main__":
     mt = MetaCatTransformer().visit(t)
     meta = meta_render_dimensions_tree(mt)
     print(meta)
+    sys.exit(0)
     try:
         newt = parser.parse_string(dims)
     except DimParserError as ex:

@@ -309,8 +309,9 @@ class SetNode(BinaryOperatorNode, NegatableNode):
                 if not is_set_level_node(n):
                     yield "files where"
 
-                for t in n.meta_render():
-                    yield t
+                if n:
+                    for t in n.meta_render():
+                        yield t
             yield ")"
         else:
             for t in BinaryOperatorNode.meta_render(self):
@@ -380,8 +381,9 @@ class WithNode(UnaryNode):
         yield "("
         if not is_set_level_node(self.node):
             yield "files where"
-        for t in self.node.meta_render():
-            yield t
+        if self.node:
+            for t in self.node.meta_render():
+                yield t
         # yield 'with'
         for k in sorted(self.params):
             v = self.params[k]
@@ -753,7 +755,7 @@ class MetaDatasetNode(NodeBase):
 
     def meta_render(self):
         yield "files from"
-        yield "default:snapshot_"+self.defname
+        yield "default:snapshot_"+str(self.defname)
 
     def render(self):
         yield "snapshot_id"
@@ -850,16 +852,16 @@ class IsRelativeOfNode(NegatableNode):
         return hash((self.relation, self.subtree, self.negated))
 
     def meta_render(self):
-        if self.negated:
-            yield "not"
-        yield {"ischildof": "children", "isparentof": "parents"}[self.relation]
-        yield "("
         if self.subtree:
+            if self.negated:
+                yield "not"
+            yield {"ischildof": "children", "isparentof": "parents"}[self.relation]
+            yield "("
             r = self.subtree.meta_render()
             if r:
                 for t in r:
                     yield t
-        yield " )"
+            yield " )"
 
     def render(self):
         if self.negated:
@@ -1065,9 +1067,11 @@ class MetaCatTransformer(ParseTreeTransformer):
         return None
 
     def visit_IsRelativeOfNode(self, node):
-        if self.parent_sets():
-           return IsRelativeOfNode(node.relation, self.visit(node.subtree))
-        self.parentage_terms.append(IsRelativeOfNode(node.relation,self.visit(node.subtree)))
+        if node.subtree:
+            if self.parent_sets():
+               return IsRelativeOfNode(node.relation, self.visit(node.subtree))
+         
+            self.parentage_terms.append(IsRelativeOfNode(node.relation,self.visit(node.subtree)))
         return None
 
 
