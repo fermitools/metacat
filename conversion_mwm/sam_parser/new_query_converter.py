@@ -18,16 +18,15 @@ if __name__ == "__main__":
             print("saw leading: ", m.group(0))
             leading_cols = m.group(0)
             dims = leading_re.sub('', dims)
+            m = trailing_re.search( dims )
+            if m:
+                print("saw trailing: ", m.group(0))
+                trailing_cols = m.group(0)
+                dims = trailing_re.sub('', dims)
+            else:
+                trailing_cols = ''
         else:
             leading_cols = ''
-
-        m = trailing_re.search( dims )
-        if m:
-            print("saw trailing: ", m.group(0))
-            trailing_cols = m.group(0)
-            dims = trailing_re.sub('', dims)
-        else:
-            trailing_cols = ''
 
 
         print("=-=-=-=-=-=-=-=-=-=")
