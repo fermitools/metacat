@@ -315,8 +315,6 @@ class SetNode(BinaryOperatorNode, NegatableNode):
             yield ")"
         else:
             for t in BinaryOperatorNode.meta_render(self):
-                if not is_set_level_node(t):
-                    yield "files where"
                 yield t
         if self.negated:
             yield ")"
