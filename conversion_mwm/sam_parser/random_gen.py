@@ -133,6 +133,7 @@ if __name__ == "__main__":
     print(dims)
     print("======")
     mt = MetaCatTransformer().visit(t)
+    mt = MetaCatTransformerPart2().visit(mt)
     meta = meta_render_dimensions_tree(mt)
     print(meta)
     sys.exit(0)
