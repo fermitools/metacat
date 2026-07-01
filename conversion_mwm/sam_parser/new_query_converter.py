@@ -7,12 +7,22 @@ from parse_tree import *
 from random import random, randint, choice, seed
 from parser import DimParserError
 import parser
+import logging
+
+logger = logging.getLogger(__name__)
 
 leading_re = re.compile(r'^([^,]*,){3}')
 trailing_re =  re.compile(r'(,[^,]*){4}$')
 
  
 if __name__ == "__main__":
+
+    loglevel = logging.INFO
+    if "-d" in sys.argv:
+        loglevel = logging.DEBUG
+
+    logging.basicConfig(level = loglevel )
+
     for dims in sys.stdin.readlines():
         m = leading_re.match( dims )
         if m:

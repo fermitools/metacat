@@ -1,7 +1,10 @@
 # The nodes for the dimension parse tree
 
 import re
+import logging
 from pyparsing import ParseResults
+
+logger = logging.getLogger(__name__)
 
 # from dimension_query.exc import DimParseTreeError
 
@@ -486,7 +489,8 @@ class NotNode(UnaryNode):
             return hash(("not", self.node))
 
     def meta_render(self):
-        self.node.negated = True
+        if not self.node:
+            return
         r = list(self.node.meta_render())
         if self.node.precedence is None:
             addparen = False
@@ -993,14 +997,17 @@ class MetaCatTransformer(ParseTreeTransformer):
             self.node_path.append(node)
         else:
             self.node_path[self.ptdepth] = node
+        logging.debug(f"visiting {node}")
         self.ptdepth = self.ptdepth + 1
         #actually visit
         node = ParseTreeTransformer.visit(self, node)
         #bookkeeping
         self.ptdepth = self.ptdepth - 1
+        logging.debug(f"filtered to: {node}")
 
         # now add hoisted subtrees..
         if self.setboundary():
+            
             if self.proj_terms:
                 self.modified = True
                 if len(self.proj_terms) > 1:
@@ -1041,6 +1048,9 @@ class MetaCatTransformer(ParseTreeTransformer):
             # similarly for project, definitions
         return node
 
+    def visit_NotNode(self, node):
+        node.node.negated = not node.node.negated
+        return self.visit(node.node)
 
     def visit_DimNode(self, node):
         #if self.allsets():
@@ -1054,6 +1064,7 @@ class MetaCatTransformer(ParseTreeTransformer):
             self.proj_terms.append(node)
             return None
         if node.dim in self.rse_dims:
+            logging.debug(f"handling {node}: should be returning None")
             self.modified = True
             self.rse_terms.append(node)
             return None
@@ -1095,6 +1106,7 @@ class MetaCatTransformerPart2(ParseTreeTransformer):
         #    return True
         if len(n.nodes) == 1:
             return self.isempty(n.nodes[0])
+
 
     def visit_SetNode(self, node):
         # clean up:
