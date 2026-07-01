@@ -163,6 +163,8 @@ def _meta_infix_render(op, nodes, precedence):
     tokens = []
     if op == "minus":
         op = "-"  
+    if op == "like":
+        op = "~"
     for i, n in enumerate(nodes):
         if i > 0:
             yield op
@@ -555,8 +557,8 @@ class DimNode(NegatableNode):
             ">": "<=",
             "in": "not in",
             "not in": "in",
-            "not like": "!~",
-            "like": "~",
+            "not like": "~",
+            "like": "!~",
         }
 
         # if an alias, update with the real name
@@ -646,6 +648,10 @@ class DimNode(NegatableNode):
             op = self.notmap[self.op]
         else:
             op = self.op
+
+        if op == "like":
+            op = "~"
+
         yield self.meta_trans(self.dim)
         yield op
         for v in val:
