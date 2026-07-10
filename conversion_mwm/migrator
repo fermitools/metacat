@@ -41,7 +41,7 @@ class migrator:
         for table in self.ordered_tables: 
 
             if table == 'queries':
-                self.schlep_table(table, filter='perl ./query_converter.pl', format='csv')
+                self.schlep_table(table, filter='./sam_parser/new_query_converter.py', format='csv')
             else:
                 self.schlep_table(table)
 

@@ -17,6 +17,25 @@ from metacat.util import validate_metadata
 import warnings
 warnings.simplefilter("ignore")
 
+#debug=True
+#if debug:
+#    # =-=-=- debug logging =-=-=-=-=
+#    import http
+#    import logging
+#    import requests
+#
+#    http.client.HTTPConnection.debuglevel = 1
+#
+#    logging.basicConfig()
+#    logging.getLogger().setLevel(logging.DEBUG)
+#    requests_log = logging.getLogger("requests.packages.urllib3")
+#    requests_log.setLevel(logging.DEBUG)
+#    requests_log.propagate = True
+#    rfs_log = logging.getLogger("metacat_ui")
+#    rfs_log.setLevel(logging.DEBUG)
+#    # =-=-=-=-=-=-=-=
+
+
 Usage = f"""
 MetaCat version {Version}
 
