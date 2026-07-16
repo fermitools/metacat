@@ -155,6 +155,15 @@ class ValidateMetadataCommand(CLICommand):
             # now shift to the metadata for checking
             meta = meta["metadata"]
 
+        # Check required parameters from required categories
+        for path, cat in self.Categories.items():
+            if cat.get("required") and cat.get("definitions"):
+                for pname, definition in cat["definitions"].items():
+                    if definition.get("required"):
+                        param_key = path + "." + pname
+                        if param_key not in meta:
+                            errors.append((param_key, f"required parameter '{pname}' is missing from category '{path}'"))
+
         for name, value in sorted(meta.items()):
             if not "." in name:
                 errors.append((name, f"Invalid metadata parameter name: {name} - must be <category>.<name>"))

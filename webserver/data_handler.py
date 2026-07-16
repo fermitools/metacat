@@ -1540,6 +1540,7 @@ class DataHandler(MetaCatHandler):
         path = params["path"]
         owner_role = params["owner_role"]
         restricted = params["restricted"]
+        required = params["required"]
         description = params["description"]
         definitions = params["definitions"]
         creator = user.Username
@@ -1549,28 +1550,22 @@ class DataHandler(MetaCatHandler):
         if '.' in path and path != '.':
             return 409, "Invalid relative category path. Cannot contain dot"
         if DBParamCategory.exists(db, path):
-            return 409, f"Category {path} already exists" 
+            return 409, f"Category {path} already exists"
         if not definitions:
             return 400, "Empty category definitions"
 
-        cat = DBParamCategory(db, path, restricted=restricted, owner_role=owner_role, owner_user=creator, creator=creator, description=description, definitions=definitions)
+        # Validate that required categories have at least one required parameter
+        if required:
+            has_required_param = any(
+                defn.get("required")
+                for defn in definitions.values()
+            )
+            if not has_required_param:
+                return 400, "Required category must have at least one required parameter"
+
+        cat = DBParamCategory(db, path, restricted=restricted, required=required, owner_role=owner_role, owner_user=creator, creator=creator, description=description, definitions=definitions)
         cat.create()
         return json.dumps(cat.to_jsonable()), "application/json"
-
-    @sanitized
-    def remove_category(self, request, relpath, path=None, **args):
-        path = path or relpath
-        if not path:
-            return 400, "Category path not specified", "text/plain"
-        db = self.App.connect()
-        user, error = self.authenticated_user()
-        cat = DBParamCategory.get(db, path)
-        if cat is None:
-            return 404, "Category not found"
-        if not (user.is_admin() or user in cat.owners()):
-            return 403, "Permission denied"
-        cat.delete()
-        return "null", "text/json"
 
     @sanitized
     def update_category(self, request, relpath):
@@ -1592,6 +1587,7 @@ class DataHandler(MetaCatHandler):
 
         owner_role = params.get("owner_role")
         restricted = params.get("restricted")
+        required = params.get("required")
         description = params.get("description")
         definitions = params.get("definitions")
         mode = params.get("mode", "update")
@@ -1600,6 +1596,8 @@ class DataHandler(MetaCatHandler):
             cat.OwnerRole = owner_role
         if restricted is not None:
             cat.Restricted = restricted
+        if required is not None:
+            cat.Required = required
         if description is not None:
             cat.Description = description
         if definitions is not None:
@@ -1610,8 +1608,33 @@ class DataHandler(MetaCatHandler):
             else:
                 cat.Definitions = definitions
 
+        # Validate that required categories have at least one required parameter
+        if required is not None or definitions is not None:
+            if cat.Required:
+                has_required_param = any(
+                    defn.get("required")
+                    for defn in cat.Definitions.values()
+                )
+                if not has_required_param:
+                    return 400, "Required category must have at least one required parameter"
+
         cat.save()
         return json.dumps(cat.to_jsonable()), "application/json"
+
+    @sanitized
+    def remove_category(self, request, relpath, path=None, **args):
+        path = path or relpath
+        if not path:
+            return 400, "Category path not specified", "text/plain"
+        db = self.App.connect()
+        user, error = self.authenticated_user()
+        cat = DBParamCategory.get(db, path)
+        if cat is None:
+            return 404, "Category not found"
+        if not (user.is_admin() or user in cat.owners()):
+            return 403, "Permission denied"
+        cat.delete()
+        return "null", "text/json"
 
     @sanitized
     def report_metadata_keys(self, request, replpath,  **args):

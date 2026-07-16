@@ -17,9 +17,11 @@ def print_category(data):
         ct = datetime.fromtimestamp(ct, timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
     print("Created at:      ", ct)
     print("Restricted:      ", "yes" if data.get("restricted", False) else "no")
+    print("Required:        ", "yes" if data.get("required", False) else "no")
     print("Constraints:")
     for name, constraint in sorted(data.get("definitions", {}).items()):
-        line = "  %-40s %10s" % (name, constraint.get("type", "any"))
+        required = str(constraint.get("required", False)).strip().lower() == "true"
+        line = "  %-16s Required: %-24s %10s" % (name, "yes" if required else "no", constraint.get("type", "any"))
         if "values" in constraint:
             line += " %s" % (tuple(constraint["values"]),)
         rng = None
@@ -70,27 +72,42 @@ class ShowCommand(CLICommand):
                 print_category(data)
 
 class CreateCommand(CLICommand):
-    Opts = "d:ro:p:j"
+    Opts = "d:r:n:o:p:j"
     MinArgs = 1
     Usage = """ [options] <category>        --create a category
-    -d description
-    -r restricted, default false
-    -o owner
-    -p parameter definitions (json file or dictionary)
-    -j json
+    -d                      - description
+    -r                      - restricted (True/False), default False
+    -n                      - required (True/False), default False
+    -o                      - owner
+    -p                      - parameter definitions (json file or dictionary)
+    -j                      - print as JSON
     """
 
     def __call__(self, command, client, opts, args):
         catname = args[0]
         description = opts.get("-d")
-        if opts.get("-r"):
-            restricted = True
+        if "-r" in opts:
+            if opts.get("-r") == "True":
+                restricted = True
+            elif opts.get("-r") == "False":
+                restricted = False
+            else:
+                restricted = False
         else:
             restricted = False
-        if opts.get("-o"):
-            owner = opts.get("-o")
+
+        required = "-n" in opts
+        if "-n" in opts:
+           if opts.get("-n") == "True":
+               required = True
+           elif opts.get("-n") == "False":
+               required = False
+           else:
+               required = False
         else:
-            owner = None
+            required = False
+
+        owner = opts.get("-o")
 
         defs_file = opts.get("-p")
         if defs_file:
@@ -98,54 +115,55 @@ class CreateCommand(CLICommand):
             if not isinstance(defs, dict):
                 raise InvalidArguments("Definitions must be a dictionary")
 
-        cat = client.create_category(path=catname, owner_role=owner, restricted=restricted, description=description, definitions=defs)
+        cat = client.create_category(path=catname, owner_role=owner, restricted=restricted, required=required, description=description, definitions=defs)
         if "-j" in opts:
             print(json.dumps(cat))
         else:
             print_category(cat)
 
 class UpdateCommand(CLICommand):
-    Opts = "d:ro:p:m:j"
+    Opts = "d:r:n:o:p:m:j"
     MinArgs = 1
     Usage = """ [options] <category>        --update a category
-    -d description
-    -r restricted (true/false)
-    -o owner
-    -p parameter definitions (json file or dictionary)
-    -m mode (update, replace) - default: update
-    -j json
+    -d                      - description
+    -r                      - restricted (True/False)
+    -n                      - required (True/False)
+    -o                      - owner
+    -p                      - parameter definitions (json file or dictionary)
+    -m                      - mode (update, replace), default update
+    -j                      - print as JSON
     """
 
     def __call__(self, command, client, opts, args):
         catname = args[0]
-        description = opts.get("-d")
-        if opts.get("-r"):
-            restricted = opts.get("-r").lower() == "true"
-        else:
-            restricted = None
-        if opts.get("-o"):
-            owner = opts.get("-o")
-        else:
-            owner = None
+
+        updates = {}
+        if opts.get("-d") is not None:
+            updates["description"] = opts.get("-d")
+        if opts.get("-r") is not None:
+            updates["restricted"] = bool(opts.get("-r"))
+        if opts.get("-n") is not None:
+            updates["required"] = bool(opts.get("-n"))
+        if opts.get("-o") is not None:
+            updates["owner_role"] = opts.get("-o")
 
         defs_file = opts.get("-p")
         if defs_file:
             defs = load_json(defs_file)
             if not isinstance(defs, dict):
                 raise InvalidArguments("Definitions must be a dictionary")
-        else:
-            defs = None
+            updates["definitions"] = defs
 
-        mode = opts.get("-m", "update")
+        updates["mode"] = opts.get("-m", "update")
 
-        cat = client.update_category(path=catname, owner_role=owner, restricted=restricted, description=description, definitions=defs, mode=mode)
+        cat = client.update_category(path=catname, **updates)
         if "-j" in opts:
             print(json.dumps(cat))
         else:
             print_category(cat)
 
 class RemoveCommand(CLICommand):
-    Usage = """ <category>              --remove a category"""
+    Usage = """ <category>                  --remove a category"""
     MinArgs = 1
 
     def __call__(self, command, client, opts, args):

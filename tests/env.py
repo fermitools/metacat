@@ -12,7 +12,7 @@ if not production:
     sys.path.insert(0,base)
     sys.path.insert(0,f"{base}/tests/mocks")
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def env():
     if production:
        hostaport = 'https://metacat.fnal.gov:8143'
@@ -30,11 +30,11 @@ def env():
     os.environ['BEARER_TOKEN_FILE'] = '/tmp/bt_mc_test%d' % os.getpid()
     print("METACAT_SERVER_URL=", os.environ["METACAT_SERVER_URL"])
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def token(env):
     os.system("htgettoken -i hypot -a htvaultprod.fnal.gov ")
     
-@pytest.fixture
+@pytest.fixture(scope='session')
 def auth(token):
     os.system("metacat auth login -m token $USER")
     
@@ -76,3 +76,12 @@ def tst_file_md_list():
             os.unlink(md["name"])
         except:
             pass
+
+# define definitions for testing categories
+@pytest.fixture
+def tst_defs():
+    tst_defs = {
+        "intfield": {"type": "int", "min": 0, "max": 10, "required": "True"},
+        "textfield": {"type": "text", "values": ["a", "b", "c", "d"]}
+    }
+    return tst_defs

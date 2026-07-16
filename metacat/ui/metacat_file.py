@@ -86,7 +86,7 @@ class DeclareSingleCommand(CLICommand):
     Opts = ("N:p:m:c:da:s:P:jvf:", ["namespace=", "parents=", "metadata=", "checksums=", "dry-run", "auto-name", "size=", "json",
                     "file-description", "sample", "verbose"])
     Usage = """[options] [[<file namespace>:]<filename>] [<dataset namespace>:]<dataset name>
-    Declare signle file:
+    Declare single file:
         declare [options] [[<file namespace>:]<filename>] [<dataset namespace>:]<dataset name>
 
             -f|--file-description <JSON file>   - JSON file with description, including file attributes and metadata

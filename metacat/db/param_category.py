@@ -6,7 +6,7 @@ from metacat.util import epoch, validate_metadata, fetch_generator
 class DBParamCategory(DBObject):
 
     Table = "parameter_categories"
-    ColumnsText = "path,owner_user,owner_role,description,restricted,definitions,creator,created_timestamp"
+    ColumnsText = "path,owner_user,owner_role,restricted,description,creator,created_timestamp,definitions,required"
     Columns = ColumnsText.split(",")
     PK = ["path"]
 
@@ -27,13 +27,14 @@ class DBParamCategory(DBObject):
     Types =  ('int','float','text','boolean',
                 'int[]','float[]','text[]','boolean[]','dict', 'list', 'any')
 
-    def __init__(self, db, path, restricted=False, owner_role=None, owner_user=None, creator=None, definitions={}, description="", created_timestamp=None):
+    def __init__(self, db, path, restricted=False, required=False, owner_role=None, owner_user=None, creator=None, definitions={}, description="", created_timestamp=None):
         self.Path = path
         self.DB = db
         self.OwnerUser = owner_user
         self.OwnerRole = owner_role
         self.Description = description
         self.Restricted = restricted
+        self.Required = required
         self.Definitions = definitions         
         self.Creator = creator 
         self.CreatedTimestamp = created_timestamp
@@ -56,6 +57,7 @@ class DBParamCategory(DBObject):
             owner_role = self.OwnerRole,
             description = self.Description,
             restricted = self.Restricted,
+            required = self.Required,
             definitions = self.Definitions,
             creator = self.Creator,
             created_timestamp = epoch(self.CreatedTimestamp)
@@ -95,10 +97,10 @@ class DBParamCategory(DBObject):
         transaction.execute(f"""
             update parameter_categories
                 set owner_user=%(owner_user)s, owner_role=%(owner_role)s, restricted=%(restricted)s, 
-                    definitions=%(defs)s, description=%(description)s
+                    required=%(required)s, definitions=%(defs)s, description=%(description)s
                 where path = %(path)s
             """,
-            dict(path=self.Path, owner_user=self.OwnerUser, owner_role=self.OwnerRole, restricted=self.Restricted, defs=defs,
+            dict(path=self.Path, owner_user=self.OwnerUser, owner_role=self.OwnerRole, restricted=self.Restricted, required=self.Required, defs=defs,
                     description=self.Description, creator=self.Creator))
         return self
 
@@ -107,12 +109,12 @@ class DBParamCategory(DBObject):
         defs = json.dumps(self.Definitions)
         columns = self.columns(exclude="created_timestamp")
         transaction.execute(f"""
-            insert into parameter_categories({columns}) 
-                values(%(path)s, %(owner_user)s, %(owner_role)s, %(description)s, %(restricted)s, %(defs)s, %(creator)s)
+            insert into parameter_categories({columns})
+                values(%(path)s, %(owner_user)s, %(owner_role)s, %(restricted)s, %(description)s, %(creator)s, %(defs)s, %(required)s)
                 returning created_timestamp
             """,
-            dict(path=self.Path, owner_user=self.OwnerUser, owner_role=self.OwnerRole, restricted=self.Restricted, defs=defs,
-                    description=self.Description, creator=self.Creator)
+            dict(path=self.Path, owner_user=self.OwnerUser, owner_role=self.OwnerRole, restricted=self.Restricted,
+                    description=self.Description, creator=self.Creator, defs=defs, required=self.Required)
         )
         self.CreatedTimestamp = transaction.fetchone()[0]
         return self
@@ -126,9 +128,9 @@ class DBParamCategory(DBObject):
     @staticmethod
     def from_tuple(db, tup):
         if tup is None: return None
-        path, owner_user, owner_role, description, restricted, definitions, creator, created_timestamp = tup
-        return DBParamCategory(db, path, owner_user=owner_user, owner_role=owner_role, description=description, 
-                restricted=restricted, definitions=definitions, creator=creator, created_timestamp=created_timestamp)
+        path, owner_user, owner_role, restricted, description, creator, created_timestamp, definitions, required = tup
+        return DBParamCategory(db, path, owner_user=owner_user, owner_role=owner_role, restricted=restricted,
+                description=description, definitions=definitions, creator=creator, created_timestamp=created_timestamp, required=required)
 
     @staticmethod
     def get_many(db, paths):
@@ -172,7 +174,6 @@ class DBParamCategory(DBObject):
             return False, errors[0][1]
         else:
             return True, "valid"
-        return True, "valid"
     
     @staticmethod
     def validate_metadata_bulk(db, items):
@@ -185,7 +186,17 @@ class DBParamCategory(DBObject):
         # returns list of tuples:
         #     (item, {"param name":"error", ...})
         #
-        
+
+        # Collect all required parameters from required categories
+        required_params = {}  # path -> set of required param names
+        all_categories = {c.Path: c for c in DBParamCategory.list(db)}
+        for path, category in all_categories.items():
+            if category and category.Required and category.Definitions:
+                for pname, definition in category.Definitions.items():
+                    if definition.get("required"):
+                        required_params.setdefault(path, set()).add(pname)
+
+        # Collect all category paths from metadata
         category_paths = set()
         for item in items:
             meta = item if isinstance(item, dict) else item.metadata()
@@ -200,10 +211,18 @@ class DBParamCategory(DBObject):
         for index, item in enumerate(items):
             meta = item if isinstance(item, dict) else item.metadata()
             item_errors = []
+
+            # Check required params for required categories
+            for path, required_set in required_params.items():
+                for pname in required_set:
+                    param_key = path + "." + pname
+                    if param_key not in meta:
+                        item_errors.append({"name": param_key, "reason": f"required parameter '{pname}' is missing from category '{path}'", "value": None})
+
             for name, value in meta.items():
                 if "." in name:
                     path, vname = name.rsplit(".", 1)
-                    category = categories[path]
+                    category = categories.get(path)
                     if category is not None:
                         ok, error = category.validate_parameter(vname, value)
                         if not ok:

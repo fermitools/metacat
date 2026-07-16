@@ -305,52 +305,135 @@ def test_metacat_namespace_show(auth, tst_ds):
 # Categories
 
 def test_metacat_category_create(auth, tst_defs):
-    with open("defs", "w") as defs:
-        json.dump(tst_defs, defs)
-    with os.popen(f"metacat category create -d 'testing' -p defs test_category") as fin:
+    with open("defs", "w") as f:
+        json.dump(tst_defs, f)
+    with os.popen(f"metacat category create -d 'testing with pytest' -p defs pytest_category") as fin:
         data = fin.read()
     os.unlink("defs")
-    assert data.find(os.environ["USER"]) > 0
-    assert data.find("test_category") > 0
-    assert data.find("intfield") > 0
+    assert data.find(os.environ["USER"]) >= 0
+    assert data.find("pytest_category") >= 0
+    assert data.find("intfield") >= 0
 
 def test_metacat_category_list(auth):
     with os.popen("metacat category list", "r") as fin:
         data = fin.read()
-    assert data.find("test_category") > 0
-    assert data.find("cat_t1") > 0
+    assert data.find("pytest_category") >= 0
+    assert data.find("cat_t1") >= 0
 
 def test_metacat_category_show(auth):
-    with os.popen("metacat category show test_category", "r") as fin:
+    with os.popen("metacat category show pytest_category", "r") as fin:
         data = fin.read()
-    assert data.find("test_category") > 0
-    assert data.find("Restricted") > 0
-    assert data.find("int") > 0
+    assert data.find("pytest_category") >= 0
+    assert data.find("Restricted") >= 0
+    assert data.find("int") >= 0
 
 def test_metacat_category_update(auth, tst_defs):
     tst_defs["newfield"] = {"type": "float", "min": 1.2, "max": 4.7}
     with open("defs", "w") as defs:
         json.dump(tst_defs, defs)
-    os.system(f"metacat category update -p defs test_category")
+    os.system(f"metacat category update -p defs pytest_category")
     os.unlink("defs")
-    with os.popen(f"metacat category show test_category") as fin:
+    with os.popen(f"metacat category show pytest_category") as fin:
         data = fin.read()
-    assert data.find("newfield") > 0
+    assert data.find("newfield") >= 0
 
 def test_metacat_category_validation(auth, tst_ds, tst_file_md_list):
+    # adding metadata that fits the definitions, should succeed
     ns = tst_file_md_list[1]["namespace"]
-    fname = tst_file_md_list[1]["name"]
-    md = '{"test_category.newfield": 8.9}'
-    with os.popen(f"metacat file update-meta -f {ns}:{name} {md}") as fin:
+    name = tst_file_md_list[1]["name"]+"c"
+    md = '{"pytest_category.intfield": 2}'
+    with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds}") as fin:
         data = fin.read()
-    assert data.find("InvalidMetadataError")
+    assert data.find(ns) >= 0
+    assert data.find("Invalid metadata") < 0
+
+def test_metacat_category_validation2(auth, tst_ds, tst_file_md_list):
+    # adding metadata outside the range of the definitions, should fail
+    ns = tst_file_md_list[2]["namespace"]
+    name = tst_file_md_list[2]["name"]+"c"
+    md = '{"pytest_category.newfield": 8.9}'
+    with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds} 2>&1") as fin:
+        data = fin.read()
+    assert data.find("Invalid metadata") >= 0
+    assert data.find("Metadata category validation errors") >= 0
+    assert data.find("out of range") >= 0
+
+def test_metacat_category_nonrestricted(auth, tst_ds, tst_file_md_list):
+    # metadata includes an undefined parameter in a non-restricted category, should succeed
+    ns = tst_file_md_list[2]["namespace"]
+    name = tst_file_md_list[2]["name"]+"c"
+    md = '{"pytest_category.extra": 7.2}'
+    with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds}") as fin:
+        data = fin.read()
+    assert data.find(ns) >= 0
+    assert data.find("Invalid metadata") < 0
+
+def test_metacat_category_create2(auth, tst_defs):
+    # testing creation of a category that is restricted and required
+    with open("defs", "w") as f:
+        json.dump(tst_defs, f)
+    with os.popen(f"metacat category create -d 'testing restricted and required with pytest' -r True -n True -p defs pytest_category_rr") as fin:
+        data = fin.read()
+    os.unlink("defs")
+    assert data.find("pytest_category_rr") >= 0
+    assert data.find("yes") >= 0
+    
+def test_metacat_category_validation3(auth, tst_ds, tst_file_md_list):
+    # adding metadata that fits the definitions in the restricted, required category, should succeed
+    ns = tst_file_md_list[3]["namespace"]
+    name = tst_file_md_list[3]["name"]+"c"
+    md = '{"pytest_category_rr.intfield": 2}'
+    with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds}") as fin:
+        data = fin.read()
+    assert data.find(ns) >= 0
+    assert data.find("Invalid metadata") < 0
+
+def test_metacat_categroy_validation4(auth, tst_ds, tst_file_md_list):
+    # adding metadata outside the range of the definitions in the restricted, required category, should fail
+    ns = tst_file_md_list[4]["namespace"]
+    name = tst_file_md_list[4]["name"]+"c"
+    md = '{"pytest_category_rr.newfield": 8.9}'
+    with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds} 2>&1") as fin:
+        data = fin.read()
+    assert data.find("Invalid metadata") >= 0
+    assert data.find("Metadata category validation errors") >= 0
+
+def test_metacat_category_restricted(auth, tst_ds, tst_file_md_list):
+    # adding unallowed metadata field to a restricted category, should fail
+    ns = tst_file_md_list[4]["namespace"]
+    name = tst_file_md_list[4]["name"]+"c"
+    md = '{"pytest_category_rr.extra": "abc"}'
+    with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds} 2>&1") as fin:
+        data = fin.read()
+    assert data.find("Invalid metadata") >= 0
+    assert data.find("parameter not allowed in restricted category") >= 0
+
+def test_metacat_category_requiredparam(auth, tst_ds, tst_file_md_list):
+    # not adding a required parameter, should fail
+    ns = tst_file_md_list[4]["namespace"]
+    name = tst_file_md_list[4]["name"]+"c"
+    md = '{"pytest_category_rr.textfield": "a"}'
+    with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds} 2>&1") as fin:
+        data = fin.read()
+    assert data.find("Invalid metadata") >= 0
+    assert data.find("missing from category") >= 0
+
+def test_metacat_category_requiredcat(auth, tst_ds, tst_file_md_list):
+    # not adding a required category, should fail
+    ns = tst_file_md_list[4]["namespace"]
+    name = tst_file_md_list[4]["name"]+"c"
+    md = '{"pytest_category.intfield": 4}'
+    with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds} 2>&1") as fin:
+        data = fin.read()
+    assert data.find("Invalid metadata") >= 0
+    assert data.find("missing from category") >= 0
 
 def test_metacat_category_remove(auth):
-    os.system(f"metacat category remove test_category")
+    os.system(f"metacat category remove pytest_category")
+    os.system(f"metacat category remove pytest_category_rr")
     with os.popen(f"metacat category list") as fin:
         data = fin.read()
-    assert data.find("test_category") < 0
-
+    assert data.find("pytest_category") < 0
 
 def test_metacat_file_declare_sample(auth):
     with os.popen("metacat file declare-sample", "r") as fin:
