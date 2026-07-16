@@ -1,6 +1,6 @@
-import json, requests, time, psycopg2
+import json, requests, time, psycopg2, re
 from pythreader import TaskQueue
-from metacat.db import DBUser, DBNamespace, DBDataset, DBFile
+from metacat.db import DBUser, DBNamespace, DBDataset, DBFile, DBRole
 from metacat.logs import Logged, init as init_logs
 from wsdbtools import ConnectionWithTransactions
 import functools, traceback
@@ -137,23 +137,25 @@ class MetaCatDaemon(Logged):
             if m:
                 # substitute subexpressions from pattern match
                 rolename = self.role_template
-                for i,val in enumerate(m.groups)
+                for i,val in enumerate(m.groups(), start=1):
                     rolename = rolename.replace(f"${i}", val)
+                if rolename.find('$') >= 0:
+                    self.debug(f"role template from {item['fqan']} still has '$' : {rolename}, skipping")
+                    continue
 
                 do_save = False
                 db = self.db()
-                role = BaseDBRole.get(db, rolename):
+                role = DBRole.get(db, rolename)
 
                 if not role:
                     self.debug(f"creating new role {rolename}")
-                    role = BaseDBRole(db, role, "auto-imported from FERRY")
+                    role = DBRole(db, rolename, "auto-imported from FERRY")
                     role.save()
                     
-                if not user in role.members():
+                if not user in role.members:
                     self.debug(f"adding {user} to {rolename}")
                     role.add_member(user)
 
-                return
 
     @log_exceptions
     def ferry_update(self):
@@ -224,6 +226,7 @@ def main():
         print(Usage)
         sys.exit(2)
 
+
     config = yaml.load(open(opts["-c"], "r"), Loader=yaml.SafeLoader)
     log_file = opts.get("-l", "-")
     init_logs(log_file, error_out=log_file, debug_out=log_file, debug_enabled="-d" in opts)
@@ -231,7 +234,6 @@ def main():
     daemon = MetaCatDaemon(config)
     while True:
         time.sleep(10)
-
 
 if __name__ == "__main__":
     main()
