@@ -4,7 +4,7 @@ from metacat.webapi import MetaCatClient, MCWebAPIError, MCInvalidMetadataError,
 from metacat.ui.cli import CLI, CLICommand, InvalidOptions, InvalidArguments
 from metacat.util import ObjectSpec, undid
 from datetime import timezone, datetime
-from .common import load_text, load_file_list, load_json
+from .common import load_text, load_file_list, load_json, exit_code_from_exception
 
 class DeclareSampleCommand(CLICommand):
     Usage = """-- print sample input for declare-many command
@@ -236,10 +236,7 @@ class DeclareManyCommand(CLICommand):
         try:
             response = client.declare_files(f"{dataset_namespace}:{dataset_name}", files, dry_run = "-d" in opts, as_required=as_required)
         except MCError as e:
-            print(e)
-            error_code = (hash(str(e)) % 89) + 32
-            print("trying to exit: ", error_code)
-            sys.exit(error_code)
+            sys.exit(exit_code_from_exception(e))
 
         if "-j" in opts or "--json" in opts:
             print(json.dumps(response, indent=4, sort_keys=True))
@@ -270,10 +267,7 @@ class DatasetsCommand(CLICommand):
         try:
             data = client.get_file(did=did, fid=fid, with_provenance=False, with_metadata=False, with_datasets=True)
         except MCError as e:
-            print(e)
-            error_code = (hash(str(e)) % 89) + 32
-            print("trying to exit: ", error_code)
-            sys.exit(error_code)
+            sys.exit(exit_code_from_exception(e))
 
         if data is None:
             print("File not found", file=sys.stderr)
@@ -308,10 +302,7 @@ class FileIDCommand(CLICommand):
             data = client.get_file(did=did, namespace=namespace, name=name, with_provenance=False, with_metadata=False,
                                with_datasets=False)
         except MCError as e:
-            print(e)
-            error_code = (hash(str(e)) % 89) + 32
-            print("trying to exit: ", error_code)
-            sys.exit(error_code)
+            sys.exit(exit_code_from_exception(e))
         if data is None:
             print("File not found", file=sys.stderr)
             sys.exit(7)
@@ -340,10 +331,7 @@ class RetireCommand(CLICommand):
         try:
             data = client.retire_file(did=did, namespace=namespace, name=name, retire=do_retire)
         except MCError as e:
-            print(e)
-            error_code = (hash(str(e)) % 89) + 32
-            print("trying to exit: ", error_code)
-            sys.exit(error_code)
+            sys.exit(exit_code_from_exception(e))
         if data is None:
             print("File not found", file=sys.stderr)
             sys.exit(7)
@@ -364,10 +352,7 @@ class NameCommand(CLICommand):
         try:
             data = client.get_file(fid=fid, with_provenance=False, with_metadata=False, with_datasets=False)
         except MCError as e:
-            print(e)
-            error_code = (hash(str(e)) % 89) + 32
-            print("trying to exit: ", error_code)
-            sys.exit(error_code)
+            sys.exit(exit_code_from_exception(e))
 
         if data is None:
             print("File not found", file=sys.stderr)
@@ -423,10 +408,7 @@ class ShowCommand(CLICommand):
                         with_provenance=include_provenance, with_metadata=include_meta,
                         with_datasets=include_datasets)
         except MCError as e:
-            print(e)
-            error_code = (hash(str(e)) % 89) + 32
-            print("trying to exit: ", error_code)
-            sys.exit(error_code)
+            sys.exit(exit_code_from_exception(e))
 
         if data is None:
             print("File not found", file=sys.stderr)
@@ -542,10 +524,7 @@ class UpdateMetaCommand(CLICommand):
         try:
             response = client.update_file_meta(meta, files=file_list, mode=mode, namespace=namespace)
         except MCError as e:
-            print(e)
-            error_code = (hash(str(e)) % 89) + 32
-            print("trying to exit: ", error_code)
-            sys.exit(error_code)
+            sys.exit(exit_code_from_exception(e))
 
 class UpdateCommand(CLICommand):
     

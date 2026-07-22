@@ -6,15 +6,21 @@ from metacat.webapi import MCError
 from metacat.util import ObjectSpec
 import sys, json, os.path
 
+def exit_code_from_exception(e):
+    if isinstance(e, Exception):
+        msg = f"Exception: {e.__class__.__name__} {' '.join(e.args)}"
+        print(msg, file=sys.stderr)
+    else:
+        msg = str(e)
+    error_code = sum([ord(c) for c in msg]) % 63 + 32
+    return error_code
+
 def catch_mc_errors(method):
     def decorated(*params, **args):
         try:
             return method(*params, **args)
         except MCError as e:
-            print(e, file=sys.stderr)
-            error_code = (hash(str(e)) % 89) + 32
-            print("trying to exit: ", error_code)
-            sys.exit(error_code)
+            sys.exit(exit_code_from_exception(e))
     return decorated
 
 def load_text(arg):

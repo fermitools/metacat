@@ -14,6 +14,7 @@ from .metacat_report import ReportMetadataCommand
 from .metacat_category import CategoryCLI
 from .metacat_named_query import NamedQueriesCLI
 from metacat.util import validate_metadata
+from .common import exit_code_from_exception
 
 import warnings
 warnings.simplefilter("ignore")
@@ -199,13 +200,12 @@ class ValidateMetadataCommand(CLICommand):
                 for name_error in errors:
                     if name_error:
                         print("%-40s: %s" % (name_error[0], " ".join(name_error[1:])))
-            error_code = (hash(errors) % 126) + 1
-            print("trying to exit: ", error_code)
-            sys.exit(error_code)
+            sys.exit(exit_code_from_exception(errors))
         else:
             sys.exit(0)
 
 Commands = ["admin","auth","dataset","query","namespace","file","report"]
+
 
 def main():
 
@@ -238,11 +238,7 @@ def main():
        print("Invalid Metadata", file=sys.stderr)
        sys.exit(13)
     except Exception as e:
-        msg = f"Exception: {type(e)} {e.args}"
-        print(msg, file=sys.stderr)
-        error_code = (ord(msg[0])+len(msg)) % 89 + 32
-        print("trying to exit: ", error_code)
-        sys.exit(error_code)
+        sys.exit(exit_code_from_exception(e))
 
 if __name__ == "__main__":
     print("debug one")
