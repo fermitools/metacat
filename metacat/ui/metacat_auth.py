@@ -100,7 +100,7 @@ def get_x509_cert_key(opts):
         print("X.509 certificate file is unspecified.\n")
         print("  Use -c <cert file> or set env. variable X509_USER_PROXY or X509_USER_CERT")
         print(Usage)
-        sys.exit(2)
+        sys.exit(12)
     return cert, key
     
 class MyDNCommand(CLICommand):
@@ -164,17 +164,17 @@ class LoginCommand(CLICommand):
                 if token_file:
                     if not os.path.isfile(token_file):
                         print("File not found:", token_file, file=sys.stderr)
-                        sys.exit(1)
+                        sys.exit(7)
                     token = open(token_file, "r").read().strip()
             if not token:
                 print("Token not found", file=sys.stderr)
-                sys.exit(1)
+                sys.exit(8)
             user, expiration = client.login_token(username, token)
         else:
             raise InvalidArguments(f"Unknown authentication mechanism {mechanism}")
         if not client.tokens_saved():
             print("Authentication token not saved. Can not access/create token library", sys.stderr)
-            sys.exit(1)
+            sys.exit(9)
         print ("User:   ", user)
         print ("Expires:", time.ctime(expiration))
     
@@ -191,7 +191,7 @@ class ExportCommand(CLICommand):
             token = client.Token
             if token is None:
                 print(Usage)
-                sys.exit(2)
+                sys.exit(10)
         else:
             tl = client.TokenLib
             token_id_or_url = args[0]
@@ -200,7 +200,7 @@ class ExportCommand(CLICommand):
                     break
             else:
                 print("Token not found", file=sys.stderr)
-                sys.exit(1)
+                sys.exit(10)
 
         out_path = opts.get("-o", opts.get("--out"))
         if out_path:

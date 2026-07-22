@@ -12,7 +12,9 @@ def catch_mc_errors(method):
             return method(*params, **args)
         except MCError as e:
             print(e, file=sys.stderr)
-            sys.exit(1)
+            error_code = (hash(str(e)) % 89) + 32
+            print("trying to exit: ", error_code)
+            sys.exit(error_code)
     return decorated
 
 def load_text(arg):

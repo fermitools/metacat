@@ -107,7 +107,7 @@ class ShowDatasetCommand(CLICommand):
         info = client.get_dataset(args[0])
         if info is None:
             print("Dataset not found")
-            sys.exit(1)
+            sys.exit(11)
         if "-p" in opts or "--pprint" in opts:
             pprint.pprint(info)
         elif "-j" in opts or "--json" in opts:
@@ -207,8 +207,9 @@ class CreateDatasetCommand(CLICommand):
 
         except MCError as e:
             print(e)
-
-            sys.exit(1)
+            error_code = (hash(str(e)) % 89) + 32
+            print("trying to exit: ", error_code)
+            sys.exit(error_code)
         else:
             if "-j" in opts or "--json" in opts:
                 print(json.dumps(out, indent=4, sort_keys=True))
@@ -256,7 +257,9 @@ class UpdateDatasetCommand(CLICommand):
                 mode=mode, description=desc)
         except MCError as e:
             print(e)
-            sys.exit(1)
+            error_code = (hash(str(e)) % 89) + 32
+            print("trying to exit: ", error_code)
+            sys.exit(error_code)
         else:
             if "-j" in opts or "--json" in opts:
                 print(json.dumps(response, indent=4, sort_keys=True))
@@ -338,7 +341,9 @@ class AddFilesCommand(CLICommand):
             nadded = client.add_files(dataset, file_list=files, query=query)
         except MCError as e:
             print(e)
-            sys.exit(1)
+            error_code = (hash(str(e)) % 89) + 32
+            print("trying to exit: ", error_code)
+            sys.exit(error_code)
         else:
             print("Added", nadded, "files")
 
@@ -418,7 +423,9 @@ class RemoveFilesCommand(CLICommand):
             nremoved = client.remove_files(dataset, file_list=files, query=query)
         except MCError as e:
             print(e)
-            sys.exit(1)
+            error_code = (hash(str(e)) % 89) + 32
+            print("trying to exit: ", error_code)
+            sys.exit(error_code)
         else:
             print("Removed", nremoved, "files")
 
@@ -434,7 +441,9 @@ class RemoveDatasetCommand(CLICommand):
             nremoved = client.remove_dataset(dataset)
         except MCError as e:
             print(e)
-            sys.exit(1)
+            error_code = (hash(str(e)) % 89) + 32
+            print("trying to exit: ", error_code)
+            sys.exit(error_code)
 
 DatasetCLI = CLI(
     "create",       CreateDatasetCommand(),

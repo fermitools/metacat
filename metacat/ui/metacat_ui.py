@@ -70,7 +70,7 @@ class MetaCatCLI(CLI):
     
             if not server_url:
                 print("Server address must be specified either using -s option or using environment variable METACAT_SERVER_URL", file=sys.stderr)
-                sys.exit(2)
+                sys.exit(15)
 
             auth_server_url = opts.get("-a") or os.environ.get("METACAT_AUTH_SERVER_URL")
             if not auth_server_url:
@@ -132,7 +132,7 @@ class ValidateMetadataCommand(CLICommand):
             dataset = client.get_dataset(dataset_did)
             if dataset is None:
                 print(f"Dataset {dataset_did} not found", file=sys.stderr)
-                sys.exit(1)
+                sys.exit(11)
 
         if self.Categories is None:
             categories = self.Categories = {c["path"]:c for c in client.list_categories()}
@@ -198,7 +198,9 @@ class ValidateMetadataCommand(CLICommand):
                 for name_error in errors:
                     if name_error:
                         print("%-40s: %s" % (name_error[0], " ".join(name_error[1:])))
-            sys.exit(1)
+            error_code = (hash(errors) % 126) + 1
+            print("trying to exit: ", error_code)
+            sys.exit(error_code)
         else:
             sys.exit(0)
 
@@ -223,9 +225,13 @@ def main():
     try:
         cli.run(sys.argv, argv0="metacat")
     except (AuthenticationError, MCError) as e:
-        print(e, file=sys.stderr)
-        sys.exit(1)
+        msg = str(e)
+        print(msg, file=sys.stderr)
+        error_code = (hash(msg) % 89) + 32
+        print("trying to exit: ", error_code)
+        sys.exit(error_code)
 
 if __name__ == "__main__":
+    print("debug one")
     main()
     

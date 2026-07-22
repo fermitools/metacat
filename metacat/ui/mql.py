@@ -66,7 +66,7 @@ from metacat.filters import standard_filters as filters
 
 if not sys.argv[1:] or sys.argv[1] in ("help", "--help", "-?"):
     print(Usage)
-    sys.exit(2)
+    sys.exit(1)
 
 cmd = sys.argv[1]
 opts, args = getopt(sys.argv[2:], "dc:os")
