@@ -1,4 +1,5 @@
 from metacat.webapi import MCWebAPIError, MetaCatClient, MCError, AuthenticationError
+from metacat.webapi.webapi import NotFoundError, AlreadyExistsError, PermissionDeniedError, InvalidMetadataError
 from metacat import Version
 import sys, getopt, os, json
 from .cli import CLI, CLICommand
@@ -224,10 +225,22 @@ def main():
     )
     try:
         cli.run(sys.argv, argv0="metacat")
-    except (AuthenticationError, MCError) as e:
-        msg = str(e)
+    except NotFoundError as e:
+       print("File not found on server", file=sys.stderr)
+       sys.exit(12)
+    except AlreadyExistsError as e:
+       print("Already exists on server", file=sys.stderr)
+       sys.exit(16)
+    except PermissionDeniedError as e:
+       print("Permission Denied by server", file=sys.stderr)
+       sys.exit(17)
+    except InvalidMetadataError as e:
+       print("Invalid Metadata", file=sys.stderr)
+       sys.exit(13)
+    except Exception as e:
+        msg = f"Exception: {type(e)} {e.args}"
         print(msg, file=sys.stderr)
-        error_code = (hash(msg) % 89) + 32
+        error_code = (ord(msg[0])+len(msg)) % 89 + 32
         print("trying to exit: ", error_code)
         sys.exit(error_code)
 
