@@ -1,6 +1,6 @@
-import json, requests, time, psycopg2
+import json, requests, time, psycopg2, re
 from pythreader import TaskQueue
-from metacat.db import DBUser, DBNamespace, DBDataset, DBFile
+from metacat.db import DBUser, DBNamespace, DBDataset, DBFile, DBRole
 from metacat.logs import Logged, init as init_logs
 from wsdbtools import ConnectionWithTransactions
 import functools, traceback
@@ -41,11 +41,22 @@ class MetaCatDaemon(Logged):
         self.CountsUpdateInterval = daemon_config.get("counts_update_interval", 1 * 3600)
         self.VO = daemon_config["vo"]
 
+        role_pattern_txt = daemon_config.get("role_pattern", "")
+        if role_pattern_txt: 
+            self.role_pattern = re.compile(role_pattern_txt)
+        else:
+            self.role_pattern = None
+
+        self.role_template = daemon_config.get("role_template", "")
+
         db_config = config["database"]
         self.DBConnect = "host=%(host)s port=%(port)s dbname=%(dbname)s user=%(user)s" % db_config
         if "password" in db_config:
             self.DBConnect += " password=%(password)s" % db_config
+
+
         self.Schema = db_config.get("schema")
+
 
         self.Queue = TaskQueue(5, delegate=self)
         self.Queue.append(self.ferry_update, interval=self.FerryUpdateInterval, after=time.time())
@@ -83,13 +94,8 @@ class MetaCatDaemon(Logged):
         db.close()
         self.log("Namespace file counts updated")
 
-    @log_exceptions
-    def ferry_update(self):
-        self.debug("ferry_update...")
-        url = f"{self.FerryURL}/getAffiliationMembersRoles?unitname={self.VO}"
 
-        # Authentication...
-        self.debug("ferry URL:", url)
+    def do_auth(self):
         if self.CertFile:
             cert = (self.CertFile, self.KeyFile)
         else:
@@ -101,7 +107,13 @@ class MetaCatDaemon(Logged):
             headers = {"Authorization": "Bearer " + token}
         else:
             headers = None
+        return cert, headers
 
+
+    def fetch_url(self, url):
+
+        self.debug("ferry URL:", url)
+        cert, headers = self.do_auth()
         response = requests.get(url, verify=False, cert=cert, headers=headers)
         data = response.json()
         self.debug("data received")
@@ -112,6 +124,46 @@ class MetaCatDaemon(Logged):
             for line in data["ferry_error"]:
                 print(line)
             raise ValueError(f"Ferry error: {data['ferry_error']}")
+
+        return data
+
+    def ferry_user_roles(self, user):
+        self.debug(f"ferry_user_roles: {user}")
+        url = f"{self.FerryURL}/getUserFQANs?username={user}&unitname={self.VO}"
+
+        data = self.fetch_url(url)
+
+        for item in data["ferry_output"]: 
+            m = self.role_pattern.search(item["fqan"])
+            if m:
+                # substitute subexpressions from pattern match
+                rolename = self.role_template
+                for i,val in enumerate(m.groups(), start=1):
+                    rolename = rolename.replace(f"${i}", val)
+                if rolename.find('$') >= 0:
+                    self.debug(f"role template from {item['fqan']} still has '$' : {rolename}, skipping")
+                    continue
+
+                do_save = False
+                db = self.db()
+                role = DBRole.get(db, rolename)
+
+                if not role:
+                    self.debug(f"creating new role {rolename}")
+                    role = DBRole(db, rolename, "auto-imported from FERRY")
+                    role.save()
+                    
+                if not user in role.members:
+                    self.debug(f"adding {user} to {rolename}")
+                    role.add_member(user)
+
+
+    @log_exceptions
+    def ferry_update(self):
+        self.debug("ferry_update...")
+        url = f"{self.FerryURL}/getAffiliationMembersRoles?unitname={self.VO}"
+
+        data = self.fetch_url(url)
 
         ferry_users = {item["username"]: item for item in data["ferry_output"][self.VO]}
         self.log("Loaded", len(ferry_users), "users from Ferry")
@@ -161,6 +213,9 @@ class MetaCatDaemon(Logged):
                     ns_created.append(uns)
                     ns.Creator = username
                     ns.create()
+                    
+            if self.role_pattern:
+                self.ferry_user_roles(username)
 
         self.log("created:", len(created), "" if not created else ",".join(created))
         self.log("updated:", len(updated), "" if not updated else ",".join(updated))
@@ -183,6 +238,7 @@ def main():
         print(Usage)
         sys.exit(2)
 
+
     config = yaml.load(open(opts["-c"], "r"), Loader=yaml.SafeLoader)
     log_file = opts.get("-l", "-")
     init_logs(log_file, error_out=log_file, debug_out=log_file, debug_enabled="-d" in opts)
@@ -190,7 +246,6 @@ def main():
     daemon = MetaCatDaemon(config)
     while True:
         time.sleep(10)
-
 
 if __name__ == "__main__":
     main()

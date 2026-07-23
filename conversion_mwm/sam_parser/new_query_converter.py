@@ -3,9 +3,9 @@
 import sys
 import os
 import re
+from parser import DimParserError
 from parse_tree import *
 from random import random, randint, choice, seed
-from parser import DimParserError
 import parser
 import logging
 
