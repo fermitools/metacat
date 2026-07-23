@@ -1,5 +1,5 @@
 from metacat.webapi import MCWebAPIError, MetaCatClient, MCError, AuthenticationError
-from metacat.webapi.webapi import NotFoundError, AlreadyExistsError, PermissionDeniedError, InvalidMetadataError
+from metacat.webapi.webapi import NotFoundError, AlreadyExistsError, PermissionDeniedError, InvalidMetadataError, BadRequestError
 from metacat import Version
 import sys, getopt, os, json
 from .cli import CLI, CLICommand
@@ -207,6 +207,7 @@ class ValidateMetadataCommand(CLICommand):
 Commands = ["admin","auth","dataset","query","namespace","file","report"]
 
 
+
 def main():
 
     cli = MetaCatCLI(
@@ -225,22 +226,24 @@ def main():
     )
     try:
         cli.run(sys.argv, argv0="metacat")
+    except BadRequestError as e:
+       print(f"Bad Request error: {e.Message=}")
+       sys.exit(18)
     except NotFoundError as e:
-       print("File not found on server", file=sys.stderr)
+       print(f"File not found on server {e.Message}", file=sys.stderr)
        sys.exit(12)
     except AlreadyExistsError as e:
-       print("Already exists on server", file=sys.stderr)
+       print(f"Already exists on server {e.Message}", file=sys.stderr)
        sys.exit(16)
     except PermissionDeniedError as e:
-       print("Permission Denied by server", file=sys.stderr)
+       print(f"Permission Denied by server {e.Message}", file=sys.stderr)
        sys.exit(17)
     except InvalidMetadataError as e:
-       print("Invalid Metadata", file=sys.stderr)
+       print(f"Invalid MetadataError : {e.Message} {str(e)}", file=sys.stderr)
        sys.exit(13)
     except Exception as e:
-        sys.exit(exit_code_from_exception(e))
+       sys.exit(exit_code_from_exception(e))
 
 if __name__ == "__main__":
-    print("debug one")
     main()
     

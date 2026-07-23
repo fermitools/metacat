@@ -277,10 +277,10 @@ def test_metacat_dataset_update(auth, tst_ds):
 
 def test_metacat_dataset_remove(auth, tst_ds):
     tst_ds2 = tst_ds + "_super"
-    with os.popen(f"metacat dataset remove {tst_ds2}", "r") as fin:
+    with os.popen(f"metacat dataset remove {tst_ds2} 2>&1", "r") as fin:
         data = fin.read()
     assert data.strip() == ""
-    with os.popen(f"metacat dataset remove {tst_ds2}", "r") as fin:
+    with os.popen(f"metacat dataset remove {tst_ds2} 2>&1", "r") as fin:
         data = fin.read()
     assert data.find("not found") >= 0
 
