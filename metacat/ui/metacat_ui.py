@@ -1,4 +1,5 @@
 from metacat.webapi import MCWebAPIError, MetaCatClient, MCError, AuthenticationError
+from metacat.webapi.webapi import NotFoundError, AlreadyExistsError, PermissionDeniedError, InvalidMetadataError, BadRequestError
 from metacat import Version
 import sys, getopt, os, json
 from .cli import CLI, CLICommand
@@ -13,6 +14,7 @@ from .metacat_report import ReportMetadataCommand
 from .metacat_category import CategoryCLI
 from .metacat_named_query import NamedQueriesCLI
 from metacat.util import validate_metadata
+from .common import exit_code_from_exception
 
 import warnings
 warnings.simplefilter("ignore")
@@ -70,7 +72,7 @@ class MetaCatCLI(CLI):
     
             if not server_url:
                 print("Server address must be specified either using -s option or using environment variable METACAT_SERVER_URL", file=sys.stderr)
-                sys.exit(2)
+                sys.exit(15)
 
             auth_server_url = opts.get("-a") or os.environ.get("METACAT_AUTH_SERVER_URL")
             if not auth_server_url:
@@ -132,7 +134,7 @@ class ValidateMetadataCommand(CLICommand):
             dataset = client.get_dataset(dataset_did)
             if dataset is None:
                 print(f"Dataset {dataset_did} not found", file=sys.stderr)
-                sys.exit(1)
+                sys.exit(11)
 
         if self.Categories is None:
             categories = self.Categories = {c["path"]:c for c in client.list_categories()}
@@ -198,11 +200,13 @@ class ValidateMetadataCommand(CLICommand):
                 for name_error in errors:
                     if name_error:
                         print("%-40s: %s" % (name_error[0], " ".join(name_error[1:])))
-            sys.exit(1)
+            sys.exit(exit_code_from_exception(errors))
         else:
             sys.exit(0)
 
 Commands = ["admin","auth","dataset","query","namespace","file","report"]
+
+
 
 def main():
 
@@ -222,9 +226,23 @@ def main():
     )
     try:
         cli.run(sys.argv, argv0="metacat")
-    except (AuthenticationError, MCError) as e:
-        print(e, file=sys.stderr)
-        sys.exit(1)
+    except BadRequestError as e:
+       print(f"Bad Request error: {e.Message=}")
+       sys.exit(18)
+    except NotFoundError as e:
+       print(f"File not found on server {e.Message}", file=sys.stderr)
+       sys.exit(12)
+    except AlreadyExistsError as e:
+       print(f"Already exists on server {e.Message}", file=sys.stderr)
+       sys.exit(16)
+    except PermissionDeniedError as e:
+       print(f"Permission Denied by server {e.Message}", file=sys.stderr)
+       sys.exit(17)
+    except InvalidMetadataError as e:
+       print(f"Invalid MetadataError : {e.Message} {str(e)}", file=sys.stderr)
+       sys.exit(13)
+    except Exception as e:
+       sys.exit(exit_code_from_exception(e))
 
 if __name__ == "__main__":
     main()
