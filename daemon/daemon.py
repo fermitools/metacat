@@ -36,6 +36,7 @@ class MetaCatDaemon(Logged):
         ):
             raise ValueError("Token file, or X.509 cert and key files are not in the configuration")
 
+        self.UserNamespaceTemplate = daemon_config.get("user_namespace_template", "")
         self.FerryUpdateInterval = daemon_config.get("ferry_update_interval", 1 * 3600)
         self.CountsUpdateInterval = daemon_config.get("counts_update_interval", 1 * 3600)
         self.VO = daemon_config["vo"]
@@ -121,6 +122,7 @@ class MetaCatDaemon(Logged):
         ncreated = nupdated = 0
         updated = []
         created = []
+        ns_created = []
         for username, ferry_user in ferry_users.items():
             db_user = db_users.get(username)
             if db_user is None:
@@ -151,8 +153,18 @@ class MetaCatDaemon(Logged):
                     nupdated += 1
                     updated.append(username)
 
+            # add namespace for user, if configured
+            if self.UserNamespaceTemplate:
+                uns = self.UserNamespaceTemplate.replace('$username', username)
+                if not DBNamespace.exists(db, uns):
+                    ns = DBNamespace(db, uns, owner_user=db_user )
+                    ns_created.append(uns)
+                    ns.Creator = username
+                    ns.create()
+
         self.log("created:", len(created), "" if not created else ",".join(created))
         self.log("updated:", len(updated), "" if not updated else ",".join(updated))
+        self.log("namespaces created:", len(ns_created), "" if not ns_created else ",".join(ns_created))
         db.close()
 
 
