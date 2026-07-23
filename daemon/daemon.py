@@ -157,7 +157,7 @@ class MetaCatDaemon(Logged):
             if self.UserNamespaceTemplate:
                 uns = self.UserNamespaceTemplate.replace('$username', username)
                 if not DBNamespace.exists(db, uns):
-                    ns = DBNamespace(db, uns, owner_user=db_user )
+                    ns = DBNamespace(db, uns, owner_user=username )
                     ns_created.append(uns)
                     ns.Creator = username
                     ns.create()
