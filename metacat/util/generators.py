@@ -31,8 +31,10 @@ def unique(iterable, key=None):
 def limited(iterable, n):
     if n is None:
         yield from iterable
+        return
     if isinstance(iterable, (list, tuple)):
         yield from iterable[:n]
+        return
     for f in iterable:
         if n is None:
             yield f
@@ -46,6 +48,7 @@ def limited(iterable, n):
 def strided(iterable, n, i=0):
     if n is None:
         yield from iterable
+        return
     for j, f in enumerate(iterable):
         if j%n == i:
             yield f
@@ -53,8 +56,10 @@ def strided(iterable, n, i=0):
 def skipped(iterable, n):
     if n is None:
         yield from iterable
+        return
     if isinstance(iterable, (list, tuple)):
         yield from iterable[n:]
+        return
     for f in iterable:
         if n > 0:
             n -= 1
