@@ -127,7 +127,7 @@ class MetaCatDaemon(Logged):
 
         return data
 
-    def ferry_user_roles(self, user, roles_added, users_added_to_roles):
+    def ferry_user_roles(self, user, roles_created, users_added_to_roles):
         self.debug(f"ferry_user_roles: {user}")
         url = f"{self.FerryURL}/getUserFQANs?username={user}&unitname={self.VO}"
 
@@ -152,7 +152,7 @@ class MetaCatDaemon(Logged):
                     self.debug(f"creating new role {rolename}")
                     role = DBRole(db, rolename, "auto-imported from FERRY")
                     role.save()
-                    roles_added.add(rolename)
+                    roles_created.add(rolename)
                     
                 if not user in role.members:
                     self.debug(f"adding {user} to {rolename}")
@@ -219,12 +219,12 @@ class MetaCatDaemon(Logged):
                     ns.create()
                     
             if self.role_pattern:
-                self.ferry_user_roles(username, roles_added, users_added_to_roles)
+                self.ferry_user_roles(username, roles_created, users_added_to_roles)
 
         self.log("created:", len(created), "" if not created else ",".join(created))
         self.log("updated:", len(updated), "" if not updated else ",".join(updated))
         self.log("namespaces created:", len(ns_created), "" if not ns_created else ",".join(ns_created))
-        self.log("roles created:", len(roles_added),  "" if not ns_created else ",".join(roles_added))
+        self.log("roles created:", len(roles_created),  "" if not ns_created else ",".join(roles_added))
         self.log("users added to roles:", len(users_added_to_roles),  "" if not ns_created else ",".join(users_added_to_roles))
         db.close()
 
