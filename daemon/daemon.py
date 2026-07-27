@@ -224,7 +224,7 @@ class MetaCatDaemon(Logged):
         self.log("created:", len(created), "" if not created else ",".join(created))
         self.log("updated:", len(updated), "" if not updated else ",".join(updated))
         self.log("namespaces created:", len(ns_created), "" if not ns_created else ",".join(ns_created))
-        self.log("roles created:", len(roles_created),  "" if not ns_created else ",".join(roles_added))
+        self.log("roles created:", len(roles_created),  "" if not ns_created else ",".join(roles_created))
         self.log("users added to roles:", len(users_added_to_roles),  "" if not ns_created else ",".join(users_added_to_roles))
         db.close()
 
