@@ -163,12 +163,18 @@ class MetaCatDaemon(Logged):
     @log_exceptions
     def ferry_update(self):
         self.debug("ferry_update...")
+
+        valid_url = f"{self.FerryURL}/getAllUsers?status=true"
+        data = self.fetch_url(valid_url)
+        valid_users = { item["username"] for item in data["ferry_output"] }
+
         url = f"{self.FerryURL}/getAffiliationMembersRoles?unitname={self.VO}"
 
         data = self.fetch_url(url)
 
-        ferry_users = {item["username"]: item for item in data["ferry_output"][self.VO]}
-        self.log("Loaded", len(ferry_users), "users from Ferry")
+        ferry_users = {item["username"]: item for item in data["ferry_output"][self.VO] if item["username"] in valid_users}
+
+        self.log("Loaded", len(ferry_users), "valid users from Ferry")
 
         db = self.db()
         db_users = {u.Username: u for u in DBUser.list(db)}
