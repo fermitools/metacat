@@ -1,9 +1,8 @@
 # The nodes for the dimension parse tree
 
-import re
+import re, sys
 import logging
 from pyparsing import ParseResults
-import parser
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +143,7 @@ class ListNodeBase(NodeBase):
 
     def __init__(self, *nodes):
         self.nodes = list(nodes)
+        self.negated = False
 
     def __str__(self):
         return formatTree(self)
@@ -174,7 +174,10 @@ def _meta_infix_render(op, nodes, precedence):
     for i, n in enumerate(nodes):
         if i > 0:
             yield op
-        r = n.meta_render()
+        if n:
+            r = n.meta_render()
+        else:
+            r = []
         associativity = _associativity.get(precedence, 0)
         addparens = _determine_needs_parens(i, n, precedence, associativity)
         if addparens:
@@ -204,6 +207,8 @@ def _infix_render(op, nodes, precedence):
 
 def _determine_needs_parens(i, n, precedence, associativity):
     t1 = None
+    if not n:
+        return False
     if n.precedence is None:
         t1 = False
     else:
@@ -219,6 +224,9 @@ def _determine_needs_parens(i, n, precedence, associativity):
 
 class UnaryNode(NodeBase):
     """Base class for nodes with a single child"""
+
+    def __init__(self):
+        self.negated = False
 
     @property
     def nodes(self):
@@ -302,7 +310,10 @@ class SetNode(BinaryOperatorNode, NegatableNode):
         if  notnonelen == 0:
             return 
         if  notnonelen == 1:
-            return self.nodes[0].meta_render()
+            if self.nodes[0]:
+                return self.nodes[0].meta_render()
+            else:
+                return self.nodes[1].meta_render()
         # debugging
         # yield f"[{notnonelen=} {repr(self.nodes)}]"
         if self.op in ("union", "intersect"):
@@ -357,6 +368,7 @@ class WithNode(UnaryNode):
     def __init__(self, node, params):
         self.node = node
         self.params = params
+        self.negated = False
         for param, val in self.params.items():
             if isinstance(val, (list, tuple)):
                 self.params[param] = set(val)
@@ -463,6 +475,8 @@ class NotNode(UnaryNode):
 
     def __init__(self, node):
         self.node = node
+        self.negated = False
+ 
 
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, self.node)
@@ -564,6 +578,7 @@ class DimNode(NegatableNode):
             ">=": "<",
             ">": "<=",
             "in": "not in",
+            "notin": "in",
             "not in": "in",
             "not like": "~",
             "like": "!~",
@@ -731,6 +746,7 @@ class DefinitionNode(NodeBase):
 
     def __init__(self, defname):
         self.defname = "default:" + defname.replace('-','_')
+        self.negated = False
 
     def __str__(self):
         return "Defname(%s)" % self.defname
@@ -1064,6 +1080,31 @@ class MetaCatTransformer(ParseTreeTransformer):
         node.node.negated = not node.node.negated
         return self.visit(node.node)
 
+    def visit_AndNode(self, node):
+        if node.negated:
+            for n in node.nodes:
+                n.negated = not n.negated
+            node = OrNode(*node.nodes)
+            #print(f"vist_AndNode converted to {node}", file=sys.stderr)
+
+        for i,n in enumerate(node.nodes):
+            node.nodes[i] = self.visit(node.nodes[i])
+
+        return node
+
+    def visit_OrNode(self, node):
+        if node.negated:
+            # DeMorgan is my friend...
+            for n in node.nodes:
+                n.negated = not n.negated
+            node = AndNode(*node.nodes)
+            #print(f"vist_OrNode converted to {node}", file=sys.stderr)
+
+        for i,n in enumerate(node.nodes):
+            node.nodes[i] = self.visit(node.nodes[i])
+
+        return node
+
     def visit_DimNode(self, node):
         #if self.allsets():
         #   return node
@@ -1229,6 +1270,7 @@ def formatTree(tree):
 
 
 def SAM_query_to_MetaCat(dims):
+    import parser
     t = parser.parse_string(dims)
     #logging.debug("parse tree: ", str(t), "\n\n")
     #logging.debug("-------------------")
