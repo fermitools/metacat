@@ -1087,10 +1087,19 @@ class MetaCatTransformer(ParseTreeTransformer):
             node = OrNode(*node.nodes)
             #print(f"vist_AndNode converted to {node}", file=sys.stderr)
 
+        nn = []
         for i,n in enumerate(node.nodes):
-            node.nodes[i] = self.visit(node.nodes[i])
+            vni = self.visit(node.nodes[i])
+            if vni:
+                nn.append(vni)
 
-        return node
+        if not nn:
+            return None
+        elif len(nn) == 1:
+            return nn[0]
+        else:
+            node.nodes = nn
+            return node
 
     def visit_OrNode(self, node):
         if node.negated:
@@ -1100,10 +1109,19 @@ class MetaCatTransformer(ParseTreeTransformer):
             node = AndNode(*node.nodes)
             #print(f"vist_OrNode converted to {node}", file=sys.stderr)
 
+        nn = []
         for i,n in enumerate(node.nodes):
-            node.nodes[i] = self.visit(node.nodes[i])
+            vni = self.visit(node.nodes[i])
+            if vni:
+                nn.append(vni)
 
-        return node
+        if not nn:
+            return None
+        elif len(nn) == 1:
+            return nn[0]
+        else:
+            node.nodes = nn
+            return node
 
     def visit_DimNode(self, node):
         #if self.allsets():
@@ -1205,6 +1223,11 @@ class MetaCatTransformerPart2(ParseTreeTransformer):
                  node = node.nodes[0]
 
         return node
+
+    def visit_NotNode(self, node):
+        # in case the above missed any
+        node.node.negated = not node.node.negated
+        return self.visit(node.node)
              
 
 def _indenter(func):
