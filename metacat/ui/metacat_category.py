@@ -40,7 +40,7 @@ class ListCommand(CLICommand):
 
     GNUStyle = True
     Opts = "j json"
-    Usage = """[options] [<root category>]
+    Usage = """ [options] [<root category>]
         -j|--json           - print as JSON
     """
 
@@ -59,7 +59,7 @@ class ShowCommand(CLICommand):
     GNUStyle = True
     Opts = "j json"
     MinArgs = 1
-    Usage = """[-j|--json] <category>
+    Usage = """ [-j|--json] <category>
         -j|--json           - print as JSON
     """
     
@@ -75,12 +75,12 @@ class CreateCommand(CLICommand):
     Opts = "d:r:n:o:p:j"
     MinArgs = 1
     Usage = """ [options] <category>        --create a category
-    -d                      - description
-    -r                      - restricted (True/False), default False
-    -n                      - required (True/False), default False
-    -o                      - owner
-    -p                      - parameter definitions (json file or dictionary)
-    -j                      - print as JSON
+    -d <description>                             - description of category
+    -r <True|False>                              - whether a category is restricted (cannot add extra fields to metadata), default False
+    -n <True|False>                              - whether a category is required (required field(s) must be present in metadata), default False
+    -o <owner>                                   - owner of category, default current user
+    -p <file|json>                               - parameter definitions as JSON file or inline JSON
+    -j                                           - print category information as JSON
     """
 
     def __call__(self, command, client, opts, args):
@@ -125,13 +125,13 @@ class UpdateCommand(CLICommand):
     Opts = "d:r:n:o:p:m:j"
     MinArgs = 1
     Usage = """ [options] <category>        --update a category
-    -d                      - description
-    -r                      - restricted (True/False)
-    -n                      - required (True/False)
-    -o                      - owner
-    -p                      - parameter definitions (json file or dictionary)
-    -m                      - mode (update, replace), default update
-    -j                      - print as JSON
+    -d <description>                            - description of category
+    -r <True|False>                             - whether a category is restricted (cannot add extra fields to metadata), default False
+    -n <True|False>                             - whether a category is required (required field(s) must be present in metadata), default False
+    -o <owner>                                  - owner of category, default current user
+    -p <file|json>                              - parameter definitions as JSON file or inline JSON
+    -m <update|replace>                         - mode for updating definitions, default update
+    -j                                          - print category information as JSON
     """
 
     def __call__(self, command, client, opts, args):

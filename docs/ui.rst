@@ -839,11 +839,12 @@ To create a new parameter category with constraints:
 .. code-block:: shell
 
     $ metacat category create [options] <category>
-              -d|--description <description>
-              -r|--restricted           - make the category restricted (only defined parameters allowed)
-              -o|--owner <owner_role>   - owner role (default: current user)
-              -p|--parameters <file|json>  - parameter definitions as JSON file or inline JSON
-              -j|--json                 - print as JSON
+              -d <description>                             - description of category
+              -r <True|False>                              - whether a category is restricted (cannot add extra fields to metadata), default False
+              -n <True|False>                              - whether a category is required (required field(s) must be present in metadata), default False
+              -o <owner>                                   - owner of category, default current user
+              -p <file|json>                               - parameter definitions as JSON file or inline JSON
+              -j                                           - print category information as JSON
 
 Parameter definitions define the constraints for each parameter. Each parameter can have:
 
@@ -852,7 +853,7 @@ Parameter definitions define the constraints for each parameter. Each parameter 
 - ``min``: minimum value (for numeric and text)
 - ``max``: maximum value (for numeric and text)
 - ``pattern``: regex pattern for text values
-.. - ``required``: boolean, whether the parameter is required
+- ``required``: boolean, whether the parameter is required
 
 Example:
 
@@ -865,19 +866,21 @@ Example:
 Only admins can create categories.
 
 Updating a category
-...........
+...................
 
 To update an existing category:
 
 .. code-block:: shell
 
     $ metacat category update [options] <category>
-              -d|--description <description>
-              -r|--restricted (true|false)
-              -o|--owner <owner_role>
-              -p|--parameters <file|json>  - parameter definitions (merged by default)
-              -m|--mode (update|replace)    - mode for updating definitions (default: update)
-              -j|--json                 - print as JSON
+                -d <description>                            - description of category
+                -r <True|False>                             - whether a category is restricted (cannot add extra fields to metadata), default False
+                -n <True|False>                             - whether a category is required (required field(s) must be present in metadata), default False
+                -o <owner>                                  - owner of category, default current user
+                -p <file|json>                              - parameter definitions as JSON file or inline JSON
+                -m <update|replace>                         - mode for updating definitions, default update
+                -j                                          - print category information as JSON
+
 
 The ``-m`` option controls how parameter definitions are updated:
 
@@ -893,7 +896,7 @@ Example (add new parameter definitions while keeping existing ones):
 Only admins can update categories.
 
 Removing a category
-...........
+...................
 
 To remove a category:
 
@@ -904,7 +907,7 @@ To remove a category:
 Only admins can remove categories.
 
 Metadata validation
-...........
+...................
 
 MetaCat enforces the category parameter definitions when files are declared or updated.
 
@@ -915,8 +918,13 @@ a file with ``run_number`` outside that range will result in a validation error.
 When a category is marked as ``restricted``, only parameters in the category's definitions are allowed. 
 Attempting to add a metadata parameter not in the definitions will result in a validation error.
 
-When a definition is marked as ``required``, that parameter must be present in the metadata. 
-Attempting to add metadata without required parameters will result in a validation error.
+When a category is marked as ``required``, that category must be present in the metadata.
+Attempting to add metadata without a required category will result in a validation error.
+A category can only be required if at least one of its parameters are required.
+
+When a definition is marked as ``required``, that parameter must be present in the metadata if the 
+category is present or marked as required. Attempting to add metadata without required parameters will 
+result in a validation error.
 
 
 Query

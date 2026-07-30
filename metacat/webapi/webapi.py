@@ -1539,6 +1539,10 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
     def get_category(self, path):
         """Get category information
         
+        Arguments
+        ---------
+        path : str - category path
+
         Returns
         -------
         dict 
@@ -1552,18 +1556,19 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
 
         Arguments
         ---------
-        path: string
-        parent_path: string, optional
-        owner_role: str, optional
+        path: str - category path
+        parent_path: str, optional - path of parent category
+        owner_role: str, optional - owner or owner role of category
             if unspecified, the new category will be owned by the user
-        restricted: bool
-        required: bool
-        description: string
-        definitions: dict
+        restricted: bool - whether a category is restricted (cannot add extra fields to metadata), default False
+        required: bool - whether a category is required (required field(s) must be present in metadata), default False
+        description: str - description of category
+        definitions: dict - parameter definitions
+
         Returns
         -------
         dict
-            created category attributes
+            A dictionary with created category attributes
         """
 
         params = {
@@ -1581,18 +1586,18 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
 
         Arguments
         ---------
-        path: string
-        owner_role: str, optional
-        restricted: bool, optional
-        required: bool, optional
-        description: string, optional
-        definitions: dict, optional
+        path: str - category path
+        owner_role: str, optional - owner or owner role of category
+        restricted: bool, optional - whether a category is restricted (cannot add extra fields to metadata), default False
+        required: bool, optional - whether a category is required (required field(s) must be present in metadata), default False
+        description: string, optional - description of category
+        definitions: dict, optional - parameter definitions
         mode: str, optional - "update" to merge, "replace" to overwrite (default: "update")
 
         Returns
         -------
         dict
-            updated category attributes
+            A dictionary with updated category attributes
         """
         params = {
             "path": path,
@@ -1611,7 +1616,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         Arguments
         _________
 
-        category : str
+        path : str - category path
         
         """
         return self.get_text(f"data/remove_category/{path}")
