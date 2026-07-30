@@ -22,7 +22,7 @@ class GUICategoryHandler(MetaCatHandler):
     index = categories
 
     @sanitize()
-    def show(self, request, relpath, path=None):
+    def show(self, request, relpath, path=None, **args):
         me, auth_error = self.authenticated_user()
         if not me:
             self.redirect(self.scriptUri() + "/auth/login?redirect=" + self.scriptUri() + "/gui/show")
@@ -39,7 +39,8 @@ class GUICategoryHandler(MetaCatHandler):
             print(name, d)
         return self.render_to_response("category.html", category=cat, edit=edit, create=False, roles=roles, admin=admin, user=me,
             users = users,
-            types = DBParamCategory.Types)
+            types = DBParamCategory.Types,
+            **self.messages(args))
         
     @sanitize()
     def create(self, request, relpath):
@@ -77,39 +78,41 @@ class GUICategoryHandler(MetaCatHandler):
                         values = values.split(",") if values else None
                         minv = form.get(f"param:{param_id}:min", "").strip() or None
                         maxv = form.get(f"param:{param_id}:max", "").strip() or None
-                
+
                         if type in ("int", "int[]"):
-                            if minv is not None:    
+                            if minv is not None:
                                 try:    minv = int(minv)
                                 except: minv = None
-                            if maxv is not None:    
+                            if maxv is not None:
                                 try:    maxv = int(maxv)
                                 except: maxv = None
-                            if values:  
+                            if values:
                                 try:    values = [int(x) for x in values]
                                 except: values = None
                         elif type in ("float", "float[]"):
-                            if minv is not None:    
+                            if minv is not None:
                                 try:    minv = float(minv)
                                 except: minv = None
-                            if maxv is not None:    
+                            if maxv is not None:
                                 try:    maxv = float(maxv)
                                 except: maxv = None
-                            if values:  
+                            if values:
                                 try:    values = [float(x) for x in values]
                                 except: values = None
                         elif type in ("boolean", "boolean[]", "any"):
                             minv = maxv = values = None     # meaningless
-                            
+
                         pdef = {"type":type}
 
                         if type in ("text", "text[]"):
                             pattern = form.get(f"param:{param_id}:pattern", "").strip() or None
                             if pattern: pdef["pattern"] = pattern
-                            
+
                         if minv is not None:    pdef["min"] = minv
                         if maxv is not None:    pdef["max"] = maxv
                         if values is not None:    pdef["values"] = values
+                        if form.get(f"param:{param_id}:required"):
+                            pdef["required"] = True
                         defs[name] = pdef
                         #print("pdef:", pdef)
         for n in removals:
@@ -151,8 +154,19 @@ class GUICategoryHandler(MetaCatHandler):
         #print("owner_user, owner_role:", owner_user, owner_role)
         
         restricted = request.POST.get("restricted", False)
+        required = request.POST.get("required", False)
         definitions = self.read_parameter_definitions(request.POST)
-        cat = DBParamCategory(db, path, restricted=restricted, owner_role=owner_role, 
+
+        # Validate that required categories have at least one required parameter
+        if required:
+            has_required_param = any(
+                defn.get("required")
+                for defn in definitions.values()
+            )
+            if not has_required_param:
+                self.redirect("./index?error=%s" % (quote_plus("Required category must have at least one required parameter"),))
+
+        cat = DBParamCategory(db, path, restricted=restricted, required=required, owner_role=owner_role,
             owner_user=owner_user,
             creator = me.Username, description=request.POST["description"],
             definitions = definitions)
@@ -179,6 +193,10 @@ class GUICategoryHandler(MetaCatHandler):
 
         if not (me.is_admin() or me.Username in cat.owners()):
             self.redirect("./index?error=%s" % (quote_plus(f"Permission denied"),))
+
+        if request.POST.get("delete"):
+            cat.delete()
+            self.redirect("./index")
             
         if me.is_admin():
             new_owner = request.POST.get("owner")
@@ -194,7 +212,18 @@ class GUICategoryHandler(MetaCatHandler):
             
         cat.Description = request.POST["description"]
         cat.Restricted = "restricted" in request.POST
+        cat.Required = "required" in request.POST
         defs = self.read_parameter_definitions(request.POST)
+
+        # Validate that required categories have at least one required parameter
+        if cat.Required:
+            has_required_param = any(
+                defn.get("required")
+                for defn in defs.values()
+            )
+            if not has_required_param:
+                self.redirect("./index?error=%s" % (quote_plus("Required category must have at least one required parameter"),))
+
         cat.Definitions = defs
         cat.save()
         self.redirect(f"./show?path={path}")
