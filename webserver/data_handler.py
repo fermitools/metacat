@@ -601,28 +601,6 @@ class DataHandler(MetaCatHandler):
         else:
             return ".", path
 
-# should be using metadata validation code from util/validation.py        
-#    def validate_metadata(self, data):
-#        categories = self.load_categories()
-#        invalid = []
-#        for k, v in data.items():
-#            path, name = self.split_cat(k)
-#            cat = categories.get(path)
-#            if cat is None:
-#                while True:
-#                    path, _ = self.split_cat(path)
-#                    if path in categories:
-#                        if categories[path].Restricted:
-#                            invalid.append({"name":k, "value":v, "reason":f"Category {path} is restricted"})
-#                        break
-#                    if path == ".":
-#                        break
-#            else:
-#                valid, reason = cat.validate_parameter(name, v)
-#                if not valid:
-#                    invalid.append({"name":k, "value":v, "reason":reason})
-#        return invalid
-        
     @sanitized
     def declare_files(self, request, relpath, namespace=None, dataset=None, dry_run="no", **args):
         # Declare new files, add to the dataset
