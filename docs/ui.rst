@@ -68,20 +68,19 @@ In general, the command looks like this:
 Exit Codes
 ----------
 
-The in 4.1.5 and later, the metacat command will exit with different exit codes for different errors: 
+In metacat version 4.1.5 and later, the metacat command will exit with different exit codes for different errors: 
 
 ====    ====================================================
 Code    Description                                     
 ----    ----------------------------------------------------
    1    Invalid option                                  
    2    Digest authentication config error              
-   3    User does not exist / is not administrator      
+   3    User is not administrator or does not exist
    4    DB Config error                                 
    5    User already exists                             
    7    File not found                                  
-   8    Token file not found                            
-   9    Cannot access token file                        
-  10    Token or token file missing                     
+   8    Token file not found or not accessible
+  10    No token to export / not authenticated
   11    Dataset not found                               
   12    X.509 certificate file not specified            
   13    Invalid metadata keys specified                 

@@ -174,7 +174,7 @@ class LoginCommand(CLICommand):
             raise InvalidArguments(f"Unknown authentication mechanism {mechanism}")
         if not client.tokens_saved():
             print("Authentication token not saved. Can not access/create token library", sys.stderr)
-            sys.exit(9)
+            sys.exit(8)
         print ("User:   ", user)
         print ("Expires:", time.ctime(expiration))
     
@@ -200,7 +200,7 @@ class ExportCommand(CLICommand):
                     break
             else:
                 print("Token not found", file=sys.stderr)
-                sys.exit(10)
+                sys.exit(8)
 
         out_path = opts.get("-o", opts.get("--out"))
         if out_path:
