@@ -3,16 +3,38 @@
 #
 
 from metacat.webapi import MCError
+from metacat.webapi.webapi import NotFoundError,WebAPIError,InvalidMetadataError
 from metacat.util import ObjectSpec
 import sys, json, os.path
+
+def exit_code_from_exception(e):
+    if isinstance(e, NotFoundError):
+        msg = f"Exception: not found: {e.args}"
+        print(msg, file=sys.stderr)
+        error_code=12
+    elif isinstance(e, InvalidMetadataError):
+        msg = f"Exception: {e.__class__.__name__}: {str(e)}"
+        print(msg, file=sys.stderr)
+        error_code = sum([ord(c) for c in msg[:20]]) % 63 + 32
+    elif isinstance(e, WebAPIError):
+        msg = f"Exception: {e.__class__.__name__}: {e.Message}"
+        print(msg, file=sys.stderr)
+        error_code = sum([ord(c) for c in msg[:20]]) % 63 + 32
+    elif isinstance(e, Exception):
+        msg = f"Exception: {e.__class__.__name__} {' '.join([str(x) for x in e.args])}"
+        print(msg, file=sys.stderr)
+        error_code = sum([ord(c) for c in msg[:20]]) % 63 + 32
+    else:
+        msg = str(e)
+        error_code = sum([ord(c) for c in msg[:20]]) % 63 + 32
+    return error_code
 
 def catch_mc_errors(method):
     def decorated(*params, **args):
         try:
             return method(*params, **args)
         except MCError as e:
-            print(e, file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_code_from_exception(e))
     return decorated
 
 def load_text(arg):

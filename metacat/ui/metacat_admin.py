@@ -50,7 +50,7 @@ class CreateAdminCommand(CLICommand):
         u = DBUser.get(db, username)
         if u is not None:
             print("User already exists. Leaving users status unchanged. Use 'metacat admin add ...'")
-            sys.exit(1)
+            sys.exit(5)
         u = DBUser(db, username, "Admin", "", "a", {}, None)
         u.set_password(realm, password)
         u.save()
@@ -80,7 +80,7 @@ class PasswordCommand(CLICommand):
         u = DBUser.get(db, username)
         if u is None or not u.is_admin():
             print("User does not exist or is not an Admin. Leaving the password unchanged.")
-            sys.exit(1)
+            sys.exit(3)
         u.set_password(realm, password)
         #print("hashed password:", hashed)
         u.save()
@@ -98,7 +98,7 @@ class AddCommand(CLICommand):
         u = DBUser.get(db, username)
         if u is None or u.is_admin():
             print("User does not exist or is an Admin already.")
-            sys.exit(1)
+            sys.exit(3)
         u.Flags = (u.Flags or "") + "a"
         u.save()
         print("Admin privileges added")
@@ -115,7 +115,7 @@ class RemoveCommand(CLICommand):
         u = DBUser.get(db, username)
         if u is None or not u.is_admin():
             print("User does not exist or is not an Admin.")
-            sys.exit(1)
+            sys.exit(3)
         u.Flags = (u.Flags or "").replace("a", "")
         u.save()
         print("Admin privileges removed")
@@ -205,7 +205,7 @@ class AdminCLI(CLI):
         import yaml
         if "-c" not in opts:
             print("Database configuration must be specified with -c", file=sys.stderr)
-            sys.exit(2)
+            sys.exit(4)
         cfg = yaml.load(open(opts["-c"], "r"), Loader=yaml.SafeLoader)
         return cfg
 

@@ -64,8 +64,37 @@ In general, the command looks like this:
         $ export METACAT_SERVER_URL="http://server:port/path"
         $ export METACAT_AUTH_SERVER_URL="http://auth_server:port/auth_path"
         $ metacat <command group> <command> [command options] [arguments ...]
-        
 
+Exit Codes
+----------
+
+In metacat version 4.1.5 and later, the metacat command will exit with different exit codes for different errors: 
+
+====    ====================================================
+Code    Description                                     
+----    ----------------------------------------------------
+   1    Invalid command-line option                                  
+   2    Digest authentication configuration error              
+   3    User is not administrator or does not exist
+   4    DB Config error                                 
+   5    User already exists                             
+   7    File not found                                  
+   8    Metacat Token library file not found or not accessible
+  10    No token to export / not authenticated
+  11    Dataset not found                               
+  12    X.509 certificate file not specified            
+  13    Invalid metadata keys specified                 
+  14    Deprecated command refused                      
+  15    METACAT_SERVER_URL not specified                
+  16    Item already exists on server
+  17    Permission denied                               
+  19    Errors in namespace move                        
+ >32    Other exception:
+  67    Metadata parameter without a category
+  81    Alternate metadata parameter error
+ 108    Authentication Failed (token exprired, etc)     
+====    ====================================================
+        
 Versions
 --------
 

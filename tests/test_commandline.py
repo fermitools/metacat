@@ -12,6 +12,15 @@ import time
 
 from env import env, token, auth, start_ds, tst_ds, tst_file_md_list
 
+def check_result(fin, fn, expected):
+    st = fin.close()
+    if st != None:
+        rc = os.waitstatus_to_exitcode(st)
+        #with open("results.txt", "a") as fout:
+        #    print(f"{fn} result: {rc}, expected {expected}", file=fout)
+        print(f"{fn} exit code result: {rc}, expected {expected}")
+        assert(rc == expected)
+
 
 # need tests for at least:
 
@@ -110,6 +119,7 @@ def test_initial_namespace_create(auth):
     os.system(f'metacat namespace create {os.environ["USER"]}')
     with os.popen(f'metacat namespace create {os.environ["USER"]} 2>&1', "r") as fin:
         data = fin.read()
+        check_result(fin, "namespace_create", 16)
     assert data.find("exists") > 0
 
 # jumping some file delcaration tests first, so we then have some files
@@ -257,12 +267,12 @@ def test_metacat_dataset_add_files(auth, tst_ds):
         data = fin.read()
     assert data.find("Added 2 files") >= 0
 
-
 def test_metacat_dataset_update_fail(auth, tst_ds):
     md = '{"foo": "bar"}'
     with os.popen(f"metacat dataset update -j -m '{md}' {tst_ds} 2>&1", "r") as fin:
         data = fin.read()
         # check output
+        check_result(fin, "update_fail", 67)
     assert data.find("Metadata parameter without a category") >= 0
 
 
@@ -277,11 +287,12 @@ def test_metacat_dataset_update(auth, tst_ds):
 
 def test_metacat_dataset_remove(auth, tst_ds):
     tst_ds2 = tst_ds + "_super"
-    with os.popen(f"metacat dataset remove {tst_ds2}", "r") as fin:
+    with os.popen(f"metacat dataset remove {tst_ds2} 2>&1", "r") as fin:
         data = fin.read()
     assert data.strip() == ""
-    with os.popen(f"metacat dataset remove {tst_ds2}", "r") as fin:
+    with os.popen(f"metacat dataset remove {tst_ds2} 2>&1", "r") as fin:
         data = fin.read()
+        check_result(fin, "dataset_remove", 12)
     assert data.find("not found") >= 0
 
 
@@ -461,6 +472,7 @@ def test_metacat_validate_bad(auth, tst_file_md_list, tst_ds):
         json.dump(md, mdf)
     with os.popen(f"metacat validate mdf1 2>&1", "r") as fin:
         data = fin.read()
+        check_result(fin, "validate_bad", 81)
     os.unlink("mdf1")
     assert data.find("wrong") >= 0
 

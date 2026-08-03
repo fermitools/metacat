@@ -4,7 +4,7 @@ from metacat.webapi import MetaCatClient, MCWebAPIError, MCInvalidMetadataError,
 from metacat.ui.cli import CLI, CLICommand, InvalidOptions, InvalidArguments
 from metacat.util import ObjectSpec, undid
 from datetime import timezone, datetime
-from .common import load_text, load_file_list, load_json
+from .common import load_text, load_file_list, load_json, exit_code_from_exception
 
 class DeclareSampleCommand(CLICommand):
     Usage = """-- print sample input for declare-many command
@@ -236,8 +236,7 @@ class DeclareManyCommand(CLICommand):
         try:
             response = client.declare_files(f"{dataset_namespace}:{dataset_name}", files, dry_run = "-d" in opts, as_required=as_required)
         except MCError as e:
-            print(e)
-            sys.exit(1)
+            sys.exit(exit_code_from_exception(e))
 
         if "-j" in opts or "--json" in opts:
             print(json.dumps(response, indent=4, sort_keys=True))
@@ -268,12 +267,11 @@ class DatasetsCommand(CLICommand):
         try:
             data = client.get_file(did=did, fid=fid, with_provenance=False, with_metadata=False, with_datasets=True)
         except MCError as e:
-            print(e)
-            sys.exit(1)
+            sys.exit(exit_code_from_exception(e))
 
         if data is None:
             print("File not found", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(7)
         datasets = sorted(data.get("datasets", []), key = lambda ds: (ds["namespace"], ds["name"]))
         if "-j" in opts:
             print(json.dumps(datasets, indent=4, sort_keys=True))
@@ -304,11 +302,10 @@ class FileIDCommand(CLICommand):
             data = client.get_file(did=did, namespace=namespace, name=name, with_provenance=False, with_metadata=False,
                                with_datasets=False)
         except MCError as e:
-            print(e)
-            sys.exit(1)
+            sys.exit(exit_code_from_exception(e))
         if data is None:
             print("File not found", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(7)
 
         print(data["fid"])
 
@@ -334,11 +331,10 @@ class RetireCommand(CLICommand):
         try:
             data = client.retire_file(did=did, namespace=namespace, name=name, retire=do_retire)
         except MCError as e:
-            print(e)
-            sys.exit(1)
+            sys.exit(exit_code_from_exception(e))
         if data is None:
             print("File not found", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(7)
 
 class NameCommand(CLICommand):
 
@@ -356,12 +352,11 @@ class NameCommand(CLICommand):
         try:
             data = client.get_file(fid=fid, with_provenance=False, with_metadata=False, with_datasets=False)
         except MCError as e:
-            print(e)
-            sys.exit(1)
+            sys.exit(exit_code_from_exception(e))
 
         if data is None:
             print("File not found", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(7)
 
         namespace, name = data["namespace"], data["name"]
         if "-j" in opts or "--json" in opts:
@@ -413,12 +408,11 @@ class ShowCommand(CLICommand):
                         with_provenance=include_provenance, with_metadata=include_meta,
                         with_datasets=include_datasets)
         except MCError as e:
-            print(e)
-            sys.exit(1)
+            sys.exit(exit_code_from_exception(e))
 
         if data is None:
-            print("file not found", file=sys.stderr)
-            sys.exit(1)
+            print("File not found", file=sys.stderr)
+            sys.exit(7)
         
         if include_provenance:
             parents = data.get("parents", [])
@@ -530,8 +524,7 @@ class UpdateMetaCommand(CLICommand):
         try:
             response = client.update_file_meta(meta, files=file_list, mode=mode, namespace=namespace)
         except MCError as e:
-            print(e)
-            sys.exit(1)
+            sys.exit(exit_code_from_exception(e))
 
 class UpdateCommand(CLICommand):
     
@@ -607,7 +600,7 @@ class UpdateCommand(CLICommand):
             invalid_names = [k for k in metadata_update if '.' not in k]
             if invalid_names:
                 print("Invalid metadata key(s):", ", ".join(invalid_names), file=sys.stderr)
-                sys.exit(1)
+                sys.exit(13)
             update_args["metadata"] = metadata_update
 
         parents_specs = opts.get("-p") or opts.get("--parents")
@@ -691,7 +684,7 @@ class AddCommand(CLICommand):
     
     def __call__(self, command, client, opts, args):
         print('Use "metacat dataset add..." instead')
-        sys.exit(1)
+        sys.exit(14)
 
         # backward compatibility
         opts["-f"] = (
@@ -774,7 +767,7 @@ class MoveCommand(CLICommand):
                 print("Number of errors:  ", len(errors))
         print("Files moved:       ", nmoved)
         if errors:
-            sys.exit(1)
+            sys.exit(19)
 
 FileCLI = CLI(
     "declare",  DeclareSingleCommand(),
