@@ -79,7 +79,7 @@ Code    Description
    4    DB Config error                                 
    5    User already exists                             
    7    File not found                                  
-   8    Token file not found or not accessible
+   8    Metacat Token library file not found or not accessible
   10    No token to export / not authenticated
   11    Dataset not found                               
   12    X.509 certificate file not specified            
