@@ -257,12 +257,21 @@ def test_metacat_dataset_add_files(auth, tst_ds):
         data = fin.read()
     assert data.find("Added 2 files") >= 0
 
+def check_result(fin, fn, expected):
+    st = fin.close()
+    if st != None:
+        rc = os.waitstatus_to_exitcode(st)
+        #with open("results.txt", "a") as fout:
+        #    print(f"{fn} result: {rc}, expected {expected}", file=fout)
+        print(f"{fn} exit code result: {rc}, expected {expected}")
+        assert(rc == expected)
 
 def test_metacat_dataset_update_fail(auth, tst_ds):
     md = '{"foo": "bar"}'
     with os.popen(f"metacat dataset update -j -m '{md}' {tst_ds} 2>&1", "r") as fin:
         data = fin.read()
         # check output
+        check_result(fin, "update_fail", 67)
     assert data.find("Metadata parameter without a category") >= 0
 
 
@@ -282,6 +291,7 @@ def test_metacat_dataset_remove(auth, tst_ds):
     assert data.strip() == ""
     with os.popen(f"metacat dataset remove {tst_ds2} 2>&1", "r") as fin:
         data = fin.read()
+        check_result(fin, "dataset_remove", 12)
     assert data.find("not found") >= 0
 
 
