@@ -91,6 +91,7 @@ Code    Description
   19    Errors in namespace move                        
  >32    Other exception:
   67    Metadata parameter without a category
+  81    Alternate metadata parameter error
  108    Authentication Failed (token exprired, etc)     
 ====    ====================================================
         

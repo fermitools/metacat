@@ -12,6 +12,15 @@ import time
 
 from env import env, token, auth, start_ds, tst_ds, tst_file_md_list
 
+def check_result(fin, fn, expected):
+    st = fin.close()
+    if st != None:
+        rc = os.waitstatus_to_exitcode(st)
+        #with open("results.txt", "a") as fout:
+        #    print(f"{fn} result: {rc}, expected {expected}", file=fout)
+        print(f"{fn} exit code result: {rc}, expected {expected}")
+        assert(rc == expected)
+
 
 # need tests for at least:
 
@@ -110,6 +119,7 @@ def test_initial_namespace_create(auth):
     os.system(f'metacat namespace create {os.environ["USER"]}')
     with os.popen(f'metacat namespace create {os.environ["USER"]} 2>&1', "r") as fin:
         data = fin.read()
+        check_result(fin, "namespace_create", 16)
     assert data.find("exists") > 0
 
 # jumping some file delcaration tests first, so we then have some files
@@ -256,15 +266,6 @@ def test_metacat_dataset_add_files(auth, tst_ds):
     with os.popen(f"metacat dataset add-files --query '{query}' {tst_ds} ", "r") as fin:
         data = fin.read()
     assert data.find("Added 2 files") >= 0
-
-def check_result(fin, fn, expected):
-    st = fin.close()
-    if st != None:
-        rc = os.waitstatus_to_exitcode(st)
-        #with open("results.txt", "a") as fout:
-        #    print(f"{fn} result: {rc}, expected {expected}", file=fout)
-        print(f"{fn} exit code result: {rc}, expected {expected}")
-        assert(rc == expected)
 
 def test_metacat_dataset_update_fail(auth, tst_ds):
     md = '{"foo": "bar"}'
@@ -471,6 +472,7 @@ def test_metacat_validate_bad(auth, tst_file_md_list, tst_ds):
         json.dump(md, mdf)
     with os.popen(f"metacat validate mdf1 2>&1", "r") as fin:
         data = fin.read()
+        check_result(fin, "validate_bad", 81)
     os.unlink("mdf1")
     assert data.find("wrong") >= 0
 
