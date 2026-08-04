@@ -143,5 +143,5 @@ def validate_metadata(definitions, restricted, metadata={}, name=None, value=Non
     for dname, definition in definitions.items():
         if definition.get("required") and dname not in metadata:
             errors.append((dname, "required parameter is missing"))
-    
+
     return errors

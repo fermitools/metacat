@@ -1514,7 +1514,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
                 yield item
                 
     #
-    # Categiries
+    # Categories
     #
     def list_categories(self, root=None):
         """List namespaces
@@ -1539,6 +1539,10 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
     def get_category(self, path):
         """Get category information
         
+        Arguments
+        ---------
+        path : str - category path
+
         Returns
         -------
         dict 
@@ -1546,7 +1550,77 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         """
         out = self.get_json(f"data/category/{path}")
         return out
+
+    def create_category(self, path=None, owner_role=None, restricted=False, required=False, description=None, definitions=None):
+        """Create a category
+
+        Arguments
+        ---------
+        path: str - category path
+        parent_path: str, optional - path of parent category
+        owner_role: str, optional - owner or owner role of category
+            if unspecified, the new category will be owned by the user
+        restricted: bool - whether a category is restricted (cannot add extra fields to metadata), default False
+        required: bool - whether a category is required (required field(s) must be present in metadata), default False
+        description: str - description of category
+        definitions: dict - parameter definitions
+
+        Returns
+        -------
+        dict
+            A dictionary with created category attributes
+        """
+
+        params = {
+            "path": path,
+            "owner_role": owner_role,
+            "restricted": restricted,
+            "required": required,
+            "description": description,
+            "definitions": definitions
+        }
+        return self.post_json(f"data/create_category", params)
+
+    def update_category(self, path=None, owner_role=None, restricted=None, required=None, description=None, definitions=None, mode="update"):
+        """Update a category
+
+        Arguments
+        ---------
+        path: str - category path
+        owner_role: str, optional - owner or owner role of category
+        restricted: bool, optional - whether a category is restricted (cannot add extra fields to metadata), default False
+        required: bool, optional - whether a category is required (required field(s) must be present in metadata), default False
+        description: string, optional - description of category
+        definitions: dict, optional - parameter definitions
+        mode: str, optional - "update" to merge, "replace" to overwrite (default: "update")
+
+        Returns
+        -------
+        dict
+            A dictionary with updated category attributes
+        """
+        params = {
+            "path": path,
+            "owner_role": owner_role,
+            "restricted": restricted,
+            "required": required,
+            "description": description,
+            "definitions": definitions,
+            "mode": mode
+        }
+        return self.post_json(f"data/update_category", params)
+
+    def remove_category(self, path):
+        """Remove a category
+    
+        Arguments
+        _________
+
+        path : str - category path
         
+        """
+        return self.get_text(f"data/remove_category/{path}")
+
     #
     # Named queries
     #
