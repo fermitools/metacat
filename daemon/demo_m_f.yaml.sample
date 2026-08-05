@@ -1,0 +1,23 @@
+
+ssl:
+  cert: ./certs/cert.pem
+  key:  ./certs/key.pem
+
+daemon:
+  vo: hypot
+  ferry_url: https://ferryhost.some.domain:12345
+  ferry_update_interval: 3600
+  counts_update_interval: 14400
+  role_pattern: Role=(.*)(read|write)
+  role_template: $1_$2
+  user_namespace_template: user.$user.fnal.gov   
+  user_namespace_owner: admin_role
+
+database:
+  host:     dbhost.some.domain
+  port:     1234
+  dbname:   hypot_db_name
+  user:     hypot_db_user
+  password: redacted
+  schema:   metacat
+
