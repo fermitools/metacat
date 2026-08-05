@@ -5,7 +5,7 @@ from metacat.db import DBFile, DBDataset, DBFileSet, DBNamedQuery, DBUser, DBNam
     DBParamCategory, parse_name, AlreadyExistsError, IntegrityError, MetaValidationError
 from wsdbtools import ConnectionPool
 from urllib.parse import quote_plus, unquote_plus
-from metacat.util import to_str, to_bytes, ObjectSpec
+from metacat.util import to_str, to_bytes, ObjectSpec, validate_metadata
 from metacat.mql import MQLQuery, MQLSyntaxError, MQLExecutionError, MQLCompilationError, MQLError
 from metacat import Version
 from datetime import datetime, timezone
@@ -600,28 +600,7 @@ class DataHandler(MetaCatHandler):
             return tuple(path.rsplit(".",1))
         else:
             return ".", path
-        
-    def validate_metadata(self, data):
-        categories = self.load_categories()
-        invalid = []
-        for k, v in data.items():
-            path, name = self.split_cat(k)
-            cat = categories.get(path)
-            if cat is None:
-                while True:
-                    path, _ = self.split_cat(path)
-                    if path in categories:
-                        if categories[path].Restricted:
-                            invalid.append({"name":k, "value":v, "reason":f"Category {path} is restricted"})
-                        break
-                    if path == ".":
-                        break
-            else:
-                valid, reason = cat.validate_parameter(name, v)
-                if not valid:
-                    invalid.append({"name":k, "value":v, "reason":reason})
-        return invalid
-        
+
     @sanitized
     def declare_files(self, request, relpath, namespace=None, dataset=None, dry_run="no", **args):
         # Declare new files, add to the dataset
@@ -951,8 +930,9 @@ class DataHandler(MetaCatHandler):
         return json.dumps({"files_moved": nmoved, "errors":errors[:self.MAX_ERRORS], "nerrors":nerrors}), "application/json"
 
     def __update_meta_bulk(self, db, user, new_meta, mode, names=None, ids=None):
-        metadata_errors = self.validate_metadata(new_meta)
+        metadata_errors = DBParamCategory.validate_metadata_bulk(db, [new_meta])
         if metadata_errors:
+            metadata_errors = metadata_errors[0][1]  # Get errors from first (only) item
             return METADATA_ERROR_CODE, json.dumps({
                 "message":"Metadata validation errors",
                 "metadata_errors":metadata_errors
@@ -1524,7 +1504,116 @@ class DataHandler(MetaCatHandler):
         else:
             out = cat.to_jsonable()
         return json.dumps(out), "application/json"
-        
+
+    @sanitized
+    def create_category(self, request, relpath):
+        db = self.App.connect()
+        user, error = self.authenticated_user()
+        if not (user and user.is_admin()):
+            return 403, "Permission denied -- must be admin"
+        if not request.body:
+            return 400, "Category parameters are not specified"
+
+        params = json.loads(request.body)
+        path = params["path"]
+        owner_role = params["owner_role"]
+        restricted = params["restricted"]
+        required = params["required"]
+        description = params["description"]
+        definitions = params["definitions"]
+        creator = user.Username
+
+        if not path:
+            return 404, "Category path not specified"
+        if '.' in path and path != '.':
+            return 409, "Invalid relative category path. Cannot contain dot"
+        if DBParamCategory.exists(db, path):
+            return 409, f"Category {path} already exists"
+        if not definitions:
+            return 400, "Empty category definitions"
+
+        # Validate that required categories have at least one required parameter
+        if required:
+            has_required_param = any(
+                defn.get("required")
+                for defn in definitions.values()
+            )
+            if not has_required_param:
+                return 400, "Required category must have at least one required parameter"
+
+        cat = DBParamCategory(db, path, restricted=restricted, required=required, owner_role=owner_role, owner_user=creator, creator=creator, description=description, definitions=definitions)
+        cat.create()
+        return json.dumps(cat.to_jsonable()), "application/json"
+
+    @sanitized
+    def update_category(self, request, relpath):
+        db = self.App.connect()
+        user, error = self.authenticated_user()
+        if not (user and user.is_admin()):
+            return 403, "Permission denied -- must be admin"
+        if not request.body:
+            return 400, "Category parameters are not specified"
+
+        params = json.loads(request.body)
+        path = params.get("path")
+        if not path:
+            return 400, "Category path not specified"
+
+        cat = DBParamCategory.get(db, path)
+        if cat is None:
+            return 404, "Category not found"
+
+        owner_role = params.get("owner_role")
+        restricted = params.get("restricted")
+        required = params.get("required")
+        description = params.get("description")
+        definitions = params.get("definitions")
+        mode = params.get("mode", "update")
+
+        if owner_role is not None:
+            cat.OwnerRole = owner_role
+        if restricted is not None:
+            cat.Restricted = restricted
+        if required is not None:
+            cat.Required = required
+        if description is not None:
+            cat.Description = description
+        if definitions is not None:
+            if mode == "update":
+                new_defs = cat.Definitions.copy()
+                new_defs.update(definitions)
+                cat.Definitions = new_defs
+            else:
+                cat.Definitions = definitions
+
+        # Validate that required categories have at least one required parameter
+        if required is not None or definitions is not None:
+            if cat.Required:
+                has_required_param = any(
+                    defn.get("required")
+                    for defn in cat.Definitions.values()
+                )
+                if not has_required_param:
+                    return 400, "Required category must have at least one required parameter"
+
+        cat.save()
+        return json.dumps(cat.to_jsonable()), "application/json"
+
+    @sanitized
+    def remove_category(self, request, relpath, path=None, **args):
+        path = path or relpath
+        if not path:
+            return 400, "Category path not specified", "text/plain"
+        db = self.App.connect()
+        user, error = self.authenticated_user()
+        cat = DBParamCategory.get(db, path)
+        if cat is None:
+            return 404, "Category not found"
+        if not (user.is_admin() or user in cat.owners()):
+            return 403, "Permission denied"
+        cat.delete()
+        return "null", "text/json"
+
     @sanitized
     def report_metadata_keys(self, request, replpath,  **args):
         db = self.App.connect()

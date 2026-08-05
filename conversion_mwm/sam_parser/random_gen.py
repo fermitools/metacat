@@ -130,8 +130,12 @@ if __name__ == "__main__":
     print(t)
     print("-------")
     dims = render_dimensions_tree(t)
+       
     print(dims)
     print("======")
+    if len(dims) > 4096:
+       print("too long!")
+       sys.exit(0)
     mt = MetaCatTransformer().visit(t)
     mt = MetaCatTransformerPart2().visit(mt)
     meta = meta_render_dimensions_tree(mt)

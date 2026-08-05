@@ -51,7 +51,7 @@ class ShowNamedQueryCommand(CLICommand):
         query = client.get_named_query(namespace, name)
         if query is None:
             print("Not found")
-            sys.exit(1)
+            sys.exit(7)
         if as_json:
             print(json.dumps(query, indent=2, sort_keys=True))
         elif not verbose:

@@ -64,8 +64,37 @@ In general, the command looks like this:
         $ export METACAT_SERVER_URL="http://server:port/path"
         $ export METACAT_AUTH_SERVER_URL="http://auth_server:port/auth_path"
         $ metacat <command group> <command> [command options] [arguments ...]
-        
 
+Exit Codes
+----------
+
+In metacat version 4.1.5 and later, the metacat command will exit with different exit codes for different errors: 
+
+====    ====================================================
+Code    Description                                     
+----    ----------------------------------------------------
+   1    Invalid command-line option                                  
+   2    Digest authentication configuration error              
+   3    User is not administrator or does not exist
+   4    DB Config error                                 
+   5    User already exists                             
+   7    File not found                                  
+   8    Metacat Token library file not found or not accessible
+  10    No token to export / not authenticated
+  11    Dataset not found                               
+  12    X.509 certificate file not specified            
+  13    Invalid metadata keys specified                 
+  14    Deprecated command refused                      
+  15    METACAT_SERVER_URL not specified                
+  16    Item already exists on server
+  17    Permission denied                               
+  19    Errors in namespace move                        
+ >32    Other exception:
+  67    Metadata parameter without a category
+  81    Alternate metadata parameter error
+ 108    Authentication Failed (token exprired, etc)     
+====    ====================================================
+        
 Versions
 --------
 
@@ -195,7 +224,7 @@ To see available MetaCat authentication tokens:
 
 Export token to a file or to stdout
     
-    .. code-block:: shell
+.. code-block:: shell
     
     metacat auth export [-o|--out <token file>] [<token id>|<server url>]
 	
@@ -227,23 +256,6 @@ To list existing namespaces:
         -d                          - exclude namespaces owned by the user via a role
         -r|--role <role>            - list namespaces owned by the role
 
-
-Parameter Categories
---------------------
-
-To list existing parameter categories:
-
-.. code-block:: shell
-
-        $ metacat category list [options] [<root category>]
-                  -j|--json           - print as JSON
-
-To get particular category information:
-
-.. code-block:: shell
-
-        $ metacat category show [options] <category>
-                  -j|--json           - print as JSON
 
 Datasets
 --------
@@ -805,27 +817,39 @@ quietly exit with 0 or 1 status.
 Metadata Categories
 -------------------
 
+Metadata categories define the structure and constraints for metadata parameters. 
+They are used to validate metadata values when files are declared or updated.
+
+MetaCat metadata has the format ``<category>.parameter>``.
+
+Listing categories
+...................
+
 Existing parameter categories can be listed using:
 
 .. code-block:: shell
 
-    $ metacat category list
-    .
-    DUNE
-    DUNE_MC
-    ivm
-    ...
-    
-    
+    $ metacat category list [options] [<root category>]
+              -j|--json           - print as JSON
+
+If a root category is specified, only categories under that path will be listed.
+
 Information about an individual category can be printed using:
 
-.. code-block::
+.. code-block:: shell
+
+    $ metacat category show [options] <category>
+              -j|--json           - print as JSON
+
+The output shows:
+
+.. code-block:: none
 
     $ metacat category show ivm
     Path:             ivm
     Description:      ivm test category
     Owner user:       ivm
-    Owner role:       
+    Owner role:
     Creator:          ivm
     Created at:       2022-09-27 10:51:19 UTC
     Restricted:       no
@@ -836,6 +860,100 @@ Information about an individual category can be printed using:
       pi                                            float [3.0 - 4.0]
       word                                           text ~ '[A-Z].*'
 
+Creating a category
+...................
+
+To create a new parameter category with constraints:
+
+.. code-block:: shell
+
+    $ metacat category create [options] <category>
+              -d <description>                             - description of category
+              -r <True|False>                              - whether a category is restricted (cannot add extra fields to metadata), default False
+              -n <True|False>                              - whether a category is required (required field(s) must be present in metadata), default False
+              -o <owner>                                   - owner of category, default current user
+              -p <file|json>                               - parameter definitions as JSON file or inline JSON
+              -j                                           - print category information as JSON
+
+Parameter definitions define the constraints for each parameter. Each parameter can have:
+
+- ``type``: int, float, text, boolean, dict, list, int[], float[], text[], boolean[], or any
+- ``values``: list of allowed values (enum)
+- ``min``: minimum value (for numeric and text)
+- ``max``: maximum value (for numeric and text)
+- ``pattern``: regex pattern for text values
+- ``required``: boolean, whether the parameter is required
+
+Example:
+
+.. code-block:: shell
+
+    $ metacat category create -d "Test category" -r \
+        -p '{"run_number": {"type": "int", "min": 1, "max": 1000}, "status": {"type": "text", "values": ["good", "bad"]}}' \
+        test_category
+
+Only admins can create categories.
+
+Updating a category
+...................
+
+To update an existing category:
+
+.. code-block:: shell
+
+    $ metacat category update [options] <category>
+                -d <description>                            - description of category
+                -r <True|False>                             - whether a category is restricted (cannot add extra fields to metadata), default False
+                -n <True|False>                             - whether a category is required (required field(s) must be present in metadata), default False
+                -o <owner>                                  - owner of category, default current user
+                -p <file|json>                              - parameter definitions as JSON file or inline JSON
+                -m <update|replace>                         - mode for updating definitions, default update
+                -j                                          - print category information as JSON
+
+
+The ``-m`` option controls how parameter definitions are updated:
+
+- ``update`` (default): Merge new definitions with existing ones (keeps undefined parameters)
+- ``replace``: Replace the entire definitions dictionary
+
+Example (add new parameter definitions while keeping existing ones):
+
+.. code-block:: shell
+
+    $ metacat category update -p '{"new_param": {"type": "int"}}' test_category
+
+Only admins can update categories.
+
+Removing a category
+...................
+
+To remove a category:
+
+.. code-block:: shell
+
+    $ metacat category remove <category>
+
+Only admins can remove categories.
+
+Metadata validation
+...................
+
+MetaCat enforces the category parameter definitions when files are declared or updated.
+
+MetaCat checks that metadata using parameters from that category must follow the defined constraints. 
+For example, if a category defines ``run_number`` as an integer between 1 and 1000, attempting to declare 
+a file with ``run_number`` outside that range will result in a validation error.
+
+When a category is marked as ``restricted``, only parameters in the category's definitions are allowed. 
+Attempting to add a metadata parameter not in the definitions will result in a validation error.
+
+When a category is marked as ``required``, that category must be present in the metadata.
+Attempting to add metadata without a required category will result in a validation error.
+A category can only be required if at least one of its parameters are required.
+
+When a definition is marked as ``required``, that parameter must be present in the metadata if the 
+category is present or marked as required. Attempting to add metadata without required parameters will 
+result in a validation error.
 
 
 Query

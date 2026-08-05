@@ -13,6 +13,7 @@
 		<th>Path</th>
 		<th>Owner</th>
         <th>Restricted</th>
+        <th>Required</th>
 		<th>Description</th>
 	</tr>
     {% for cat in categories %}
@@ -24,6 +25,7 @@
                 {% endif %}
             </td>
             <td>{{'yes' if cat.Restricted else 'no'}}</td>
+            <td>{{'yes' if cat.Required else 'no'}}</td>
             <td>{{cat.Description or ""}}</td>
         </tr>
     {% endfor %}
