@@ -139,9 +139,9 @@ def validate_metadata(definitions, restricted, metadata={}, name=None, value=Non
                             if not all(x <= vmax for x in value):   errors.append((name, f"value in {value} out of range (max:{vmax})"))
                         else:
                             if value > vmax:    errors.append((name, f"value {value} out of range (max:{vmax})"))
-
-    for dname, definition in definitions.items():
-        if definition.get("required") and dname not in metadata:
-            errors.append((dname, "required parameter is missing"))
+    if name is None:
+        for dname, definition in definitions.items():
+            if definition.get("required") and dname not in metadata:
+                errors.append((dname, "required parameter is missing"))
 
     return errors
