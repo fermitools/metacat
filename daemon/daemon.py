@@ -37,6 +37,7 @@ class MetaCatDaemon(Logged):
             raise ValueError("Token file, or X.509 cert and key files are not in the configuration")
 
         self.UserNamespaceTemplate = daemon_config.get("user_namespace_template", "")
+        self.UserNamespaceOwner = daemon_config.get("user_namespace_owner", "")
         self.FerryUpdateInterval = daemon_config.get("ferry_update_interval", 1 * 3600)
         self.CountsUpdateInterval = daemon_config.get("counts_update_interval", 1 * 3600)
         self.VO = daemon_config["vo"]
@@ -218,8 +219,13 @@ class MetaCatDaemon(Logged):
             # add namespace for user, if configured
             if self.UserNamespaceTemplate:
                 uns = self.UserNamespaceTemplate.replace('$username', username)
+                if self.UserNamespaceOwner:
+                    owndict = {"owner_role": self.UserNamespaceOwner}
+                else:
+                    owndict = {"owner_user": username}
+
                 if not DBNamespace.exists(db, uns):
-                    ns = DBNamespace(db, uns, owner_user=username )
+                    ns = DBNamespace(db, uns, **owndict)
                     ns_created.append(uns)
                     ns.Creator = username
                     ns.create()
