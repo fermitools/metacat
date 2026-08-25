@@ -642,16 +642,19 @@ class DBFile(DBObject):
 
     @staticmethod
     @transactioned
-    def update_many(db, files, transaction=None):
+    def update_many(db, files, user, transaction=None):
+        if isinstance(user, DBUser):
+            user = user.Username
         from psycopg2 import IntegrityError
         tuples = [
-            (f.Namespace, f.Name, json.dumps(f.Metadata or {}), f.Size, json.dumps(f.Checksums or {}), f.FID)
+            (f.Namespace, f.Name, json.dumps(f.Metadata or {}), f.Size, json.dumps(f.Checksums or {}), user, f.FID)
             for f in files
         ]
         #print("tuples:", tuples)
         transaction.executemany("""
             update files
-                set namespace=%s, name=%s, metadata=%s, size=%s, checksums=%s
+                set namespace=%s, name=%s, metadata=%s, size=%s, checksums=%s,
+                updated_by=%s, updated_timestamp = now()
                 where id=%s
             """,
             tuples)
