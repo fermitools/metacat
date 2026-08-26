@@ -1004,7 +1004,7 @@ class DataHandler(MetaCatHandler):
                         )
                 )
 
-            DBFile.update_many(db, file_set)
+            DBFile.update_many(db, file_set, user)
 
         return json.dumps(out), "application/json"
 
