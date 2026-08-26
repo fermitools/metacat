@@ -80,7 +80,7 @@ class MetaCatDaemon(Logged):
         db = self.db()
         counts = DBDataset.file_count_by_dataset(db)
         for ds in DBDataset.list(db):
-            ds.FileCount = counts.get((ds.Namespace, ds.Name), 0)
+            ds.FileCount, ds.TotalFileSize = counts.get((ds.Namespace, ds.Name), 0)
             ds.save()
         db.close()
         self.log("Dataset file counts updated")

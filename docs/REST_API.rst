@@ -105,7 +105,7 @@ Get all datasets
             [with_file_counts=(yes|no) default="no"]
 
     Returns: list of dictionaries, one dictionary per dataset with dataset attributes. If with_file_counts=yes,
-    each dictionary will include "file_count" field.
+    each dictionary will include "file_count"  and "total_file_size" field.
 
 Get single dataset by name
     .. code-block::
@@ -146,7 +146,7 @@ Get file count in a dataset
 
         GET /data/dataset_count?dataset=<namespace>:<name>
 
-    Returns: JSON dictionary ``{"file_count":n}``
+    Returns: JSON dictionary ``{"file_count":n, "total_file_size":n}``
 
 
 File Metadata
