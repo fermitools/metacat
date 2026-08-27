@@ -1751,7 +1751,7 @@ class DBDataset(DBObject):
                and datasets.total_file_size is null
             group by datasets.namespace, datasets.name;
         """)
-        return dict(((ds_ns, ds_name), (n, tot)) for ds_ns, ds_name, n, tot in fetch_generator(c))
+        return dict(((ds_ns, ds_name), (n, int(tot))) for ds_ns, ds_name, n, tot in fetch_generator(c))
 
 
 class DBNamedQuery(DBObject):
