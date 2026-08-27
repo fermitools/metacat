@@ -50,7 +50,7 @@ class DataHandler(MetaCatHandler):
             timeout = self.report_timeout
         else:
             timeout = self.usual_timeout
-        db.cursor().execute("SET LOCAL statement_timeout = '{timeout}'")
+        db.cursor().execute(f"SET LOCAL statement_timeout = '{timeout}'")
         return db
         
     def load_categories(self):
