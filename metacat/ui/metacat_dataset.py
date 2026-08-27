@@ -134,8 +134,12 @@ class ShowDatasetCommand(CLICommand):
                 ut = datetime.fromtimestamp(ut, timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
             print("Updated by:           ", info.get("updated_by") or "")
             print("Update timestamp:     ", ut)
-            print("Cached file count: ", info.get("file_count"), "")
-            print("Cached total file size: ", info.get("total_file_size"), "")
+            if info.get("frozen"):
+                tdesc = "Cached"
+            else:
+                tdesc = "Estimated"
+            print(tdesc, " file count: ", info.get("file_count"), "")
+            print(tdesc, " total file size: ", info.get("total_file_size"), "")
             print("Restricted:           ", "frozen" if info.get("frozen", False) else (
                                             "monotonic" if info.get("monotonic", False) else "no"
                                             )
