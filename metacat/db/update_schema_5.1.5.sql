@@ -1,3 +1,4 @@
+set search_path=metacat;
 
 create index concurrently files_retired_size on files ( id, retired, size );
 
