@@ -1010,13 +1010,13 @@ class DBDataset(DBObject):
     Columns = ['namespace', 'name', 'frozen', 'monotonic', 
             'metadata', 'creator', 'created_timestamp', 'description', 
             'file_metadata_requirements', 'file_count',
-            'updated_timestamp', 'updated_by'
+            'updated_timestamp', 'updated_by', 'total_file_size'
     ]
     Table = "datasets"
     
 
     def __init__(self, db, namespace, name, frozen=False, monotonic=False, metadata={}, file_meta_requirements=None, creator=None,
-            description = None, file_count = 0, updated_timestamp=None, updated_by=None):
+            description = None, file_count = 0, updated_timestamp=None, updated_by=None, total_file_size=None):
         DBObject.__init__(self, db)
         assert namespace is not None and name is not None
         self.Namespace = namespace
@@ -1032,6 +1032,7 @@ class DBDataset(DBObject):
         self.FileCount = file_count
         self.UpdatedTimestamp = updated_timestamp
         self.UpdatedBy = updated_by
+        self.TotalFileSize = total_file_size
     
     def __str__(self):
         return "DBDataset(%s:%s)" % (self.Namespace, self.Name)
@@ -1042,10 +1043,10 @@ class DBDataset(DBObject):
     @staticmethod
     def from_tuple(db, tup):
         (namespace, name, frozen, monotonic, metadata, creator, created_timestamp, description,
-            file_metadata_requirements, file_count, updated_timestamp, updated_by) = tup
+            file_metadata_requirements, file_count, updated_timestamp, updated_by, total_file_size) = tup
         dataset = DBDataset(db, namespace, name, 
             frozen=frozen, monotonic=monotonic, metadata=metadata, file_meta_requirements=file_metadata_requirements,
-            file_count = file_count, updated_timestamp=updated_timestamp, updated_by=updated_by)
+            file_count = file_count, updated_timestamp=updated_timestamp, updated_by=updated_by, total_file_size=total_file_size)
         dataset.Creator = creator
         dataset.CreatedTimestamp = created_timestamp
         dataset.Description = description
@@ -1060,11 +1061,11 @@ class DBDataset(DBObject):
         column_names = self.columns(exclude="created_timestamp")        # use DB default for creation
         transaction.execute(f"""
             insert into datasets({column_names}) 
-                values(%s, %s, %s, %s, %s, %s, %s, %s, %s, null, null)
+                values(%s, %s, %s, %s, %s, %s, %s, %s, %s, null, null, %s)
                 returning created_timestamp
             """,
             (namespace, self.Name, self.Frozen, self.Monotonic, meta, self.Creator, 
-                    self.Description, file_meta_requirements, self.FileCount
+                    self.Description, file_meta_requirements, self.FileCount, self.TotalFileSize
             )
         )
         self.CreatedTimestamp = transaction.fetchone()[0]
@@ -1082,12 +1083,12 @@ class DBDataset(DBObject):
                 update datasets 
                     set frozen=%s, monotonic=%s, metadata=%s, description=%s, 
                         file_metadata_requirements=%s, file_count=%s,
-                        updated_by=%s, updated_timestamp=now()
+                        updated_by=%s, updated_timestamp=now(), 
+                        total_file_size=%s
                     where namespace=%s and name=%s
                     returning updated_timestamp
                 """,
-                (   self.Frozen, self.Monotonic, meta, self.Description, file_meta_requirements, self.FileCount,
-                    updated_by,
+                (   self.Frozen, self.Monotonic, meta, self.Description, file_meta_requirements, self.FileCount, updated_by, self.TotalFileSize, 
                     namespace, self.Name
                 )
             )
@@ -1096,10 +1097,10 @@ class DBDataset(DBObject):
             transaction.execute(f"""
                 update datasets 
                     set frozen=%s, monotonic=%s, metadata=%s, description=%s, 
-                        file_metadata_requirements=%s, file_count=%s
+                        file_metadata_requirements=%s, file_count=%s, total_file_size=%s
                     where namespace=%s and name=%s
                 """,
-                (   self.Frozen, self.Monotonic, meta, self.Description, file_meta_requirements, self.FileCount,
+                (   self.Frozen, self.Monotonic, meta, self.Description, file_meta_requirements, self.FileCount, self.TotalFileSize,
                     namespace, self.Name
                 )
             )
@@ -1422,7 +1423,8 @@ class DBDataset(DBObject):
             description = self.Description,
             file_count = self.FileCount,
             updated_timestamp = epoch(self.UpdatedTimestamp),
-            updated_by = self.UpdatedBy
+            updated_by = self.UpdatedBy,
+            total_file_size = self.TotalFileSize
         )
         if with_relatives:
             out["parents"] = [
@@ -1725,15 +1727,30 @@ class DBDataset(DBObject):
 
         return dataset_map
 
-    @staticmethod
-    def file_count_by_dataset(db):
-        c = db.cursor()
-        c.execute(f"""
+     def file_count_by_dataset(db):
+         c = db.cursor()
+         c.execute(f"""
             select dataset_namespace, dataset_name, count(*) 
                 from files_datasets 
                 group by dataset_namespace, dataset_name
         """)
-        return dict(((ds_ns, ds_name), n) for ds_ns, ds_name, n in fetch_generator(c))
+-        return dict(((ds_ns, ds_name), n) for ds_ns, ds_name, n in fetch_generator(c))
+ 
+    @staticmethod
+    def file_count_and_size_by_frozen_dataset(db):
+        c = db.cursor()
+        c.execute(f"""
+            select datasets.namespace, datasets.name, count(files.id), sum(files.size) 
+              from datasets, files_datasets, files 
+            where  files_datasets.dataset_namespace=datasets.namespace 
+               and files_datasets.dataset_name = datasets.name 
+               and   files_datasets.file_id = files.id 
+               and not files.retired 
+               and datasets.frozen
+               and datasets.total_file_size is null
+            group by datasets.namespace, datasets.name;
+        """)
+        return dict(((ds_ns, ds_name), (n, tot)) for ds_ns, ds_name, n, tot in fetch_generator(c))
 
 
 class DBNamedQuery(DBObject):

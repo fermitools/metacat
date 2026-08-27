@@ -79,9 +79,18 @@ class MetaCatDaemon(Logged):
     def update_dataset_file_counts(self):
         db = self.db()
         counts = DBDataset.file_count_by_dataset(db)
+        fcounts_sizes = DBDataset.file_count_and_size_by_frozen_dataset(db)
         for ds in DBDataset.list(db):
-            ds.FileCount = counts.get((ds.Namespace, ds.Name), 0)
-            ds.save()
+            if ds.frozen and ds.TotalFileSize = None:
+                ds.FileCount, ds.TotalFileSize = fcounts_sizes.get((ds.Namespace, ds.Name), (0,None))
+                ds.save()
+            elif not ds.frozen:
+                ds.FileCount = counts.get((ds.Namespace, ds.Name), 0)
+                ds.save()
+            else:
+                #is frozen and aready has a count
+                pass
+        
         db.close()
         self.log("Dataset file counts updated")
 

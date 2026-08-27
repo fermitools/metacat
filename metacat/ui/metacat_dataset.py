@@ -60,10 +60,10 @@ class ListDatasetsCommand(CLICommand):
         output = list(client.list_datasets(ns_pattern, name_pattern, with_counts=exact_counts))
         output = sorted(output, key=lambda ds:(ds["namespace"], ds["name"]))
     
-        verbose_format = "%-16s %-23s %10s %s"
-        header_format = "%-16s %-23s %-10s %s"
-        divider = " ".join(("-"*16, "-"*23, "-"*10, "-"*60))
-        columns = ("creator", "created", "files", "namespace:name")
+        verbose_format = "%-16s %-23s %10s %16s %s"
+        header_format = "%-16s %-23s %-10s %-16s %s"
+        divider = " ".join(("-"*16, "-"*23, "-"*10, "-"*16, "-"*60))
+        columns = ("creator", "created", "files", "total_file_size", "namespace:name")
             
         if verbose:
             print(header_format % columns)
@@ -84,10 +84,18 @@ class ListDatasetsCommand(CLICommand):
                         file_count = "?"
                     else:
                         file_count = str(file_count)
+
+                    total_file_size = item.get("total_file_size")
+                    if total_file_size is None:
+                        total_file_size = "?"
+                    else:
+                        total_file_size = str(total_file_size)
+
                     print(verbose_format % (
                         item.get("creator") or "",
                         ct,
                         file_count,
+                        total_file_size,
                         namespace + ":" + name
                     ))
                 else:
@@ -126,7 +134,8 @@ class ShowDatasetCommand(CLICommand):
                 ut = datetime.fromtimestamp(ut, timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
             print("Updated by:           ", info.get("updated_by") or "")
             print("Update timestamp:     ", ut)
-            print("Estimated file count: ", info.get("file_count"), "")
+            print("Cached file count: ", info.get("file_count"), "")
+            print("Cached total file size: ", info.get("total_file_size"), "")
             print("Restricted:           ", "frozen" if info.get("frozen", False) else (
                                             "monotonic" if info.get("monotonic", False) else "no"
                                             )
