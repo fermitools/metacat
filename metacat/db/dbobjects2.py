@@ -1727,17 +1727,30 @@ class DBDataset(DBObject):
 
         return dataset_map
 
+     def file_count_by_dataset(db):
+         c = db.cursor()
+         c.execute(f"""
+            select dataset_namespace, dataset_name, count(*) 
+                from files_datasets 
+                group by dataset_namespace, dataset_name
+        """)
+-        return dict(((ds_ns, ds_name), n) for ds_ns, ds_name, n in fetch_generator(c))
+ 
     @staticmethod
-    def file_count_by_dataset(db):
+    def file_count_and_size_by_frozen_dataset(db):
         c = db.cursor()
         c.execute(f"""
-            select files_datasets.dataset_namespace, files_datasets.dataset_name, count(files.id), sum(files.size) 
-              from files_datasets, files 
-             where files_datasets.file_id = files.id 
+            select datasets.namespace, datasets.name, count(files.id), sum(files.size) 
+              from datasets, files_datasets, files 
+            where  files_datasets.dataset_namespace=datasets.namespace 
+               and files_datasets.dataset_name = datasets.name 
+               and   files_datasets.file_id = files.id 
                and not files.retired 
-            group by files_datasets.dataset_namespace, files_datasets.dataset_name;
+               and datasets.frozen
+               and datasets.total_file_size is null
+            group by datasets.namespace, datasets.name;
         """)
-        return dict(((ds_ns, ds_name), n, tot) for ds_ns, ds_name, n, tot in fetch_generator(c))
+        return dict(((ds_ns, ds_name), (n, tot)) for ds_ns, ds_name, n, tot in fetch_generator(c))
 
 
 class DBNamedQuery(DBObject):
