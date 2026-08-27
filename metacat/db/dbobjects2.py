@@ -1727,14 +1727,15 @@ class DBDataset(DBObject):
 
         return dataset_map
 
-     def file_count_by_dataset(db):
-         c = db.cursor()
-         c.execute(f"""
+    @staticmethod
+    def file_count_by_dataset(db):
+        c = db.cursor()
+        c.execute(f"""
             select dataset_namespace, dataset_name, count(*) 
                 from files_datasets 
                 group by dataset_namespace, dataset_name
         """)
--        return dict(((ds_ns, ds_name), n) for ds_ns, ds_name, n in fetch_generator(c))
+        return dict(((ds_ns, ds_name), n) for ds_ns, ds_name, n in fetch_generator(c))
  
     @staticmethod
     def file_count_and_size_by_frozen_dataset(db):
