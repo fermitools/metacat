@@ -81,7 +81,6 @@ class MetaCatDaemon(Logged):
         counts = DBDataset.file_count_by_dataset(db)
         for ds in DBDataset.list(db):
             ds.FileCount = counts.get((ds.Namespace, ds.Name), 0)
-            ds.save()
         db.close()
         self.log("Dataset file counts updated")
 
@@ -117,7 +116,7 @@ class MetaCatDaemon(Logged):
         cert, headers = self.do_auth()
         response = requests.get(url, verify=False, cert=cert, headers=headers)
         data = response.json()
-        self.debug("data received")
+        self.debug(f"data received (status {response.status_code} {data=}")
 
         status = data["ferry_status"]
         if status != "success":
@@ -145,6 +144,8 @@ class MetaCatDaemon(Logged):
                     self.debug(f"role template from {item['fqan']} still has '$' : {rolename}, skipping")
                     continue
 
+                self.debug(f"checking if {user} in {rolename}..")
+
                 do_save = False
                 db = self.db()
                 role = DBRole.get(db, rolename)
@@ -157,7 +158,9 @@ class MetaCatDaemon(Logged):
                     
                 if not user in role.members:
                     self.debug(f"adding {user} to {rolename}")
-                    role.add_member(user)
+                    cur_members = set(role.members.list())
+                    cur_members.add(user)
+                    role.members.set(cur_members)
                     users_added_to_roles.add(user)
 
 
@@ -238,6 +241,7 @@ class MetaCatDaemon(Logged):
         self.log("namespaces created:", len(ns_created), "" if not ns_created else ",".join(ns_created))
         self.log("roles created:", len(roles_created),  "" if not ns_created else ",".join(roles_created))
         self.log("users added to roles:", len(users_added_to_roles),  "" if not ns_created else ",".join(users_added_to_roles))
+        db.cursor().execute("commit")
         db.close()
 
 
