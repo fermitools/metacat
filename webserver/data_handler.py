@@ -40,17 +40,29 @@ class DataHandler(MetaCatHandler):
            "sha256": 64,
            "md5": 32,
         }
+        # these should probalby be overridable in a config file...
+        self.usual_timeout = "600s" 
+        self.report_timeout = "3600s"
+
+    def connect_with_timeout(self, report=False):
+        db = self.App.connect()
+        if report:
+            timeout = self.report_timeout
+        else:
+            timeout = self.usual_timeout
+        db.cursor().execute(f"SET LOCAL statement_timeout = '{timeout}'")
+        return db
         
     def load_categories(self):
         if self.Categories is None:
-            db = self.App.connect()
+            db = self.connect_with_timeout()
             self.Categories = {c.Path:c for c in DBParamCategory.list(db)}
         return self.Categories
         
     def load_dataset(self, ns, n):
         ds = self.Datasets.get((ns, n))
         if ds is None:
-            db = self.App.connect()
+            db = self.connect_with_timeout()
             ds = self.Datasets[(ns, n)] = DBDataset.get(db, ns, n)
         return ds
 
@@ -100,7 +112,7 @@ class DataHandler(MetaCatHandler):
     @sanitized
     def namespaces(self, request, relpath, owner_user=None, owner_role=None, directly="no", **args):
         directly = directly == "yes"
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         if request.body:
             names = json.loads(request.body)
             for name in names:
@@ -116,7 +128,7 @@ class DataHandler(MetaCatHandler):
     def namespace(self, request, relpath, name=None, **args):
         name = name or relpath
         self.sanitize(name=name)
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         ns = DBNamespace.get(db, name)
         if ns is None:
             return 404, "Not found", "text/plain"
@@ -140,7 +152,7 @@ class DataHandler(MetaCatHandler):
     def namespace_counts(self, request, relpath, name=None, **args):
         self.sanitize(name, relpath)
         name = name or relpath
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         ns = DBNamespace.get(db, name)
         out = json.dumps(
             dict(
@@ -156,7 +168,7 @@ class DataHandler(MetaCatHandler):
     def datasets(self, request, relpath, with_file_counts="no", **args):
         with_file_counts = with_file_counts == "yes"        # whether exact number of files is to be returned
         #print("data_server.datasets: with_file_counts:", with_file_counts)
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         datasets = DBDataset.list(db)
         out = []
         for ds in datasets:
@@ -171,7 +183,7 @@ class DataHandler(MetaCatHandler):
         with_metadata=with_metadata == "yes"
         namespace, name = (dataset or relpath).split(":", 1)
         self.sanitize(namespace, name)
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         dataset = DBDataset.get(db, namespace, name)
         if dataset is None:
             return 404, "Dataset not found"
@@ -181,7 +193,7 @@ class DataHandler(MetaCatHandler):
         
     @sanitized
     def dataset(self, request, relpath, dataset=None, exact_file_count="no", **args):
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         namespace, name = (dataset or relpath).split(":", 1)
         self.sanitize(namespace, name)
         dataset = DBDataset.get(db, namespace, name)
@@ -195,7 +207,7 @@ class DataHandler(MetaCatHandler):
     def dataset_count(self, request, relpath, dataset=None, exact_file_count="yes", **args):
         namespace, name = dataset.split(":", 1)
         self.sanitize(namespace, name)
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         nfiles = DBDataset(db, namespace, name).nfiles(exact_file_count == "yes")
         return '{"file_count":%d}\n' % (nfiles,), {"Content-Type":"application/json",
             "Access-Control-Allow-Origin":"*"
@@ -205,7 +217,7 @@ class DataHandler(MetaCatHandler):
     def dataset_counts(self, request, relpath, dataset=None, exact_file_count="yes", **args):
         namespace, name = dataset.split(":", 1)
         self.sanitize(namespace, name)
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         ds = DBDataset(db, namespace, name)
         
         #nfiles = self.App.dataset_file_count(namespace, name)
@@ -229,7 +241,7 @@ class DataHandler(MetaCatHandler):
 
     @sanitized
     def create_dataset(self, request, relpath):
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         user, error = self.authenticated_user()
         if user is None:
             return 401, error
@@ -291,7 +303,7 @@ class DataHandler(MetaCatHandler):
         user, error = self.authenticated_user()
         if user is None:
             return 403, "Authentication required"
-        db = self.App.connect()
+        db = self.connect_with_timeout()
 
         ds = DBDataset.get(db, namespace, name)
         if ds is None:
@@ -335,7 +347,7 @@ class DataHandler(MetaCatHandler):
         self.sanitize(parent_namespace=parent_namespace, parent_name=parent_name)
         child_namespace, child_name = child.split(":",1)
         self.sanitize(child_namespace=child_namespace, child_name=child_name)
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         parent_ns = DBNamespace.get(db, parent_namespace)
         child_ns = DBNamespace.get(db, child_namespace)
         if not user.is_admin() and not parent_ns.owned_by_user(user):      # allow adding unowned datasets as subsets 
@@ -375,7 +387,7 @@ class DataHandler(MetaCatHandler):
         if file_list and query_text:
             return 400, "Either file list or query must be specified, but not both", "text/plain"
             
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         ds_namespace, ds_name = parse_name(dataset)
         self.sanitize(namespace=default_namespace, dataset_namespace=ds_namespace, dataset_name=ds_name)
         if ds_namespace is None:
@@ -435,7 +447,7 @@ class DataHandler(MetaCatHandler):
         if file_list and query_text:
             return 400, "Either file list or query must be specified, but not both", "text/plain"
             
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         ds_namespace, ds_name = parse_name(dataset, default_namespace)
         self.sanitize(namespace=default_namespace, dataset_namespace=ds_namespace, dataset_name=ds_name)
         if ds_namespace is None:
@@ -501,7 +513,7 @@ class DataHandler(MetaCatHandler):
         if file_list and query_text:
             return 400, "Either file list or query must be specified, but not both", "text/plain"
             
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         if ds_namespace is None:
             return 400, "Dataset namespace unspecified", "text/plain"
         if not self._namespace_authorized(db, ds_namespace, user):
@@ -556,7 +568,7 @@ class DataHandler(MetaCatHandler):
         self.sanitize(dataset_namespace=ds_namespace, dataset_name=ds_name)
         if ds_namespace is None or ds_name is None:
             return 400, "Dataset specification error", "text/plain"
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         ds = DBDataset.get(db, ds_namespace, ds_name)
         if ds is None:
             return 404, "Dataset not found", "text/plain"
@@ -572,7 +584,7 @@ class DataHandler(MetaCatHandler):
         #       { "namespace": "...", "name":"..." },
         #       { "fid":"..." }
         #
-        db = self.App.connect()
+        db = self.connect_with_timeout()
 
         # validate input data
         file_list = json.loads(request.body) if request.body else []
@@ -634,7 +646,7 @@ class DataHandler(MetaCatHandler):
         if dataset is None:
             return 400, "Dataset not specified"
 
-        db = self.App.connect()
+        db = self.connect_with_timeout()
 
         ds_namespace, ds_name = parse_name(dataset, default_namespace)
         try:
@@ -903,7 +915,7 @@ class DataHandler(MetaCatHandler):
         if user is None:
             return 403, "Authentication required"
 
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         data = json.loads(request.body)
         if not isinstance(data, dict):
             return 400, "Unsupported request data format"
@@ -1018,7 +1030,7 @@ class DataHandler(MetaCatHandler):
         user, error = self.authenticated_user()
         if user is None:
             return 403, "Authentication required"
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         #print("request.body:", request.body)
         data = json.loads(request.body)
         if not isinstance(data, dict):
@@ -1068,7 +1080,7 @@ class DataHandler(MetaCatHandler):
         user, error = self.authenticated_user()
         if user is None:
             return 403, "Authentication required"
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         data = json.loads(request.body)
         if not isinstance(data, dict):
             return 400, "Unsupported request data format"
@@ -1190,7 +1202,7 @@ class DataHandler(MetaCatHandler):
         user, error = self.authenticated_user()
         if user is None:
             return 403, "Authentication required"
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         data = json.loads(request.body)
         if not isinstance(data, dict):
             return 400, "Unsupported request data format"
@@ -1228,7 +1240,7 @@ class DataHandler(MetaCatHandler):
 
         self.sanitize(namespace=namespace, name=name, fid=fid)
 
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         if fid:
             f = DBFile.get(db, fid = fid)
         else:
@@ -1246,7 +1258,7 @@ class DataHandler(MetaCatHandler):
 
         data = json.loads(request.body)
         retire = data["retire"]
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         spec = ObjectSpec.from_dict(data)
         namespace = None
         if spec.FID:
@@ -1281,7 +1293,7 @@ class DataHandler(MetaCatHandler):
             
             lookup_lst.append(spec.as_dict())
 
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         files = list(DBFile.get_files(db, lookup_lst))
         out = [f.to_jsonable(with_metadata = with_metadata, with_provenance = with_provenance) 
                 for f in files
@@ -1324,7 +1336,7 @@ class DataHandler(MetaCatHandler):
         
         add_namespace = add_name = ds_namespace = ds_name = None
 
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         user, error = self.authenticated_user()
         if (save_as or add_to) and user is None:
             return 401, error
@@ -1416,7 +1428,7 @@ class DataHandler(MetaCatHandler):
             #print("query from body:", query_text)
         query_text = to_str(query_text or "")
         
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         t0 = time.time()
         if not query_text:
             return "[]", "application/json"
@@ -1439,14 +1451,14 @@ class DataHandler(MetaCatHandler):
         
     @sanitized
     def named_queries(self, request, relpath, namespace=None, **args):
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         queries = list(DBNamedQuery.list(db, namespace))
         data = [q.to_jsonable() for q in queries]
         return json.dumps(data), "application/json"
 
     @sanitized
     def named_query(self, request, relpath, namespace=None, name=None, **args):
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         q = DBNamedQuery.get(db, namespace, name)
         if q is None:
             return 404, "Query not found"
@@ -1459,7 +1471,7 @@ class DataHandler(MetaCatHandler):
         if user is None:
             return 401, "Authentication required"
         data = json.loads(request.body)
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         namespace = data["namespace"]
         name = data["name"]
         try:
@@ -1487,7 +1499,7 @@ class DataHandler(MetaCatHandler):
     # Parameter categories
     #
     def categories(self, request, relpath, **args):
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         lst = DBParamCategory.list(db)
         out = [cat.to_jsonable() for cat in lst]
         return json.dumps(out), "application/json"
@@ -1497,7 +1509,7 @@ class DataHandler(MetaCatHandler):
         path = path or relpath
         if not path:
             return 400, "Category path not specified", "text/plain"
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         cat = DBParamCategory.get(db, path)
         if cat is None:
             out = None
@@ -1507,7 +1519,7 @@ class DataHandler(MetaCatHandler):
 
     @sanitized
     def create_category(self, request, relpath):
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         user, error = self.authenticated_user()
         if not (user and user.is_admin()):
             return 403, "Permission denied -- must be admin"
@@ -1547,7 +1559,7 @@ class DataHandler(MetaCatHandler):
 
     @sanitized
     def update_category(self, request, relpath):
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         user, error = self.authenticated_user()
         if not (user and user.is_admin()):
             return 403, "Permission denied -- must be admin"
@@ -1604,7 +1616,7 @@ class DataHandler(MetaCatHandler):
         path = path or relpath
         if not path:
             return 400, "Category path not specified", "text/plain"
-        db = self.App.connect()
+        db = self.connect_with_timeout()
         user, error = self.authenticated_user()
         cat = DBParamCategory.get(db, path)
         if cat is None:
@@ -1616,7 +1628,7 @@ class DataHandler(MetaCatHandler):
 
     @sanitized
     def report_metadata_keys(self, request, replpath,  **args):
-        db = self.App.connect()
+        db = self.connect_with_timeout(report=True)
         user, error = self.authenticated_user()
         if not (user and user.is_admin()): 
             return 403, "Permission denied -- must be admin"
@@ -1626,7 +1638,7 @@ class DataHandler(MetaCatHandler):
 
     @sanitized
     def report_metadata_counts_ranges(self, request, relpath, keylist="", **args):
-        db = self.App.connect()
+        db = self.connect_with_timeout(report=True)
         user, error = self.authenticated_user()
         if not (user and user.is_admin()): 
             return 403, "Permission denied -- must be admin"
@@ -1637,7 +1649,7 @@ class DataHandler(MetaCatHandler):
 
     @sanitized
     def report_metadata_values(self, request, relpath, key=None, **args):
-        db = self.App.connect()
+        db = self.connect_with_timeout(report=True)
         user, error = self.authenticated_user()
         if not (user and user.is_admin()): 
             return 403, "Permission denied -- must be admin"
