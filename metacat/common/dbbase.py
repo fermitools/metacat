@@ -131,6 +131,7 @@ class DBManyToMany(object):
         return self.list()
         
     def add(self, *vals, c=None):
+        ''' DANGER: does not work consistently: avoid '''
         assert len(vals) == len(self.ReferenceColumns)
         col_vals = list(zip(self.ReferenceColumns, vals)) + list(self.LookupValues.items())
         cols, vals = zip(*col_vals)
