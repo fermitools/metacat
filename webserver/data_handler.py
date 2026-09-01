@@ -318,6 +318,8 @@ class DataHandler(MetaCatHandler):
             ds.Monotonic = request_data["monotonic"]
         if "frozen" in request_data: 
             ds.Frozen = request_data["frozen"]
+            if not ds.Frozen:
+                ds.TotalFileSize = None
         if "description" in request_data: 
             ds.Description = request_data["description"]
         

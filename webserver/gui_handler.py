@@ -1069,6 +1069,8 @@ class GUIHandler(MetaCatHandler):
 
         ds.Monotonic = "monotonic" in request.POST
         ds.Frozen = "frozen" in request.POST
+        if not ds.Frozen:
+              ds.TotalFileSize = None
         reqs = self.read_dataset_file_meta_requiremets(request.POST)
         ds.FileMetaRequirements = reqs
 
