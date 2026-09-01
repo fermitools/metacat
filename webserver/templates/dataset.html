@@ -272,7 +272,7 @@
 
 {% if files %}
 
-    <h3>{{files|length}}/{{nfiles}} (approximate) files</h3>
+    <h3>{{files|length}}/{{nfiles}} {{'' if dataset.Frozen else '(approximate)'}} files</h3>
 
     <table class="file_metadata">
         {% for f in files|sort(attribute="Name") %}
