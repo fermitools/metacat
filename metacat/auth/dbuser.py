@@ -204,6 +204,7 @@ class BaseDBRole(DBObject):
         return out
         
     def add_member(self, user):
+        ''' DANGER: does not work reliably due to DBManyToMany.add() bug '''
         self.members.add(user)
         return self
         
