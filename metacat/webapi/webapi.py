@@ -457,7 +457,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
 
             # finally set frozen flag if requested
             if frozen2:
-                self.update_datset(did, frozen=frozen2)
+                self.update_dataset(did, frozen=frozen2)
 
         return out
         

@@ -87,7 +87,7 @@ actual results. Also, we pass the dataset name to the ``async_query`` method as 
 associate the returned results with the dataset.
 
 In the second for-loop, we wait for the results from each query and use the promise ``Data`` attribute to refer to the
-actual datset name to print the results. Note that the second for-loop loops through the promises in the same order
+actual dataset name to print the results. Note that the second for-loop loops through the promises in the same order
 as they were created. But that does not mean that we expect the queries to complete in the same order. If the query completes
 before we call the corresponding promise ``wait`` method, it will simply return the results immediately.
 

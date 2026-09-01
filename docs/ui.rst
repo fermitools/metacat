@@ -983,7 +983,7 @@ MetaCat queries are written in :doc:`Metadata Query Language <mql>`.
                                                   overrides --summary
             -P|--with-provenance                - include provenance information
             -N|--namespace=<default namespace>  - default namespace for the query
-            -S|--save-as=<namespace>:<name>     - save files as a new datset
+            -S|--save-as=<namespace>:<name>     - save files as a new dataset
             -A|--add-to=<namespace>:<name>      - add files to an existing dataset
             -r|--include-retired-files          - include retired files into the query results
             -b|--batch_size N                   - request results in batches of N files
