@@ -102,7 +102,7 @@
                 {% endif %}
                 <td>{{'frozen' if ds.Frozen}} {{'monotonic' if ds.Monotonic}}</td>
                 <td id="{{did}}_file_count" class="right">{{ds.FileCount}}</td>
-                <td id="{{did}}_total_file_size" class="right">{{ds.TotalFileSize}}</td>
+                <td id="{{did}}_total_file_size" class="right">{{ds.TotalFileSize if ds.TotalFileSize else ''}}</td>
                 <td id="{{did}}_child_count" class="right"></td>
                 <td id="{{did}}_subset_count" class="right"></td>
                 <td id="{{did}}_parent_count" class="right"></td>
