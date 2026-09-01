@@ -896,6 +896,7 @@ class GUIHandler(MetaCatHandler):
              "Creator": lambda x: x.Creator,
              "Created": lambda x: x.CreatedTimestamp,
              "Files": lambda x: x.FileCount,
+             "Size": lambda x: x.TotalFileSize,
         }
 
         if not (sort_by in sort_by_map):
