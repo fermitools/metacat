@@ -34,7 +34,7 @@ class QueryCommand(CLICommand):
                                                   overrides --summary
             -P|--with-provenance                - include provenance information
             -N|--namespace=<default namespace>  - default namespace for the query
-            -S|--save-as=<namespace>:<name>     - save files as a new datset
+            -S|--save-as=<namespace>:<name>     - save files as a new dataset
             -A|--add-to=<namespace>:<name>      - add files to an existing dataset
             -r|--include-retired-files          - include retired files into the query results
             -b|--batch_size N                   - perform query in batches of N files
