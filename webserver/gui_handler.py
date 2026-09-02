@@ -896,6 +896,7 @@ class GUIHandler(MetaCatHandler):
              "Creator": lambda x: x.Creator,
              "Created": lambda x: x.CreatedTimestamp,
              "Files": lambda x: x.FileCount,
+             "Size": lambda x: x.TotalFileSize,
         }
 
         if not (sort_by in sort_by_map):
@@ -1069,6 +1070,8 @@ class GUIHandler(MetaCatHandler):
 
         ds.Monotonic = "monotonic" in request.POST
         ds.Frozen = "frozen" in request.POST
+        if not ds.Frozen:
+              ds.TotalFileSize = None
         reqs = self.read_dataset_file_meta_requiremets(request.POST)
         ds.FileMetaRequirements = reqs
 

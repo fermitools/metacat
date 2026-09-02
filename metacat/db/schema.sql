@@ -75,7 +75,7 @@ create index files_created_timestamp on files(created_timestamp);
 create index files_size on files(size);
 create index files_name on files(name) include (namespace, id);
 create index files_ns_create on files using btree  (namespace , created_timestamp);
-
+create index files_retired_size on files ( id, retired, size );
 
 
 create table parent_child
@@ -106,18 +106,19 @@ create table datasets
     name                text,
     primary key (namespace, name),
 
-    frozen		        boolean default 'false',
-    monotonic		    boolean default 'false',
-    metadata    jsonb   default '{}',
+    frozen              boolean default 'false',
+    monotonic           boolean default 'false',
+    metadata            jsonb   default '{}',
     required_metadata   text[],
     creator             text references users(username),
     created_timestamp   timestamp with time zone     default now(),
     expiration          timestamp with time zone,
     description         text,
     file_metadata_requirements  jsonb   default '{}'::jsonb,
-    file_count  bigint          default 0,
+    file_count          bigint          default 0,
     updated_timestamp   timestamp with time zone,
-    updated_by          text references users(username)
+    updated_by          text references users(username),
+    total_file_size     bigint
 );
 
 create index datasets_meta_index on datasets using gin (metadata);

@@ -78,6 +78,7 @@
             {% if logged_in %}<th>Owner<a href="./datasets?sort_by=Owner&sort_asc=d&namematch={{namematch}}&selection={{selection}}" style="text-decoration: none">&dArr;</a><a href="./datasets?sort_by=Owner&sort_asc=a&namematch={{namematch}}&selection={{selection}}" style="text-decoration: none">&uArr;</a></th>{% endif %}
     		<th>Flags</th>
     		<th>Files<sup>*</sup><a href="./datasets?sort_by=Files&sort_asc=d&namematch={{namematch}}&selection={{selection}}" style="text-decoration: none">&dArr;</a><a href="./datasets?sort_by=Files&sort_asc=a&namematch={{namematch}}&selection={{selection}}" style="text-decoration: none">&uArr;</a></th>
+    		<th>Size<sup>*</sup><a href="./datasets?sort_by=Size&sort_asc=d&namematch={{namematch}}&selection={{selection}}" style="text-decoration: none">&dArr;</a><a href="./datasets?sort_by=Files&sort_asc=a&namematch={{namematch}}&selection={{selection}}" style="text-decoration: none">&uArr;</a></th>
             <th>Children</th>
             <th>Subsets</th>
             <th>Parents</th>
@@ -101,6 +102,7 @@
                 {% endif %}
                 <td>{{'frozen' if ds.Frozen}} {{'monotonic' if ds.Monotonic}}</td>
                 <td id="{{did}}_file_count" class="right">{{ds.FileCount}}</td>
+                <td id="{{did}}_total_file_size" class="right">{{ds.TotalFileSize if ds.TotalFileSize else ''}}</td>
                 <td id="{{did}}_child_count" class="right"></td>
                 <td id="{{did}}_subset_count" class="right"></td>
                 <td id="{{did}}_parent_count" class="right"></td>
@@ -137,7 +139,7 @@
     	{% endfor %}
     </table>
     
-    <p style="color:gray">* - may not be accurate: updated periodically, includes retired files</p>
+    <p style="color:gray">* - may not be accurate for non-frozen datasets: updated periodically, includes retired files</p>
 
     {% if npages > 1 %}
         <p>Page:&nbsp;
