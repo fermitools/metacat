@@ -150,8 +150,8 @@ class ShowDatasetCommand(CLICommand):
                     tdesc = "Cached"
                 else:
                     tdesc = "Estimated"
-                print(tdesc, "file count: ", info.get("file_count"), "")
-                print(tdesc, "total file size: ", info.get("total_file_size"), "")
+                print(tdesc, "file count: ", info.get("file_count", ""))
+                print(tdesc, "total file size: ", info.get("total_file_size", ""))
                 print("Restricted:           ", "frozen" if info.get("frozen", False) else (
                                                 "monotonic" if info.get("monotonic", False) else "no"
                                                 )
@@ -176,8 +176,14 @@ class ShowDatasetCommand(CLICommand):
                         line += " ~ '%s'" % (constraint["pattern"])
                     print(line)
                 sep = " -- subset --"  
-                totfiles += 0
-                tottotsize += 0
+                totfiles += info.get("file_count", 0)
+                tottotsize += info.get("total_file_size", 0)
+
+        if "-s" in opts or "--subsets" in opts:
+             print()
+             print("Total file count:", totfiles)
+             if tottotsize:
+                 print("Total total file size:", tottotsize)
                     
 
 class AddSubsetCommand(CLICommand):
