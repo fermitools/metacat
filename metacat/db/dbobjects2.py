@@ -1309,7 +1309,8 @@ class DBDataset(DBObject):
                (
                    select pc.child_namespace, pc.child_name
                        from datasets_parent_child pc
-                       where pc.parent_namespace = 'mengel' and pc.parent_name = 'test_subset1'  union
+                       where pc.parent_namespace = %s and pc.parent_name = %s
+                    union
                        select pc1.child_namespace, pc1.child_name
                        from datasets_parent_child pc1, subsets s
                        where pc1.parent_namespace = s.namespace and pc1.parent_name = s.name 
@@ -1317,8 +1318,10 @@ class DBDataset(DBObject):
                select distinct s.namespace, s.name from subsets s 
             union 
            """
+           nametuple = (self.Namespace, self.Name, self.Namespace, self.Name)
         else:
            recursive_query = ""
+           nametuple = (self.Namespace, self.Name)
 
         meta = "null as metadata" if not with_metadata else "f.metadata"
         limit = f"limit {limit}" if limit else ""
@@ -1334,7 +1337,7 @@ class DBDataset(DBObject):
                     {limit}
         """
         c = self.DB.cursor()
-        c.execute(sql, (self.Namespace, self.Name))
+        c.execute(sql, nametuple)
         for fid, namespace, name, meta, size, checksums, creator, created_timestamp in fetch_generator(c):
             meta = meta or {}
             checksums = checksums or {}
