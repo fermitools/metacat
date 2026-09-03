@@ -1304,9 +1304,9 @@ class DBDataset(DBObject):
 
     def list_files(self, with_metadata=False, limit=None, include_retired_files=False, with_subsets=False):
         if with_subsets:
-           recursive_query = """
-               with recursive subsets (namespace, name) as  
-               (
+            recursive_query = """
+                with recursive subsets (namespace, name) as  
+                (
                    select pc.child_namespace, pc.child_name
                        from datasets_parent_child pc
                        where pc.parent_namespace = %s and pc.parent_name = %s
@@ -1314,14 +1314,14 @@ class DBDataset(DBObject):
                        select pc1.child_namespace, pc1.child_name
                        from datasets_parent_child pc1, subsets s
                        where pc1.parent_namespace = s.namespace and pc1.parent_name = s.name 
-               )
-               select distinct s.namespace, s.name from subsets s 
-            union 
-           """
-           nametuple = (self.Namespace, self.Name, self.Namespace, self.Name)
+                )
+                select distinct s.namespace, s.name from subsets s 
+                 union 
+            """
+            nametuple = (self.Namespace, self.Name, self.Namespace, self.Name)
         else:
-           recursive_query = ""
-           nametuple = (self.Namespace, self.Name)
+            recursive_query = ""
+            nametuple = (self.Namespace, self.Name)
 
         meta = "null as metadata" if not with_metadata else "f.metadata"
         limit = f"limit {limit}" if limit else ""
