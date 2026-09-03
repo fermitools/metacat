@@ -380,7 +380,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
             #print("get_dataset_counts: None")
             return None
 
-    def get_dataset(self, did=None, namespace=None, name=None, exact_file_count=False):
+    def get_dataset(self, did=None, namespace=None, name=None, exact_file_count=False, with_subsets=False ):
         """Gets single dataset
         
         Arguments
@@ -401,6 +401,8 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
             url = f"data/dataset?dataset={spec}"
             if exact_file_count:
                 url += "&exact_file_count=yes"
+            if with_subsets:
+                url += "&with_subsets=yes"
             return self.get_json(url)
         except NotFoundError:
             return None

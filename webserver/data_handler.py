@@ -179,7 +179,7 @@ class DataHandler(MetaCatHandler):
         return json.dumps(out), "application/json"
         
     @sanitized
-    def dataset_files(self, request, relpath, dataset=None, with_metadata="no", include_retired_files="no", **args):
+    def dataset_files(self, request, relpath, dataset=None, with_metadata="no", include_retired_files="no", with_subsets="no", **args):
         with_metadata=with_metadata == "yes"
         namespace, name = (dataset or relpath).split(":", 1)
         self.sanitize(namespace, name)
@@ -188,19 +188,29 @@ class DataHandler(MetaCatHandler):
         if dataset is None:
             return 404, "Dataset not found"
         files = dataset.list_files(with_metadata=with_metadata, 
-                        include_retired_files = include_retired_files == "yes")
+                        include_retired_files = include_retired_files == "yes",
+                        with_subsets = with_subsets="yes")
         return self.json_stream((f.to_jsonable(with_metadata=with_metadata) for f in files)), "application/json-seq"
         
     @sanitized
-    def dataset(self, request, relpath, dataset=None, exact_file_count="no", **args):
+    def dataset(self, request, relpath, dataset=None, exact_file_count="no", with_subsets="no", **args):
         db = self.connect_with_timeout()
         namespace, name = (dataset or relpath).split(":", 1)
         self.sanitize(namespace, name)
         dataset = DBDataset.get(db, namespace, name)
         if dataset is None:
             return 404, "Dataset not found"
+               
         dct = dataset.to_jsonable()
         dct["file_count"] = dataset.nfiles(exact_file_count == "yes")
+
+        if with_subsets == "yes": 
+            dict["subsets"] = []
+            for sds in dataset.subsets():
+                sdct = sds.to_jsonable()
+                sdct["file_count"] = sds.nfiles(exact_file_count == "yes")
+                dict["subsets"].append(dct)
+
         return json.dumps(dct), "application/json"
             
     @sanitized

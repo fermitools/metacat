@@ -108,11 +108,15 @@ class ShowDatasetCommand(CLICommand):
     Usage = """[<options>] <namespace>:<name>
             -j|--json       - print as JSON
             -p|--pprint     - Python pprint
+            -s|--subsets    - include subset dataset info
     """
     MinArgs = 1
 
     def __call__(self, command, client, opts, args):
-        info = client.get_dataset(args[0])
+        extras={}
+        if "-s" in opts or "--subsets" in opts:
+            extras["with_subsets"] = True
+        info = client.get_dataset(args[0], **extras)
         if info is None:
             print("Dataset not found")
             sys.exit(11)
@@ -121,48 +125,59 @@ class ShowDatasetCommand(CLICommand):
         elif "-j" in opts or "--json" in opts:
             print(json.dumps(info, indent=4, sort_keys=True))
         else:
-            print("Namespace:            ", info["namespace"])
-            print("Name:                 ", info["name"])
-            print("Description:          ", info.get("description") or "")
-            print("Creator:              ", info.get("creator") or "")
-            ct = info.get("created_timestamp") or ""
-            if ct:
-                ct = datetime.fromtimestamp(ct, timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
-            print("Create timestamp:     ", ct)
-            ut = info.get("updated_timestamp") or ""
-            if ut:
-                ut = datetime.fromtimestamp(ut, timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
-            print("Updated by:           ", info.get("updated_by") or "")
-            print("Update timestamp:     ", ut)
-            if info.get("frozen"):
-                tdesc = "Cached"
-            else:
-                tdesc = "Estimated"
-            print(tdesc, "file count: ", info.get("file_count"), "")
-            print(tdesc, "total file size: ", info.get("total_file_size"), "")
-            print("Restricted:           ", "frozen" if info.get("frozen", False) else (
-                                            "monotonic" if info.get("monotonic", False) else "no"
-                                            )
-            )
-            print("Metadata:")
-            if info.get("metadata"):
-                print(indent(json.dumps(info["metadata"], indent=4, sort_keys=True), "  "))
-            print("Constraints:")
-            for name, constraint in sorted(info.get("file_meta_requirements", {}).items()):
-                line = "  %-40s %10s" % (name, "required" if constraint.get("required", False) else "")
-                if "values" in constraint:
-                    line += " %s" % (tuple(constraint["values"]),)
-                rng = None
-                if "min" in constraint:
-                    rng = [repr(constraint["min"]), ""]
-                if "max" in constraint:
-                    if rng is None: rng = ["", ""]
-                    rng[1] = repr(constraint["max"])
-                if rng is not None:
-                    line += " [%s - %s]" % tuple(rng)
-                if "pattern" in constraint:
-                    line += " ~ '%s'" % (constraint["pattern"])
-                print(line)
+            info_w_ss = info
+            list_w_subsets = [info] + info.get("subsets",[])
+            totfiles = 0
+            tottotsize = 0
+            sep = ""
+            for info in list_w_subsets:
+                if sep:
+                   print(sep)
+                print("Namespace:            ", info["namespace"])
+                print("Name:                 ", info["name"])
+                print("Description:          ", info.get("description") or "")
+                print("Creator:              ", info.get("creator") or "")
+                ct = info.get("created_timestamp") or ""
+                if ct:
+                    ct = datetime.fromtimestamp(ct, timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+                print("Create timestamp:     ", ct)
+                ut = info.get("updated_timestamp") or ""
+                if ut:
+                    ut = datetime.fromtimestamp(ut, timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+                print("Updated by:           ", info.get("updated_by") or "")
+                print("Update timestamp:     ", ut)
+                if info.get("frozen"):
+                    tdesc = "Cached"
+                else:
+                    tdesc = "Estimated"
+                print(tdesc, "file count: ", info.get("file_count"), "")
+                print(tdesc, "total file size: ", info.get("total_file_size"), "")
+                print("Restricted:           ", "frozen" if info.get("frozen", False) else (
+                                                "monotonic" if info.get("monotonic", False) else "no"
+                                                )
+                )
+                print("Metadata:")
+                if info.get("metadata"):
+                    print(indent(json.dumps(info["metadata"], indent=4, sort_keys=True), "  "))
+                print("Constraints:")
+                for name, constraint in sorted(info.get("file_meta_requirements", {}).items()):
+                    line = "  %-40s %10s" % (name, "required" if constraint.get("required", False) else "")
+                    if "values" in constraint:
+                        line += " %s" % (tuple(constraint["values"]),)
+                    rng = None
+                    if "min" in constraint:
+                        rng = [repr(constraint["min"]), ""]
+                    if "max" in constraint:
+                        if rng is None: rng = ["", ""]
+                        rng[1] = repr(constraint["max"])
+                    if rng is not None:
+                        line += " [%s - %s]" % tuple(rng)
+                    if "pattern" in constraint:
+                        line += " ~ '%s'" % (constraint["pattern"])
+                    print(line)
+                sep = " -- subset --"  
+                totfiles += 0
+                tottotsize += 0
                     
 
 class AddSubsetCommand(CLICommand):
