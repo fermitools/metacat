@@ -198,7 +198,7 @@
     <tr>
         <th>File metadata requirements</th>
         <td>
-            {% if edit or dataset.FileMetaRequirements %}
+            {% if edit or create or dataset.FileMetaRequirements %}
                 <table>
                     {% set inx = 0 %}
                     <tr>
