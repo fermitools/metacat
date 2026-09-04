@@ -41,11 +41,10 @@ class ListDatasetFilesCommand(CLICommand):
 
 class ListDatasetsCommand(CLICommand):
     
-    Opts = ("lcs long file-counts with-subsets")
+    Opts = ("lc long file-counts")
     Usage = """[<options>] [<namespace pattern>:<name pattern>]        -- list datasets
             -l|--long               - detailed output
             -c|--file-counts    - if detailed output, include exact file counts -- can take long time !
-            -s|--with-subsets    - if detailed output, include exact file counts -- can take long time !
             """
     
     def __call__(self, command, client, opts, args):
