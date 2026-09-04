@@ -10,10 +10,11 @@ from .common import load_text, load_json, load_file_list, exit_code_from_excepti
 
 class ListDatasetFilesCommand(CLICommand):
     
-    Opts = "mjr with-metadata include-retired-files"
+    Opts = "mjrs with-metadata include-retired-files with-subsets"
     Usage = """[<options>] <dataset namespace>:<dataset name>          -- list dataset files
         -m|--with-metadata              - include file metadata
         -r|--include-retired-files      - include retired files
+        -s|--with-subsets               - include dataset subset files
         -j                              - as JSON
     """
     MinArgs = 1
@@ -21,8 +22,10 @@ class ListDatasetFilesCommand(CLICommand):
     def __call__(self, command, client, opts, args):
         dataset_did = args[0]
         with_meta = "-m" in opts or "--with-metadata" in opts
+        with_subsets = "-s" in opts or "--with-subsets" in opts
         files = client.get_dataset_files(dataset_did,
                     with_metadata = with_meta,
+                    with_subsets = with_subsets,
                     include_retired_files = "-r" in opts or "--include-retired-files" in opts)
         if "-j" in opts:
             first = True
@@ -38,10 +41,11 @@ class ListDatasetFilesCommand(CLICommand):
 
 class ListDatasetsCommand(CLICommand):
     
-    Opts = ("lc", ["--long", "--file-counts"])
+    Opts = ("lcs long file-counts with-subsets")
     Usage = """[<options>] [<namespace pattern>:<name pattern>]        -- list datasets
             -l|--long               - detailed output
-                -c|--file-counts    - if detailed output, include exact file counts -- can take long time !
+            -c|--file-counts    - if detailed output, include exact file counts -- can take long time !
+            -s|--with-subsets    - if detailed output, include exact file counts -- can take long time !
             """
     
     def __call__(self, command, client, opts, args):
@@ -57,6 +61,7 @@ class ListDatasetsCommand(CLICommand):
             
         verbose = "-l" in opts or "--long" in opts
         exact_counts = verbose and ("-c" in opts or "--file-counts" in opts)
+        with_subsets = verbose and ("-s" in opts or "--with-subsets" in opts)
         output = list(client.list_datasets(ns_pattern, name_pattern, with_counts=exact_counts))
         output = sorted(output, key=lambda ds:(ds["namespace"], ds["name"]))
     
@@ -64,7 +69,15 @@ class ListDatasetsCommand(CLICommand):
         header_format = "%-16s %-23s %-10s %-16s %s"
         divider = " ".join(("-"*16, "-"*23, "-"*10, "-"*16, "-"*60))
         columns = ("creator", "created", "files", "total_file_size", "namespace:name")
-            
+        if with_subsets:
+            verbose_format = "%-16s %-23s %10s %10s %10s %16s %s"
+            header_format = "%-16s %-23s %-10s %-10s %-10s %-16s %s"
+            divider = " ".join(("-"*16, "-"*23, "-"*10, "-"*10, "-"*10, "-"*16, "-"*60))
+            columns = ("creator", "created", "files", "ancestor", "subsets", "total_file_size", "namespace:name")
+            for ds in output:
+                sscounts = client.get_dataset_counts( f'{ds["namespace"]}:{ds["name"]}')
+                #print(f"got {sscounts=}")
+                ds.update( sscounts )
         if verbose:
             print(header_format % columns)
             print(divider)
@@ -91,28 +104,43 @@ class ListDatasetsCommand(CLICommand):
                     else:
                         total_file_size = str(total_file_size)
 
-                    print(verbose_format % (
-                        item.get("creator") or "",
-                        ct,
-                        file_count,
-                        total_file_size,
-                        namespace + ":" + name
-                    ))
+                    if with_subsets:
+                        print(verbose_format % (
+                            item.get("creator") or "",
+                            ct,
+                            item.get("subset_file_count") or "",
+                            item.get("superset_count") or "",
+                            item.get("subset_count") or "",
+                            item.get("subset_file_total") or "",
+                            namespace + ":" + name
+                        ))
+                    else:
+                        print(verbose_format % (
+                            item.get("creator") or "",
+                            ct,
+                            file_count,
+                            total_file_size,
+                            namespace + ":" + name
+                        ))
                 else:
                     print("%s:%s" % (namespace, name))
                     
 
 class ShowDatasetCommand(CLICommand):
     
-    Opts = ("pj", ["pprint=","json"])
+    Opts = ("pjs", ["pprint=","json","with-subsets"])
     Usage = """[<options>] <namespace>:<name>
-            -j|--json       - print as JSON
-            -p|--pprint     - Python pprint
+            -j|--json         - print as JSON
+            -p|--pprint       - Python pprint
+            -s|--with-subsets - include subset dataset info
     """
     MinArgs = 1
 
     def __call__(self, command, client, opts, args):
-        info = client.get_dataset(args[0])
+        extras={}
+        if "-s" in opts or "--with-subsets" in opts:
+            extras["with_subsets"] = True
+        info = client.get_dataset(args[0], **extras)
         if info is None:
             print("Dataset not found")
             sys.exit(11)
@@ -121,48 +149,65 @@ class ShowDatasetCommand(CLICommand):
         elif "-j" in opts or "--json" in opts:
             print(json.dumps(info, indent=4, sort_keys=True))
         else:
-            print("Namespace:            ", info["namespace"])
-            print("Name:                 ", info["name"])
-            print("Description:          ", info.get("description") or "")
-            print("Creator:              ", info.get("creator") or "")
-            ct = info.get("created_timestamp") or ""
-            if ct:
-                ct = datetime.fromtimestamp(ct, timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
-            print("Create timestamp:     ", ct)
-            ut = info.get("updated_timestamp") or ""
-            if ut:
-                ut = datetime.fromtimestamp(ut, timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
-            print("Updated by:           ", info.get("updated_by") or "")
-            print("Update timestamp:     ", ut)
-            if info.get("frozen"):
-                tdesc = "Cached"
-            else:
-                tdesc = "Estimated"
-            print(tdesc, "file count: ", info.get("file_count"), "")
-            print(tdesc, "total file size: ", info.get("total_file_size"), "")
-            print("Restricted:           ", "frozen" if info.get("frozen", False) else (
-                                            "monotonic" if info.get("monotonic", False) else "no"
-                                            )
-            )
-            print("Metadata:")
-            if info.get("metadata"):
-                print(indent(json.dumps(info["metadata"], indent=4, sort_keys=True), "  "))
-            print("Constraints:")
-            for name, constraint in sorted(info.get("file_meta_requirements", {}).items()):
-                line = "  %-40s %10s" % (name, "required" if constraint.get("required", False) else "")
-                if "values" in constraint:
-                    line += " %s" % (tuple(constraint["values"]),)
-                rng = None
-                if "min" in constraint:
-                    rng = [repr(constraint["min"]), ""]
-                if "max" in constraint:
-                    if rng is None: rng = ["", ""]
-                    rng[1] = repr(constraint["max"])
-                if rng is not None:
-                    line += " [%s - %s]" % tuple(rng)
-                if "pattern" in constraint:
-                    line += " ~ '%s'" % (constraint["pattern"])
-                print(line)
+            info_w_ss = info
+            list_w_subsets = [info] + info.get("subsets",[])
+            totfiles = 0
+            tottotsize = 0
+            sep = ""
+            for info in list_w_subsets:
+                if sep:
+                   print(sep)
+                print("Namespace:            ", info["namespace"])
+                print("Name:                 ", info["name"])
+                print("Description:          ", info.get("description") or "")
+                print("Creator:              ", info.get("creator") or "")
+                ct = info.get("created_timestamp") or ""
+                if ct:
+                    ct = datetime.fromtimestamp(ct, timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+                print("Create timestamp:     ", ct)
+                ut = info.get("updated_timestamp") or ""
+                if ut:
+                    ut = datetime.fromtimestamp(ut, timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+                print("Updated by:           ", info.get("updated_by") or "")
+                print("Update timestamp:     ", ut)
+                if info.get("frozen"):
+                    tdesc = "Cached"
+                else:
+                    tdesc = "Estimated"
+                print(tdesc, "file count: ", info.get("file_count", ""))
+                print(tdesc, "total file size: ", info.get("total_file_size", ""))
+                print("Restricted:           ", "frozen" if info.get("frozen", False) else (
+                                                "monotonic" if info.get("monotonic", False) else "no"
+                                                )
+                )
+                print("Metadata:")
+                if info.get("metadata"):
+                    print(indent(json.dumps(info["metadata"], indent=4, sort_keys=True), "  "))
+                print("Constraints:")
+                for name, constraint in sorted(info.get("file_meta_requirements", {}).items()):
+                    line = "  %-40s %10s" % (name, "required" if constraint.get("required", False) else "")
+                    if "values" in constraint:
+                        line += " %s" % (tuple(constraint["values"]),)
+                    rng = None
+                    if "min" in constraint:
+                        rng = [repr(constraint["min"]), ""]
+                    if "max" in constraint:
+                        if rng is None: rng = ["", ""]
+                        rng[1] = repr(constraint["max"])
+                    if rng is not None:
+                        line += " [%s - %s]" % tuple(rng)
+                    if "pattern" in constraint:
+                        line += " ~ '%s'" % (constraint["pattern"])
+                    print(line)
+                sep = " -- subset --"  
+                totfiles += info.get("file_count",None) or 0
+                tottotsize += info.get("total_file_size", None) or 0
+
+        if "-s" in opts or "--subsets" in opts:
+             print()
+             print("Total file count:", totfiles)
+             if tottotsize:
+                 print("Total total file size:", tottotsize)
                     
 
 class AddSubsetCommand(CLICommand):
