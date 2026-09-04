@@ -41,10 +41,11 @@ class ListDatasetFilesCommand(CLICommand):
 
 class ListDatasetsCommand(CLICommand):
     
-    Opts = ("lc", ["--long", "--file-counts"])
+    Opts = ("lcs long file-counts with-subsets")
     Usage = """[<options>] [<namespace pattern>:<name pattern>]        -- list datasets
             -l|--long               - detailed output
-                -c|--file-counts    - if detailed output, include exact file counts -- can take long time !
+            -c|--file-counts    - if detailed output, include exact file counts -- can take long time !
+            -s|--with-subsets    - if detailed output, include exact file counts -- can take long time !
             """
     
     def __call__(self, command, client, opts, args):
@@ -107,17 +108,17 @@ class ListDatasetsCommand(CLICommand):
 
 class ShowDatasetCommand(CLICommand):
     
-    Opts = ("pjs", ["pprint=","json","subsets"])
+    Opts = ("pjs", ["pprint=","json","with-subsets"])
     Usage = """[<options>] <namespace>:<name>
-            -j|--json       - print as JSON
-            -p|--pprint     - Python pprint
-            -s|--subsets    - include subset dataset info
+            -j|--json         - print as JSON
+            -p|--pprint       - Python pprint
+            -s|--with-subsets - include subset dataset info
     """
     MinArgs = 1
 
     def __call__(self, command, client, opts, args):
         extras={}
-        if "-s" in opts or "--subsets" in opts:
+        if "-s" in opts or "--with-subsets" in opts:
             extras["with_subsets"] = True
         info = client.get_dataset(args[0], **extras)
         if info is None:
