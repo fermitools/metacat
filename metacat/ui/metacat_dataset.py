@@ -41,10 +41,11 @@ class ListDatasetFilesCommand(CLICommand):
 
 class ListDatasetsCommand(CLICommand):
     
-    Opts = ("lc long file-counts")
+    Opts = ("lcs long file-counts with-subsets")
     Usage = """[<options>] [<namespace pattern>:<name pattern>]        -- list datasets
             -l|--long               - detailed output
             -c|--file-counts    - if detailed output, include exact file counts -- can take long time !
+            -s|--with-subsets    - if detailed output, include exact file counts -- can take long time !
             """
     
     def __call__(self, command, client, opts, args):
@@ -60,6 +61,7 @@ class ListDatasetsCommand(CLICommand):
             
         verbose = "-l" in opts or "--long" in opts
         exact_counts = verbose and ("-c" in opts or "--file-counts" in opts)
+        with_subsets = verbose and ("-s" in opts or "--with-subsets" in opts)
         output = list(client.list_datasets(ns_pattern, name_pattern, with_counts=exact_counts))
         output = sorted(output, key=lambda ds:(ds["namespace"], ds["name"]))
     
@@ -67,7 +69,15 @@ class ListDatasetsCommand(CLICommand):
         header_format = "%-16s %-23s %-10s %-16s %s"
         divider = " ".join(("-"*16, "-"*23, "-"*10, "-"*16, "-"*60))
         columns = ("creator", "created", "files", "total_file_size", "namespace:name")
-            
+        if with_subsets:
+            verbose_format = "%-16s %-23s %10s %10s %10s %16s %s"
+            header_format = "%-16s %-23s %-10s %-10s %-10s %-16s %s"
+            divider = " ".join(("-"*16, "-"*23, "-"*10, "-"*10, "-"*10, "-"*16, "-"*60))
+            columns = ("creator", "created", "files", "ancestor", "subsets", "total_file_size", "namespace:name")
+            for ds in output:
+                sscounts = client.get_dataset_counts( f'{ds["namespace"]}:{ds["name"]}')
+                print(f"got {sscounts=}")
+                ds.update( sscounts )
         if verbose:
             print(header_format % columns)
             print(divider)
@@ -94,13 +104,24 @@ class ListDatasetsCommand(CLICommand):
                     else:
                         total_file_size = str(total_file_size)
 
-                    print(verbose_format % (
-                        item.get("creator") or "",
-                        ct,
-                        file_count,
-                        total_file_size,
-                        namespace + ":" + name
-                    ))
+                    if with_subsets:
+                        print(verbose_format % (
+                            item.get("creator") or "",
+                            ct,
+                            file_count,
+                            item.get("superset_count") or "",
+                            item.get("subset_count") or "",
+                            total_file_size,
+                            namespace + ":" + name
+                        ))
+                    else:
+                        print(verbose_format % (
+                            item.get("creator") or "",
+                            ct,
+                            file_count,
+                            total_file_size,
+                            namespace + ":" + name
+                        ))
                 else:
                     print("%s:%s" % (namespace, name))
                     
