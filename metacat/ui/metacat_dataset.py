@@ -10,10 +10,11 @@ from .common import load_text, load_json, load_file_list, exit_code_from_excepti
 
 class ListDatasetFilesCommand(CLICommand):
     
-    Opts = "mjr with-metadata include-retired-files"
+    Opts = "mjrs with-metadata include-retired-files with-subsets"
     Usage = """[<options>] <dataset namespace>:<dataset name>          -- list dataset files
         -m|--with-metadata              - include file metadata
         -r|--include-retired-files      - include retired files
+        -s|--with-subsets               - include dataset subset files
         -j                              - as JSON
     """
     MinArgs = 1
@@ -21,8 +22,10 @@ class ListDatasetFilesCommand(CLICommand):
     def __call__(self, command, client, opts, args):
         dataset_did = args[0]
         with_meta = "-m" in opts or "--with-metadata" in opts
+        with_subsets = "-s" in opts or "--with-subsets" in opts
         files = client.get_dataset_files(dataset_did,
                     with_metadata = with_meta,
+                    with_subsets = with_subsets,
                     include_retired_files = "-r" in opts or "--include-retired-files" in opts)
         if "-j" in opts:
             first = True
@@ -104,7 +107,7 @@ class ListDatasetsCommand(CLICommand):
 
 class ShowDatasetCommand(CLICommand):
     
-    Opts = ("pj", ["pprint=","json"])
+    Opts = ("pjs", ["pprint=","json","subsets"])
     Usage = """[<options>] <namespace>:<name>
             -j|--json       - print as JSON
             -p|--pprint     - Python pprint
@@ -176,8 +179,8 @@ class ShowDatasetCommand(CLICommand):
                         line += " ~ '%s'" % (constraint["pattern"])
                     print(line)
                 sep = " -- subset --"  
-                totfiles += info.get("file_count", 0)
-                tottotsize += info.get("total_file_size", 0)
+                totfiles += info.get("file_count",None) or 0
+                tottotsize += info.get("total_file_size", None) or 0
 
         if "-s" in opts or "--subsets" in opts:
              print()

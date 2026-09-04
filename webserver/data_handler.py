@@ -189,7 +189,7 @@ class DataHandler(MetaCatHandler):
             return 404, "Dataset not found"
         files = dataset.list_files(with_metadata=with_metadata, 
                         include_retired_files = include_retired_files == "yes",
-                        with_subsets = with_subsets="yes")
+                        with_subsets="yes")
         return self.json_stream((f.to_jsonable(with_metadata=with_metadata) for f in files)), "application/json-seq"
         
     @sanitized
@@ -205,11 +205,12 @@ class DataHandler(MetaCatHandler):
         dct["file_count"] = dataset.nfiles(exact_file_count == "yes")
 
         if with_subsets == "yes": 
-            dict["subsets"] = []
+            sdlist = []
             for sds in dataset.subsets():
                 sdct = sds.to_jsonable()
                 sdct["file_count"] = sds.nfiles(exact_file_count == "yes")
-                dict["subsets"].append(dct)
+                sdlist.append(sdct)
+            dct["subsets"] = sdlist
 
         return json.dumps(dct), "application/json"
             

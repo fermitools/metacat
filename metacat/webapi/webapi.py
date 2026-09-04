@@ -407,7 +407,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         except NotFoundError:
             return None
 
-    def get_dataset_files(self, did, namespace=None, name=None, with_metadata=False, include_retired_files=False):
+    def get_dataset_files(self, did, namespace=None, name=None, with_metadata=False, include_retired_files=False, with_subsets=False):
         """Gets single dataset
         
         Arguments
@@ -427,6 +427,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         try:
             with_metadata = "yes" if with_metadata else "no"
             include_retired_files = "yes" if include_retired_files else "no"
+            with_subsets = "yes" if with_subsets else "no"
             url = f"data/dataset_files?dataset={did}&with_metadata={with_metadata}&include_retired_files={include_retired_files}"
             return self.get_json_stream(url)
         except NotFoundError:
