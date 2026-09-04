@@ -232,13 +232,24 @@ class DataHandler(MetaCatHandler):
         ds = DBDataset(db, namespace, name)
         
         #nfiles = self.App.dataset_file_count(namespace, name)
+        subsets = list(ds.subsets())
+        subset_file_count = ds.nfiles()
+        subset_file_total = ds.TotalFileSize or 0
+        for sds in subsets:
+            if sds.FileCount:
+                subset_file_count += sds.FileCount
+            if sds.TotalFileSize:
+                subset_file_total += sds.TotalFileSize
+ 
         data = {
             "dataset":      namespace + ":" + name,
             "file_count":   ds.nfiles(exact_file_count == "yes"),
             "parent_count": ds.parent_count(),
             "child_count":  ds.child_count(),
             "superset_count":  ds.ancestor_count(),
-            "subset_count":  ds.subset_count()
+            "subset_count":  len(subsets),
+            "subset_file_count": subset_file_count,
+            "subset_file_total": subset_file_total,
         }
         return json.dumps(data), {"Content-Type":"application/json",
             "Access-Control-Allow-Origin":"*"

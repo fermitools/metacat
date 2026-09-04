@@ -76,7 +76,7 @@ class ListDatasetsCommand(CLICommand):
             columns = ("creator", "created", "files", "ancestor", "subsets", "total_file_size", "namespace:name")
             for ds in output:
                 sscounts = client.get_dataset_counts( f'{ds["namespace"]}:{ds["name"]}')
-                print(f"got {sscounts=}")
+                #print(f"got {sscounts=}")
                 ds.update( sscounts )
         if verbose:
             print(header_format % columns)
@@ -108,10 +108,10 @@ class ListDatasetsCommand(CLICommand):
                         print(verbose_format % (
                             item.get("creator") or "",
                             ct,
-                            file_count,
+                            item.get("subset_file_count") or "",
                             item.get("superset_count") or "",
                             item.get("subset_count") or "",
-                            total_file_size,
+                            item.get("subset_file_total") or "",
                             namespace + ":" + name
                         ))
                     else:
