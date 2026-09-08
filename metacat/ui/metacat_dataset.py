@@ -221,6 +221,17 @@ class AddSubsetCommand(CLICommand):
         for child in children:
             client.add_child_dataset(parent, child)
 
+class RemoveSubsetCommand(CLICommand):
+
+    Usage = """<parent dataset namespace>:<parent name> <child dataset namespace>:<child name> [<child dataset namespace>:<child name> ...]
+    """
+    MinArgs = 2
+
+    def __call__(self, command, client, opts, args):
+        parent, children = args[0], args[1:]
+        for child in children:
+            client.remove_child_dataset(parent, child)
+
 class CreateDatasetCommand(CLICommand):
 
     Opts = ("b:m:q:jf:", ["batchsize=", "flags=", "metadata=", "query=", "json"])
@@ -494,6 +505,7 @@ DatasetCLI = CLI(
     "files",        ListDatasetFilesCommand(),
     "list",         ListDatasetsCommand(),
     "add-subset",   AddSubsetCommand(),
+    "remove-subset",RemoveSubsetCommand(),
     "add-files",    AddFilesCommand(),
     "remove-files", RemoveFilesCommand(),
     "update",       UpdateDatasetCommand(),

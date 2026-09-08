@@ -520,6 +520,19 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         """
         url = f"data/add_child_dataset?parent={parent_spec}&child={child_spec}"
         return self.get_text(url)
+
+    def remove_child_dataset(self, parent_spec, child_spec):
+        """Removew a child dataset from a dataset.
+        
+        Arguments
+        ---------
+        parent_spec : str
+            Parent namespace, name ("namespace:name")
+        child_spec : str
+            Child namespace, name ("namespace:name")
+        """
+        url = f"data/remove_child_dataset?parent={parent_spec}&child={child_spec}"
+        return self.get_text(url)
         
     def add_files(self, dataset, file_list=None, namespace=None, query=None):
         """Add existing files to an existing dataset. Requires client authentication.
