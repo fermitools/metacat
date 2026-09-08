@@ -161,7 +161,7 @@ class DBManyToMany(object):
         return self.contains(*v)
 
     def remove(self, *vals, c=None, all=False):
-        assert all or len(vals) == len(self.VarColumns)
+        assert all or len(vals) == len(self.ReferenceColumns)
         if c is None: c = self.DB.cursor()
         where = self.Where
         if not all:

@@ -41,7 +41,7 @@ class ListDatasetFilesCommand(CLICommand):
 
 class ListDatasetsCommand(CLICommand):
     
-    Opts = ("lcs long file-counts with-subsets")
+    Opts = ("lcs", ["long", "file-counts", "with-subsets"])
     Usage = """[<options>] [<namespace pattern>:<name pattern>]        -- list datasets
             -l|--long               - detailed output
             -c|--file-counts    - if detailed output, include exact file counts -- can take long time !

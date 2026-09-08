@@ -361,6 +361,36 @@ class DataHandler(MetaCatHandler):
         return json.dumps(ds.to_jsonable()), "application/json"
 
     @sanitized
+    def remove_child_dataset(self, request, relpath, parent=None, child=None, **args):
+        if not parent or not child:
+            return 400, "Parent or child dataset unspecified"
+        user, error = self.authenticated_user()
+        if user is None:
+            return 401, error
+        parent_namespace, parent_name = parent.split(":",1)
+        self.sanitize(parent_namespace=parent_namespace, parent_name=parent_name)
+        child_namespace, child_name = child.split(":",1)
+        self.sanitize(child_namespace=child_namespace, child_name=child_name)
+        db = self.connect_with_timeout()
+        parent_ns = DBNamespace.get(db, parent_namespace)
+        child_ns = DBNamespace.get(db, child_namespace)
+        if not user.is_admin() and not parent_ns.owned_by_user(user):      # allow adding unowned datasets as subsets 
+                                                                            # was: or not child_ns.owned_by_user(user)):
+            return 403, "Permission denied"
+        parent_ds = DBDataset.get(db, parent_namespace, parent_name)
+        if parent_ds is None:
+            return 404, "Parent dataset not found", "text/plain"
+        child_ds = DBDataset.get(db, child_namespace, child_name)
+        if child_ds is None:
+            return 404, "Child dataset not found", "text/plain"
+        
+        if not any(c.Namespace == child_namespace and c.Name == child_name for c in parent_ds.children()):
+            return 404, "Child dataset is not a child of parent", "text/plain"
+
+        parent_ds.remove_child(child_ds)
+        return "OK"
+
+    @sanitized
     def add_child_dataset(self, request, relpath, parent=None, child=None, **args):
         if not parent or not child:
             return 400, "Parent or child dataset unspecified"
