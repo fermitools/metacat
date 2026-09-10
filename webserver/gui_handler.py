@@ -920,7 +920,7 @@ class GUIHandler(MetaCatHandler):
         return self.render_to_response("datasets.html", datasets=datasets, 
             page=page, npages=npages, page_links=page_links, namematch=namematch,
             owned_namespaces = owned_namespaces, other_namespaces=other_namespaces,
-            selection=selection, user=user,  **self.messages(args))
+            selection=selection, user=user, **self.messages(args))
 
     def create_dataset(self, request, relpath, **args):
         user, auth_error = self.authenticated_user()
