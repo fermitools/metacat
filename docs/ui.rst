@@ -412,9 +412,18 @@ Listing files in the dataset
 Adding/removing subsets to/from a dataset
 .........................................
 
+
+To add a dataset as a subset of another:
+
 .. code-block:: shell
 
     $ metacat dataset add-subset <parent dataset namespace>:<parent name> <child dataset namespace>:<child name> [<child dataset namespace>:<child name> ...]
+
+and to remove it again: 
+
+.. code-block:: shell
+
+    $ metacat dataset remove-subset <parent dataset namespace>:<parent name> <child dataset namespace>:<child name> [<child dataset namespace>:<child name> ...]
 
 When adding a dataset to another dataset, MetaCat checks whether the operation will create a circle in the ancestor/descendent relationship and refuses
 to do so.

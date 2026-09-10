@@ -1302,19 +1302,42 @@ class DBDataset(DBObject):
         """, (self.Namespace, self.Name, file_ids))
         return transaction.rowcount
 
-    def list_files(self, with_metadata=False, limit=None, include_retired_files=False):
+    def list_files(self, with_metadata=False, limit=None, include_retired_files=False, with_subsets=False):
+        if with_subsets:
+            recursive_query = """
+                with recursive subsets (namespace, name) as  
+                (
+                   select pc.child_namespace, pc.child_name
+                       from datasets_parent_child pc
+                       where pc.parent_namespace = %s and pc.parent_name = %s
+                    union
+                       select pc1.child_namespace, pc1.child_name
+                       from datasets_parent_child pc1, subsets s
+                       where pc1.parent_namespace = s.namespace and pc1.parent_name = s.name 
+                )
+                select distinct s.namespace, s.name from subsets s 
+                 union 
+            """
+            nametuple = (self.Namespace, self.Name, self.Namespace, self.Name)
+        else:
+            recursive_query = ""
+            nametuple = (self.Namespace, self.Name)
+
         meta = "null as metadata" if not with_metadata else "f.metadata"
         limit = f"limit {limit}" if limit else ""
-        retired = "" if include_retired_files else "and not f.retired"
+        retired = "" if include_retired_files else "where not f.retired"
         sql = f"""select f.id, f.namespace, f.name, {meta}, f.size, f.checksums, f.creator, f.created_timestamp 
                     from files f
                         inner join files_datasets fd on fd.file_id = f.id
-                    where fd.dataset_namespace = %s and fd.dataset_name=%s
+                        inner join (
+                           {recursive_query}
+                           select %s as namespace , %s as name
+                        ) as rd on rd.namespace = fd.dataset_namespace and rd.name = fd.dataset_name
                         {retired}
                     {limit}
         """
         c = self.DB.cursor()
-        c.execute(sql, (self.Namespace, self.Name))
+        c.execute(sql, nametuple)
         for fid, namespace, name, meta, size, checksums, creator, created_timestamp in fetch_generator(c):
             meta = meta or {}
             checksums = checksums or {}

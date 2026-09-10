@@ -380,7 +380,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
             #print("get_dataset_counts: None")
             return None
 
-    def get_dataset(self, did=None, namespace=None, name=None, exact_file_count=False):
+    def get_dataset(self, did=None, namespace=None, name=None, exact_file_count=False, with_subsets=False ):
         """Gets single dataset
         
         Arguments
@@ -401,11 +401,13 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
             url = f"data/dataset?dataset={spec}"
             if exact_file_count:
                 url += "&exact_file_count=yes"
+            if with_subsets:
+                url += "&with_subsets=yes"
             return self.get_json(url)
         except NotFoundError:
             return None
 
-    def get_dataset_files(self, did, namespace=None, name=None, with_metadata=False, include_retired_files=False):
+    def get_dataset_files(self, did, namespace=None, name=None, with_metadata=False, include_retired_files=False, with_subsets=False):
         """Gets single dataset
         
         Arguments
@@ -425,6 +427,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         try:
             with_metadata = "yes" if with_metadata else "no"
             include_retired_files = "yes" if include_retired_files else "no"
+            with_subsets = "yes" if with_subsets else "no"
             url = f"data/dataset_files?dataset={did}&with_metadata={with_metadata}&include_retired_files={include_retired_files}"
             return self.get_json_stream(url)
         except NotFoundError:
@@ -516,6 +519,19 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
             Child namespace, name ("namespace:name")
         """
         url = f"data/add_child_dataset?parent={parent_spec}&child={child_spec}"
+        return self.get_text(url)
+
+    def remove_child_dataset(self, parent_spec, child_spec):
+        """Removew a child dataset from a dataset.
+        
+        Arguments
+        ---------
+        parent_spec : str
+            Parent namespace, name ("namespace:name")
+        child_spec : str
+            Child namespace, name ("namespace:name")
+        """
+        url = f"data/remove_child_dataset?parent={parent_spec}&child={child_spec}"
         return self.get_text(url)
         
     def add_files(self, dataset, file_list=None, namespace=None, query=None):

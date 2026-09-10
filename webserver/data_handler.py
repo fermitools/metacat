@@ -179,7 +179,7 @@ class DataHandler(MetaCatHandler):
         return json.dumps(out), "application/json"
         
     @sanitized
-    def dataset_files(self, request, relpath, dataset=None, with_metadata="no", include_retired_files="no", **args):
+    def dataset_files(self, request, relpath, dataset=None, with_metadata="no", include_retired_files="no", with_subsets="no", **args):
         with_metadata=with_metadata == "yes"
         namespace, name = (dataset or relpath).split(":", 1)
         self.sanitize(namespace, name)
@@ -188,19 +188,30 @@ class DataHandler(MetaCatHandler):
         if dataset is None:
             return 404, "Dataset not found"
         files = dataset.list_files(with_metadata=with_metadata, 
-                        include_retired_files = include_retired_files == "yes")
+                        include_retired_files = include_retired_files == "yes",
+                        with_subsets="yes")
         return self.json_stream((f.to_jsonable(with_metadata=with_metadata) for f in files)), "application/json-seq"
         
     @sanitized
-    def dataset(self, request, relpath, dataset=None, exact_file_count="no", **args):
+    def dataset(self, request, relpath, dataset=None, exact_file_count="no", with_subsets="no", **args):
         db = self.connect_with_timeout()
         namespace, name = (dataset or relpath).split(":", 1)
         self.sanitize(namespace, name)
         dataset = DBDataset.get(db, namespace, name)
         if dataset is None:
             return 404, "Dataset not found"
+               
         dct = dataset.to_jsonable()
         dct["file_count"] = dataset.nfiles(exact_file_count == "yes")
+
+        if with_subsets == "yes": 
+            sdlist = []
+            for sds in dataset.subsets():
+                sdct = sds.to_jsonable()
+                sdct["file_count"] = sds.nfiles(exact_file_count == "yes")
+                sdlist.append(sdct)
+            dct["subsets"] = sdlist
+
         return json.dumps(dct), "application/json"
             
     @sanitized
@@ -221,13 +232,24 @@ class DataHandler(MetaCatHandler):
         ds = DBDataset(db, namespace, name)
         
         #nfiles = self.App.dataset_file_count(namespace, name)
+        subsets = list(ds.subsets())
+        subset_file_count = ds.nfiles()
+        subset_file_total = ds.TotalFileSize or 0
+        for sds in subsets:
+            if sds.FileCount:
+                subset_file_count += sds.FileCount
+            if sds.TotalFileSize:
+                subset_file_total += sds.TotalFileSize
+ 
         data = {
             "dataset":      namespace + ":" + name,
             "file_count":   ds.nfiles(exact_file_count == "yes"),
             "parent_count": ds.parent_count(),
             "child_count":  ds.child_count(),
             "superset_count":  ds.ancestor_count(),
-            "subset_count":  ds.subset_count()
+            "subset_count":  len(subsets),
+            "subset_file_count": subset_file_count,
+            "subset_file_total": subset_file_total,
         }
         return json.dumps(data), {"Content-Type":"application/json",
             "Access-Control-Allow-Origin":"*"
@@ -337,6 +359,36 @@ class DataHandler(MetaCatHandler):
         
         ds.save(updated_by=user.Username)
         return json.dumps(ds.to_jsonable()), "application/json"
+
+    @sanitized
+    def remove_child_dataset(self, request, relpath, parent=None, child=None, **args):
+        if not parent or not child:
+            return 400, "Parent or child dataset unspecified"
+        user, error = self.authenticated_user()
+        if user is None:
+            return 401, error
+        parent_namespace, parent_name = parent.split(":",1)
+        self.sanitize(parent_namespace=parent_namespace, parent_name=parent_name)
+        child_namespace, child_name = child.split(":",1)
+        self.sanitize(child_namespace=child_namespace, child_name=child_name)
+        db = self.connect_with_timeout()
+        parent_ns = DBNamespace.get(db, parent_namespace)
+        child_ns = DBNamespace.get(db, child_namespace)
+        if not user.is_admin() and not parent_ns.owned_by_user(user):      # allow adding unowned datasets as subsets 
+                                                                            # was: or not child_ns.owned_by_user(user)):
+            return 403, "Permission denied"
+        parent_ds = DBDataset.get(db, parent_namespace, parent_name)
+        if parent_ds is None:
+            return 404, "Parent dataset not found", "text/plain"
+        child_ds = DBDataset.get(db, child_namespace, child_name)
+        if child_ds is None:
+            return 404, "Child dataset not found", "text/plain"
+        
+        if not any(c.Namespace == child_namespace and c.Name == child_name for c in parent_ds.children()):
+            return 404, "Child dataset is not a child of parent", "text/plain"
+
+        parent_ds.remove_child(child_ds)
+        return "OK"
 
     @sanitized
     def add_child_dataset(self, request, relpath, parent=None, child=None, **args):
