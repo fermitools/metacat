@@ -6,6 +6,8 @@ on:
       - published
   workflow_dispatch:
 
+  workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
