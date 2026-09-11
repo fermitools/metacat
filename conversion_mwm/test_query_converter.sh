@@ -9,7 +9,7 @@ get_recent() {
        htgettoken -i ${exp} -a htvaultprod.fnal.gov
 
        samweb -e $exp list-definitions --after=2023-01-01T00:00:00 | 
-          head -300 | 
+          head -400 | 
           while read defname
           do
               samweb -e $exp describe-definition $defname | 
