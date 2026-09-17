@@ -436,6 +436,16 @@ def test_metacat_category_requiredparam(auth, tst_ds, tst_file_md_list):
     assert data.find("Invalid metadata") >= 0
     assert data.find("missing from category") >= 0
 
+def test_metacat_category_requiredparam2(auth, tst_ds, tst_file_md_list):
+    # not adding a required paramater in a non-required category, should fail
+    ns = tst_file_md_list[4]["namespace"]
+    name = tst_file_md_list[4]["name"]+"c"
+    md = '{"pytest_category.textfield": "a"}'
+    with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds} 2>&1") as fin:
+        data = fin.read()
+    assert data.find("Invalid metadata") >= 0
+    assert data.find("missing from category") >= 0
+
 def test_metacat_category_requiredcat(auth, tst_ds, tst_file_md_list):
     # not adding a required category, should fail
     ns = tst_file_md_list[4]["namespace"]
