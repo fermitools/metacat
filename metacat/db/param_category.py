@@ -187,15 +187,6 @@ class DBParamCategory(DBObject):
         #     (item, {"param name":"error", ...})
         #
 
-        # Collect all required parameters from required categories
-        required_params = {}  # path -> set of required param names
-        all_categories = {c.Path: c for c in DBParamCategory.list(db)}
-        for path, category in all_categories.items():
-            if category and category.Required and category.Definitions:
-                for pname, definition in category.Definitions.items():
-                    if definition.get("required"):
-                        required_params.setdefault(path, set()).add(pname)
-
         # Collect all category paths from metadata
         category_paths = set()
         for item in items:
@@ -207,12 +198,28 @@ class DBParamCategory(DBObject):
 
         categories = {path:DBParamCategory.category_for_path(db, path) for path in category_paths}
 
+        # Add required params from categories that are referenced in metadata and have required parameters
+        required_params = {}  # path -> set of required param names
+        for path, category in categories.items():
+            if category and category.Definitions:
+                for pname, definition in category.Definitions.items():
+                    if definition.get("required"):
+                        required_params.setdefault(path, set()).add(pname)
+
+        # Also add required params from required categories
+        all_categories = {c.Path: c for c in DBParamCategory.list(db)}
+        for path, category in all_categories.items():
+            if category and category.Required and category.Definitions:
+                for pname, definition in category.Definitions.items():
+                    if definition.get("required"):
+                        required_params.setdefault(path, set()).add(pname)
+
         errors = []
         for index, item in enumerate(items):
             meta = item if isinstance(item, dict) else item.metadata()
             item_errors = []
 
-            # Check required params for required categories
+            # Check required params for categories in metadata or required categories
             for path, required_set in required_params.items():
                 for pname in required_set:
                     param_key = path + "." + pname
