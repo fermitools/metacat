@@ -437,6 +437,21 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
             files_query=None, subsets_query=None,
             description="", batchsize=0):
 
+        """Create a new dataset
+     
+        Arguments
+        ---------
+            did : str  - "namespace:name"
+            frozen : boolean - once created and populated, freeze dataset
+            monotonic : boolean - files cannot be removed, it can only grow
+            metadata : dict  - key value pairs for dataset
+            metadata_requirements : dict - field requirements for files added to this dataset
+            files_query : str  - file query for files to put in dataset
+            subsets_query : str  - datset query for datasets to add as subsets
+            description : str - description of datsaet
+            batchsize : int - add query file results in batches of this many files at a time
+        """
+
         if batchsize and files_query:
 
             # if batching, limit initial query and don't freeze yet...
