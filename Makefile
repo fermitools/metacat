@@ -24,9 +24,9 @@ dune:
 generic:
 	make VERSION=`python metacat/version.py` generic_with_version_defined
 
-dune_with_version_defined:	clean dune_specifics tars
+dune_with_version_defined:	clean dune_specifics common_filters tars
 
-generic_with_version_defined:	clean tars
+generic_with_version_defined:	clean common_filters tars
 
 tars:  build $(TARDIR)
 	cd $(BUILD_DIR); tar cf $(SERVER_TAR) lib server daemon
@@ -49,6 +49,9 @@ canned_client: build $(DEPS_DIR)
 	rm -rf $(DEPS_DIR)/*/__pycache__
 	find $(DEPS_DIR) -type f -name \*.pyc -exec rm -f {} \;
 	cp canned_client_setup.sh $(BUILD_DIR)
+
+common_filters:
+	cd common_filters; make SERVER_DIR=$(SERVER_DIR) build
 
 dune_specifics:
 	cd DUNE_specials; make SERVER_DIR=$(SERVER_DIR) build
