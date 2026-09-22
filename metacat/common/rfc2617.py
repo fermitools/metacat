@@ -43,8 +43,11 @@ def digest_server(realm, env, get_hashed_password):
         if ms:
             dict[ms.group(1)] = ms.group(3)
 
-    user = dict['username']
-    saved_digest = get_hashed_password(realm, user)        # as hex
+    user = dict.get('username', None)
+    if user:
+        saved_digest = get_hashed_password(realm, user)        # as hex
+    else:
+        saved_digest = None
     #print("saved digest:", saved_digest)
     if saved_digest == None:
         # unknown user
