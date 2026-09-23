@@ -23,8 +23,6 @@ def is_set_level_node( tree ):
 def meta_render_dimensions_tree(tree):
     """Pretty print the dimensions tree"""
     lines = []
-    # XXX this needs fixing later... should depend if we have a set node, etc.
-    # should really put in a files where on transition from set node to a non-set node.
     line = []
     linelen = 0
     if not is_set_level_node(tree):
@@ -102,8 +100,10 @@ def render_dimensions_tree(tree):
 
 
 class NodeBase(object):
-    precedence = None
-    nodes = []  # No children by default
+    def __init__(self):
+        self.precedence = None
+        self.nodes = []  # No children by default
+        self.default_namespace = "mengel:"
 
     def __str__(self):
         return formatTree(self)
@@ -142,8 +142,10 @@ class ListNodeBase(NodeBase):
         return cls(*tokens)
 
     def __init__(self, *nodes):
+        NodeBase.__init__(self)
         self.nodes = list(nodes)
         self.negated = False
+        
 
     def __str__(self):
         return formatTree(self)
@@ -212,7 +214,7 @@ def _determine_needs_parens(i, n, precedence, associativity):
     if n.precedence is None:
         t1 = False
     else:
-        t1 = precedence < n.precedence
+        t1 = (precedence or 0) < (n.precedence or 0)
 
     t2 = precedence == n.precedence and (
         associativity < 0 and i > 0 or associativity > 0 and i == 0
@@ -226,7 +228,9 @@ class UnaryNode(NodeBase):
     """Base class for nodes with a single child"""
 
     def __init__(self):
+        NodeBase.__init__(self)
         self.negated = False
+        self.precedence = None
 
     @property
     def nodes(self):
@@ -444,6 +448,7 @@ class AvailabilityNode(NodeBase):
         return cls(*tokens)
 
     def __init__(self, *flags):
+        NodeBase.__init__(self)
         self.flags = list(flags)
 
     def __str__(self):
@@ -568,6 +573,7 @@ class DimNode(NegatableNode):
         return cls(dim, op, value)
 
     def __init__(self, dim, op, value):
+        NegatableNode.__init__(self)
         self.dim, self.op, self.value = dim, op.replace(" ", ""), value
 
         self.notmap = {
@@ -639,14 +645,13 @@ class DimNode(NegatableNode):
         name = re.sub("^(create|update)_date$", "\\1d_timestamp", name)
         # this one is a parameter to the project filter, so don't dot-ify it
         #name = re.sub("^project_name$", "project.name", name)
-        name = re.sub("^consumed_status$", "consumed.status", name)
         name = re.sub("^full_path$", "rucio.rses[0].path", name)
         name = re.sub("^tape_label$", "rucio.rses[0].tape_label", name)
         name = re.sub("^consumer$", "project.worker", name)
         name = re.sub("^consumer_process_id$", "project.worker", name)
-        name = re.sub("^consumer_status$", "project.status", name)
+        name = re.sub("^consumed_status$", "project.state", name)
         name = re.sub("^consumer_process_description$", "project.description", name)
-        name = re.sub("^consumer_status$", "project.status", name)
+        name = re.sub("^consumed_status$", "project.status", name)
         return name
 
     def meta_render(self):
@@ -678,6 +683,8 @@ class DimNode(NegatableNode):
         yield self.meta_trans(self.dim)
         yield op
         for v in val:
+            if self.dim == 'consumed_status' and v in ('consumed','completed'):
+                v = 'done'
             yield v
 
     def render(self):
@@ -719,6 +726,7 @@ class RangeNode(NodeBase):
         return cls(*tokens)
 
     def __init__(self, first, last):
+        NodeBase.__init__(self)
         self.first, self.last = first, last
 
     def __str__(self):
@@ -745,7 +753,8 @@ class DefinitionNode(NodeBase):
         return cls(tokens[0])
 
     def __init__(self, defname):
-        self.defname = "default:" + defname.replace('-','_')
+        NodeBase.__init__(self)
+        self.defname = self.default_namespace + defname.replace('-','_')
         self.negated = False
 
     def __str__(self):
@@ -774,6 +783,7 @@ class MetaDatasetNode(NodeBase):
         return cls(tokens[0])
 
     def __init__(self, defname):
+        NodeBase.__init__(self)
         self.defname = defname
 
     def __str__(self):
@@ -789,7 +799,7 @@ class MetaDatasetNode(NodeBase):
 
     def meta_render(self):
         yield "files from"
-        yield "default:snapshot_"+str(self.defname)
+        yield self.default_namespace + "snapshot_" + str(self.defname)
 
     def render(self):
         yield "snapshot_id"
@@ -801,6 +811,7 @@ class MetaFilterNode(NodeBase):
         return cls(tokens[0])
 
     def __init__(self, filter_name, filter_param_nodes, node, where_nodes):
+        NodeBase.__init__(self)
         self.filter_name = filter_name
         self.filter_param_nodes = filter_param_nodes
         self.nodes = []
@@ -932,8 +943,9 @@ class ParseTreeVisitor(object):
         return meth(node)
 
     def generic_visit(self, node):
-        for c in node.nodes:
-            self.visit(c)
+        if hasattr(node,'nodes'):
+            for c in node.nodes:
+                self.visit(c)
 
 
 class ParseTreeTransformer(ParseTreeVisitor):
@@ -945,7 +957,7 @@ class ParseTreeTransformer(ParseTreeVisitor):
         self.modified = False
 
     def generic_visit(self, node):
-        if node and node.nodes:
+        if node and hasattr(node,'nodes') and node.nodes:
             newnodes = [self.visit(c) for c in node.nodes]
             if newnodes:
                 node.nodes = [c for c in newnodes if c is not None]
@@ -1127,9 +1139,19 @@ class MetaCatTransformer(ParseTreeTransformer):
         #if self.allsets():
         #   return node
         if node.dim in self.projname_dims:
+            # two parter:
+            # 1) save term for argument to data_dispatcher filter
+            # 2) have as base files from snapshot for the project
             self.modified = True
             self.proj_id_term = node
-            return None
+            node2 = DimNode(node.dim, "=", "for_project_" + str(node.value))
+            if self.parent_sets():
+                logging.debug(f"snapshot dim rendered here: {repr(node2)}")
+                return MetaDatasetNode(node2.value)
+            else:
+                logging.debug(f"snapshot dim pushed up: {repr(node)}")
+                self.snapshot_terms.append(node2)
+                return None
         if node.dim in self.proj_dims:
             self.modified = True
             self.proj_terms.append(node)
@@ -1291,9 +1313,8 @@ def formatTree(tree):
     formatter = TreeFormatter()
     return " ".join(formatter.visit(tree))
 
-
 def SAM_query_to_MetaCat(dims):
-    import parser
+    from . import parser
     t = parser.parse_string(dims)
     #logging.debug("parse tree: ", str(t), "\n\n")
     #logging.debug("-------------------")
