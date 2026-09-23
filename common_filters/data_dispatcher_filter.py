@@ -2,7 +2,9 @@ import os
 import sys
 from metacat.filters import MetaCatFilter
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class DataDispatcherFilter(MetaCatFilter):
     """
@@ -43,10 +45,9 @@ class DataDispatcherFilter(MetaCatFilter):
             proj = client.get_project(kwparams["project_id"], with_files=True)
 
         proj_fdata = {}
-        for h in proj.get('file_handles', []):
-            didstr = f"{h['namespace']}:{h['name']}" 
+        for h in proj.get("file_handles", []):
+            didstr = f"{h['namespace']}:{h['name']}"
             proj_fdata[didstr] = h
-
 
         for f in inputs[0]:
 
@@ -60,10 +61,9 @@ class DataDispatcherFilter(MetaCatFilter):
                 f.Metadata["project.state"] = ph["state"]
                 f.Metadata["project.project_id"] = proj["project_id"]
                 # not sure if there is one?
-                f.Metadata["project.description"] = proj.get("description","")
+                f.Metadata["project.description"] = proj.get("description", "")
 
             yield f
-
 
 
 def create_filters(config):
