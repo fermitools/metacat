@@ -892,6 +892,7 @@ Parameter definitions define the constraints for each parameter. Each parameter 
 - ``max``: maximum value (for numeric and text)
 - ``pattern``: regex pattern for text values
 - ``required``: boolean, whether the parameter is required
+- ``description``: string, description of the parameter
 
 Example:
 

@@ -236,7 +236,7 @@ def main():
     try:
         cli.run(sys.argv, argv0="metacat")
     except BadRequestError as e:
-       print(f"Bad Request error: {e.Message=}")
+       print(f"Bad Request error: {e.Message}", file=sys.stderr)
        sys.exit(18)
     except NotFoundError as e:
        print(f"File not found on server {e.Message}", file=sys.stderr)
