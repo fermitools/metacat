@@ -25,6 +25,15 @@ def parse_name(name, default_namespace=None):
         ns, name = words
     return ns, name
 
+def validate_param_definitions(definitions):
+    # returns list of error messages describing parameters with unrecognized fields, empty if all valid
+    valid_param_defs = {"type", "values", "min", "max", "pattern", "required", "description"}
+    errors = []
+    for name, definition in (definitions or {}).items():
+        invalid_keys = set(definition.keys()) - valid_param_defs
+        if invalid_keys:
+            errors.append("Parameter '%s' has unrecognized field(s): %s" % (name, ", ".join(sorted(invalid_keys))))
+    return errors
 
 class DataHandler(MetaCatHandler):
     
@@ -1598,6 +1607,11 @@ class DataHandler(MetaCatHandler):
         if not definitions:
             return 400, "Empty category definitions"
 
+        # Check that all given definitions are valid
+        definition_errors = validate_param_definitions(definitions)
+        if definition_errors:
+            return 400, "; ".join(definition_errors)
+
         # Validate that required categories have at least one required parameter
         if required:
             has_required_param = any(
@@ -1645,6 +1659,10 @@ class DataHandler(MetaCatHandler):
         if description is not None:
             cat.Description = description
         if definitions is not None:
+            # Check that all given definitions are valid
+            definition_errors = validate_param_definitions(definitions)
+            if definition_errors:
+                return 400, "; ".join(definition_errors)
             if mode == "update":
                 new_defs = cat.Definitions.copy()
                 new_defs.update(definitions)

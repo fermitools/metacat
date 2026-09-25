@@ -355,6 +355,16 @@ def test_metacat_category_update(auth, tst_defs):
         data = fin.read()
     assert data.find("newfield") >= 0
 
+def test_metacat_category_unallowed_constraint(auth, tst_defs):
+    # test adding a constraint that's not in type, min, max, values, etc.
+    tst_defs["badfield"] = {"type": "int", "bad": 2}
+    with open("defs", "w") as defs:
+        json.dump(tst_defs, defs)
+    with os.popen(f"metacat category update -p defs pytest_category") as fin:
+        data = fin.read()
+    os.unlink("defs")
+    assert data.find("unrecognized field") >= 0
+
 def test_metacat_category_validation(auth, tst_ds, tst_file_md_list):
     # adding metadata that fits the definitions, should succeed
     ns = tst_file_md_list[1]["namespace"]

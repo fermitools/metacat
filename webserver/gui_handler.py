@@ -113,6 +113,8 @@ class GUICategoryHandler(MetaCatHandler):
                         if values is not None:    pdef["values"] = values
                         if form.get(f"param:{param_id}:required"):
                             pdef["required"] = True
+                        description = form.get(f"param:{param_id}:description", "").strip() or None
+                        if description:    pdef["description"] = description
                         defs[name] = pdef
                         #print("pdef:", pdef)
         for n in removals:

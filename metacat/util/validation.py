@@ -23,6 +23,7 @@ def validate_metadata(definitions, restricted, metadata={}, name=None, value=Non
             values : list, enumeration of values
             pattern : regexp pattern for text strings
             required : boolean, whether the parameter is required
+            description: string, description of the parameter
     restricted : boolean
         whether the validation must be done in "restricted" mode - if a parameter is not mentioned in the definitions, flag that as an error
 

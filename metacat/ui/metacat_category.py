@@ -21,9 +21,9 @@ def print_category(data):
     print("Constraints:")
     for name, constraint in sorted(data.get("definitions", {}).items()):
         required = str(constraint.get("required", False)).strip().lower() == "true"
-        line = "  %-16s Required: %-24s %10s" % (name, "yes" if required else "no", constraint.get("type", "any"))
+        line = "  %-24s type: %-10s Required: %-5s" % (name, constraint.get("type", "any"), "yes" if required else "no")
         if "values" in constraint:
-            line += " %s" % (tuple(constraint["values"]),)
+            line += "  values: %s" % (tuple(constraint["values"]),)
         rng = None
         if "min" in constraint:
             rng = [repr(constraint["min"]), ""]
@@ -31,9 +31,11 @@ def print_category(data):
             if rng is None: rng = ["", ""]
             rng[1] = repr(constraint["max"])
         if rng is not None:
-            line += " [%s - %s]" % tuple(rng)
+            line += "  range: [%s - %s]" % tuple(rng)
         if "pattern" in constraint:
-            line += " ~ '%s'" % (constraint["pattern"])
+            line += "  pattern: '%s'" % (constraint["pattern"])
+        if constraint.get("description"):
+            line += "  %-8s Description: %s" % ("", constraint["description"])
         print(line)
 
 class ListCommand(CLICommand):
