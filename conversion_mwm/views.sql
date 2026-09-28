@@ -10,6 +10,20 @@ drop view if exists meta_queries;
 drop view if exists meta_datasets;
 drop view if exists meta_datasets_parent_child;
 drop view if exists meta_files_datasets;
+drop view if exists rucio_file_names_locations;
+
+-- views for rucio migration
+create view rucio_file_names_locations as
+   select file_name, file_size_in_bytes, checksum_value, path 
+     from data_files 
+          left outer  join checksums 
+                       on data_files.file_id = checksums.file_id 
+          left outer join data_file_locations 
+                       on data_file_locations.file_id = data_files.file_id 
+          join data_storage_locations 
+            on data_file_locations.location_id = data_storage_locations.location_id  
+    where checksum_type_id = 100 
+      and path like '/pnfs%';
 
 -- views to build in SAM database to generate the Metacat table data
 create view meta_users as 
@@ -35,7 +49,8 @@ create view meta_users as
 create view meta_roles as 
   select 
     work_grp_name as name, 
-    null as parent_role, 
+    null as parent_role,
+
     null as description
   from working_groups;
 
