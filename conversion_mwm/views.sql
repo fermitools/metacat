@@ -11,6 +11,101 @@ drop view if exists meta_datasets;
 drop view if exists meta_datasets_parent_child;
 drop view if exists meta_files_datasets;
 drop view if exists rucio_file_names_locations;
+drop view if exists ddisp_projects;
+drop view if exists ddisp_file_handles;
+drop view if exists ddisp_file_handle_log;
+
+-- views for data_dispatcher migration
+
+create view ddisp_projects as
+    select
+       project_id as id,
+       username as owner,
+       start_time as created_timestamp,
+       end_time as end_timestamp,
+       replace(
+          replace(
+              replace(
+                   replace( project_status, 
+                            'running', 'active'
+                   ),
+                   'ended incomplete', 'abandoned'
+                ),
+               'ended complete', 'done'
+            ),
+           'starting', 'abandoned'
+       ) as state,
+       null as retry_count,
+       make_interval(hours =>12) as worker_timeout,
+       make_interval(days => 3) as idle_timeout,
+       ('{"name": "' || project_name || '"}') :: jsonb as attributes,
+       'files selected by default:' || proj_def_name
+   from analysis_projects
+   join persons using ( person_id )
+   join project_snapshots using ( proj_snap_id )
+   join project_definitions using ( proj_def_id );
+
+create view ddisp_projet_users as
+   select 
+       project_id as id,
+       username as username
+   from analysis_projects
+   join persons using ( person_id );
+
+create view ddisp_file_handles as
+select project_id, 
+       'default' as namespace, 
+       file_name as name,
+       replace(
+           replace(
+             replace(consumed_files.consumed_file_status,'consumed','done')
+              ,'delivered','reserved')
+          ,'skipped','failed'
+       ) as state,
+       consumed_files.process_id::text as worker_id,
+       consumed_files.open_time as reserved_since,
+       1 as attempts,
+       '{}' ::jsonb as attributes
+     from consumed_files
+          join analysis_projects using ( proj_snap_id )
+          join processes using ( process_id, project_id )
+          join project_snapshots using ( proj_snap_id )
+          join project_files using ( proj_snap_id, file_number )
+          join data_files  using ( file_id );
+
+create view ddisp_file_handle_log as
+select project_id, 'default' as namespace, file_name, t, 'state' as type, data from (
+ (select analysis_projects.project_id,  file_name , analysis_projects.start_time as t,
+    '{"event": "create", "state": "initial"}'::jsonb as data
+     from consumed_files 
+          join analysis_projects using ( proj_snap_id )
+          join processes using ( process_id, project_id )
+          join project_snapshots using ( proj_snap_id )
+          join project_files using ( proj_snap_id )
+          join data_files using ( file_id )
+ ) 
+union
+ (select analysis_projects.project_id,  file_name , consumed_files.open_time as t, 
+    ('{"event": "reserve", "state": "reserved", "worker": "' || consumed_files.process_id || '", "old_state": "initial"}') ::jsonb as data
+     from consumed_files 
+          join analysis_projects using ( proj_snap_id )
+          join processes using ( process_id, project_id )
+          join project_snapshots using ( proj_snap_id )
+          join project_files using ( proj_snap_id )
+          join data_files using ( file_id )
+  )
+ ) as file_handle_log_data ;
+union
+ (select analysis_projects.project_id,  file_name , consumed_files.completed_time as t, 
+    ('{"event": "done", "state": "done", "worker": "' || consumed_files.process_id || '", "old_state": "initial"}') ::jsonb as data
+     from consumed_files 
+          join analysis_projects using ( proj_snap_id )
+          join processes using ( process_id, project_id )
+          join project_snapshots using ( proj_snap_id )
+          join project_files using ( proj_snap_id )
+          join data_files using ( file_id )
+  )
+ ) as file_handle_log_data ;
 
 -- views for rucio migration
 create view rucio_file_names_locations as
