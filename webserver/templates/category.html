@@ -122,11 +122,12 @@
                 <tr>
                     <th>Parameter name</th>
                     <th>Type</th>
+                    <th>Required</th>
+                    <th>Description</th>
                     <th>Min</th>
                     <th>Max</th>
                     <th>Values</th>
                     <th>Pattern</th>
-                    <th>Required</th>
                     {% if edit %}
                         <td>delete</td>
                     {% endif %}
@@ -140,6 +141,8 @@
                                     <option value="{{t}}" {% if definition["type"] == t %}selected="selected"{% endif %}>{{t}}</option>
                                 {% endfor %}
                             </td>
+                            <td><input type="checkbox" name="param:1_{{loop.index}}:required" {% if definition.get('required') %}checked="checked"{% endif %}/></td>
+                            <td><input type="text" name="param:1_{{loop.index}}:description" value="{{definition['description'] or ''}}"/></td>
                             <td><input type="text" name="param:1_{{loop.index}}:min" value="{{definition['min']|default('')}}"/></td>
                             <td><input type="text" name="param:1_{{loop.index}}:max" value="{{definition['max']|default('')}}"/></td>
                             <td><input type="text" name="param:1_{{loop.index}}:values"
@@ -147,14 +150,13 @@
                                     value="{{definition['values']|join(',')}}"
                                 {% endif %}/></td>
                             <td><input type="text" name="param:1_{{loop.index}}:pattern" value="{{definition['pattern'] or ''}}"/></td>
-                            <td><input type="checkbox" name="param:1_{{loop.index}}:required" {% if definition.get('required') %}checked="checked"{% endif %}/></td>
                             {% if edit %}
                                 <td><input type="checkbox" name="param:1_{{loop.index}}:remove"></td>
                             {% endif %}
                         </tr>
                     {% endfor %}
                 {% endif %}
-                
+
                 {% if edit or create %}
                     {% for i in range(5) %}
 
@@ -165,11 +167,12 @@
                                     <option value="{{t}}">{{t}}</option>
                                 {% endfor %}
                             </td>
+                            <td><input type="checkbox" name="param:2_{{loop.index}}:required"/></td>
+                            <td><input type="text" name="param:2_{{loop.index}}:description"/></td>
                             <td><input type="text" name="param:2_{{loop.index}}:min"/></td>
                             <td><input type="text" name="param:2_{{loop.index}}:max"/></td>
                             <td><input type="text" name="param:2_{{loop.index}}:values"/></td>
                             <td><input type="text" name="param:2_{{loop.index}}:pattern"/></td>
-                            <td><input type="checkbox" name="param:2_{{loop.index}}:required"/></td>
                             {% if edit %}
                                 <td></td>
                             {% endif %}
@@ -181,11 +184,12 @@
                         <tr>
                             <td>{{name}}</td>
                             <td>{{definition.get("type", "any")}}</td>
+                            <td>{{'yes' if definition.get('required') else 'no'}}</td>
+                            <td>{{definition.get("description", "")}}</td>
                             <td>{{definition.get("min", "")}}</td>
                             <td>{{definition.get("max", "")}}</td>
                             <td>{{definition.get("values", [])|join(',') or ""}}</td>
                             <td>{{definition.get("pattern", "")}}</td>
-                            <td>{{'yes' if definition.get('required') else 'no'}}</td>
                             {% if edit %}
                                 <td></td>
                             {% endif %}
