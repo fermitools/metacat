@@ -218,7 +218,7 @@ class MetaCatDaemon(Logged):
                 uuid = ferry_user.get("tokensubject")
                 name = ferry_user.get("fullname")
                 do_update = False
-                if uuid and uuid != db_user.AUID:
+                if uuid and uuid not in db_user.AUID.split(","):
                     db_user.AUID = f"{db_user.AUID},{uuid}"
                     do_update = True
                 if name and name != db_user.Name:
