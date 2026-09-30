@@ -8,6 +8,7 @@ import argparse
 import os
 import regex
 import sys
+from itertools import batched
 
 
 def upload_replicas(fin, rse, scope, add_to_dataset=None, pfn_prefix=""):
