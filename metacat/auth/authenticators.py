@@ -115,7 +115,7 @@ class SciTokenAuthenticator(Authenticator):
         return (
             subject and issuer
                 and issuer in issuers
-                and subject in user.AUID.split(",")
+                and subject in user.AUID.split(","),
             None, expiration
         )
 
