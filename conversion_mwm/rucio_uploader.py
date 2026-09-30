@@ -25,19 +25,30 @@ def upload_replicas(fin, rse, scope, add_to_dataset=None, pfn_prefix=""):
     fid_parse = re.parse(r"([^,]*),([^,]*),([^,]*),(.*)")
     rclient = rucio.client.Client()
 
-    for line in fin.readlines():
-        m = fid_parse.match(line)
-        if m:
-            fname, fsize, fchksum, path = m.groups()
-            pfn = os.path.join(pfn_prefix, path)
+    for line_batch in batched(fin.readlines(),500):
+        upload_batch = []
+        for line in line_batch:
+            m = fid_parse.match(line)
+            if m:
+                fname, fsize, fchksum, path = m.groups()
+                pfn = os.path.join(pfn_prefix, path)
 
-            rclient.add_replica(rse, scope, fname, int(fsize), adler32=fchksum, pfn=pfn)
+                upload_batch.append( {
+                   "scope": scope,
+                   "name": fname,
+                   "size": int(fsize),
+                   "adler32": fchksum,
+                   "pfn": pfn,
+                }
 
-            if add_to_dataset:
-                rclient.rclient.attach_dids(
-                    dataset,
-                    [{"scope": scope, "name": fname}],
-                )
+        rclient.add_replicas(rse, upload_batch)
+
+        if add_to_dataset:
+
+            rclient.rclient.attach_dids(
+                dataset,
+                upload_batch
+            )
 
 
 def main():
