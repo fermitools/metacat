@@ -80,7 +80,7 @@ def validate_metadata(definitions, restricted, metadata={}, name=None, value=Non
                 if not isinstance(value, list): 
                     errors.append((name, f"list of ints required instead of {repv}"))
                     type_mismatch = True
-                if not all(isinstance(x, int) for x in value): 
+                elif not all(isinstance(x, int) for x in value): 
                     errors.append((name, f"list of ints required instead of {repv}"))
                     type_mismatch = True
 
@@ -88,7 +88,7 @@ def validate_metadata(definitions, restricted, metadata={}, name=None, value=Non
                 if not isinstance(value, list): 
                     errors.append((name, f"list of floats required"))
                     type_mismatch = True
-                if not all(isinstance(x, float) for x in value): 
+                elif not all(isinstance(x, float) for x in value): 
                     errors.append((name, f"list of floats required instead of {repv}"))
                     type_mismatch = True
             
@@ -96,7 +96,7 @@ def validate_metadata(definitions, restricted, metadata={}, name=None, value=Non
                 if not isinstance(value, list): 
                     errors.append((name, f"list of strings required"))
                     type_mismatch = True
-                if not all(isinstance(x, str) for x in value): 
+                elif not all(isinstance(x, str) for x in value): 
                     errors.append((name, f"list of strings required instead of {repv}"))
                     type_mismatch = True
             
@@ -104,7 +104,7 @@ def validate_metadata(definitions, restricted, metadata={}, name=None, value=Non
                 if not isinstance(value, list): 
                     errors.append((name, f"list of booleans required"))
                     type_mismatch = True
-                if not all(isinstance(x, bool) for x in value): 
+                elif not all(isinstance(x, bool) for x in value): 
                     errors.append((name, f"list of booleans required instead of {repv}"))
                     type_mismatch = True
         
