@@ -47,9 +47,9 @@
 		<th>Anonymized user id</th>
 		<td>
 			{% if mode == "create" %}
-				<input type="text" name="auid" size="40"/>
+				<input type="text" name="auid" size="80"/>
 			{% elif mode == "edit" %}
-				<input type="text" name="auid" value="{{user.AUID or ''}}" size="36" style="font-family: monospace"/>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/>
+				<input type="text" name="auid" value="{{user.AUID or ''}}" size="80" style="font-family: monospace"/>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/>
             {% else %}
                 <span style="font-family: monospace">{{user.AUID or ""}}</span>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/>
 			{% endif %}

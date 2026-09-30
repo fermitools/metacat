@@ -219,7 +219,7 @@ class MetaCatDaemon(Logged):
                 name = ferry_user.get("fullname")
                 do_update = False
                 if uuid and uuid != db_user.AUID:
-                    db_user.AUID = uuid
+                    db_user.AUID = f"{db_user.AUID},{uuid}"
                     do_update = True
                 if name and name != db_user.Name:
                     db_user.Name = name
