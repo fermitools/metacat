@@ -3,10 +3,10 @@
 import sys
 import os
 import re
-from parser import DimParserError
-from parse_tree import *
+from query_converter.parser import DimParserError
+from query_converter.parse_tree import *
 from random import random, randint, choice, seed
-import parser
+import query_converter.parser as parser
 import logging
 
 logger = logging.getLogger(__name__)

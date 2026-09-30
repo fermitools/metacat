@@ -667,6 +667,8 @@ class DimNode(NegatableNode):
                 yield ")"  # mwm -- added parens
 
             val = _gen()
+            if self.op == "=":
+                self.op = "in"
         elif isinstance(self.value, NodeBase):
             val = self.value.render()
         else:

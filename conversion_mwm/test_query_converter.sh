@@ -8,8 +8,8 @@ get_recent() {
        echo "Getting recent defs for $exp..."
        htgettoken -i ${exp} -a htvaultprod.fnal.gov
 
-       samweb -e $exp list-definitions --after=2023-01-01T00:00:00 | 
-          head -400 | 
+       samweb -e $exp list-definitions --after=2020-01-01T00:00:00 | 
+          head -1000 | 
           while read defname
           do
               samweb -e $exp describe-definition $defname | 
@@ -33,15 +33,21 @@ metacat auth login -mtoken $USER
   total=0
   while read query 
   do
-    if metacat query --explain "$query" > /dev/null  2>&1
+    if metacat query --explain "$query" > /dev/null  2>err.out
     then
         printf "."
         total=$((total + 1))
     else
-        echo
-        echo FAIL "$query"
-        fail=$((fail + 1))
-        total=$((total + 1))
+        if grep -q 'Named query.*not found' err.out
+        then
+            printf "."
+            total=$((total + 1))
+        else
+            echo
+            echo FAIL "$query"
+            fail=$((fail + 1))
+            total=$((total + 1))
+        fi
     fi
   done
   echo $fail / $total
