@@ -20,6 +20,11 @@ if __name__ == "__main__":
     loglevel = logging.INFO
     if "-d" in sys.argv:
         loglevel = logging.DEBUG
+    if "--db" in sys.argv:
+        dbconninfo = sys.argv[-1]
+    else:
+        dbconninfo = None
+         
 
     logging.basicConfig(level = loglevel )
 
@@ -48,7 +53,7 @@ if __name__ == "__main__":
             t = parser.parse_string(dims)
             #print("parse tree: ", str(t), "\n\n")
             #print("-------------------")
-            mt = MetaCatTransformer().visit(t)
+            mt = MetaCatTransformer(dbconninfo).visit(t)
             mt = MetaCatTransformerPart2().visit(mt)
             #print("meta tree: ", str(mt), "\n\n")
             meta = meta_render_dimensions_tree(mt)
