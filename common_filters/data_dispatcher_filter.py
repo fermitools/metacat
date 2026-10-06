@@ -32,6 +32,16 @@ class DataDispatcherFilter(MetaCatFilter):
         client = DataDispatcherClient(self.url)
 
         proj = {}
+        if "worker_id" in kwparams:
+            plist = client.list_projects(
+                state=None,
+                not_state=None,
+                worker_id=kwparams["worker_id"],
+                with_files=True,
+            )
+            if plist:
+                proj = plist[0]
+
         if "project_name" in kwparams:
             plist = client.list_projects(
                 state=None,
@@ -39,15 +49,20 @@ class DataDispatcherFilter(MetaCatFilter):
                 attributes={"name", kwparams["project_name"]},
                 with_files=True,
             )
-            proj = plist[0]
+            if plist:
+                proj = plist[0]
 
         if "project_id" in kwparams:
             proj = client.get_project(kwparams["project_id"], with_files=True)
+            if not proj:
+                proj = {}
+
 
         proj_fdata = {}
         for h in proj.get("file_handles", []):
             didstr = f"{h['namespace']}:{h['name']}"
             proj_fdata[didstr] = h
+
 
         for f in inputs[0]:
 
