@@ -4,46 +4,63 @@
 
 <head>
 
-        <meta name="robots" content="noindex">
-
 	<link rel="shortcut icon" href="{{GLOBAL_AppTopPath}}/static/images/favicon.png" type="image/x-icon"/>
 
     <style type="text/css">
 
-        @font-face {
-          font-family: source_code;
-          src: url({{GLOBAL_AppTopPath}}/static/fonts/source-code-pro/SourceCodePro-Regular.ttf.woff);
-        }
-
-
-
         body, td, th, p, div {
-            font: 14px arial;
+            font: 14px;
+	    font-family: "Helvetica Neue", Arial, sans-serif;
         }
         td, th {
             vertical-align: top
         }
         div#content {
-            margin-right: 30px;
+            margin-right: 10px;
             margin-left: 30px;
             margin-top: 20px;
-	    width: 100%;
+	    width: 98%;
+            height: 63%;
+            overflow: scroll;
         }
 		
 	div#banner {
-		padding: 30px 10px;
+	    padding: 10px 10px;
+            border: 1px solid silver;
+            border-radius: 15px;
 	}
 	
-	#b-anner td {
+	.tab {
+                position: relative;
+                bottom: -55px;
 		vertical-align: middle;
-		padding: 0px 20px;
+                border-top-left-radius: 15px;
+                border-top: solid silver 1px;
+                border-left: solid silver 1px;
+                border-right: solid silver 1px;
 	}
+	#banner h1 {
+                position: relative;
+                bottom: -20px;
+        }
+	.login_info {
+                position: relative;
+        }
+        p a {
+          border: 1px solid blue;
+          background: #F0F0F0;
+          padding: 5px;
+          border-radius: 8px;
+          text-decoration: none;
+        }
 
 	div#body {
-            margin-right: 30px;
-            margin-left: 30px;
-            margin-top: 20px;
+            #margin-right: 30px;
+            #margin-left: 30px;
+            margin-top: 40px;
             padding: 10px 10px;
+            border: 1px solid silver;
+            border-radius: 15px;
 	}
         
         
@@ -316,28 +333,28 @@
 	<table class="placement">
 		<tr>
 			<td style="vertical-align: middle; padding: 0px 20px;">
-				<img src="{{GLOBAL_AppTopPath}}/static/images/logo.png" heights=100 width=100>
+				<img src="{{GLOBAL_AppTopPath}}/static/images/logo.png" heights=60 width=60>
 			</td>
 			<td style="vertical-align: middle; padding: 0px 20px; width:100%">
 				<h1>{{G_SiteTitle}}</h1>
 			    <div id="main_menu">
 					<table class="placement link_menu" width="100%">
 					<tr>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/users">users</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/roles">roles</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/namespaces">namepaces</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/datasets">datasets</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/find_file">find file</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/categories/index">categories</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/query">query</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/named_queries">named queries</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/filters">filters</a></td>
-					    <td width="100%" align="right">
-							<a href="https://fermitools.github.io/metacat/" target="_new">docs</a>
+					    <td class="tab"><a href="{{GLOBAL_AppRootPath}}/gui/users">users</a></td>
+					    <td class="tab"><a href="{{GLOBAL_AppRootPath}}/gui/roles">roles</a></td>
+					    <td class="tab"><a href="{{GLOBAL_AppRootPath}}/gui/namespaces">namepaces</a></td>
+					    <td class="tab"><a href="{{GLOBAL_AppRootPath}}/gui/datasets">datasets</a></td>
+					    <td class="tab"><a href="{{GLOBAL_AppRootPath}}/gui/find_file">find file</a></td>
+					    <td class="tab"><a href="{{GLOBAL_AppRootPath}}/gui/categories/index">categories</a></td>
+					    <td class="tab"><a href="{{GLOBAL_AppRootPath}}/gui/query">query</a></td>
+					    <td class="tab"><a href="{{GLOBAL_AppRootPath}}/gui/named_queries">named queries</a></td>
+					    <td class="tab"><a href="{{GLOBAL_AppRootPath}}/gui/filters">filters</a></td>
+					    <td class="tab">
+							<a href="https://fermitools.github.io/metacat/" target="_new">Documentation</a>
 						</td>
-						<td>
+						<td class="login_info">
 			                        {% if G_User %}
-			                            <span style="color:#AAA">logged in as {{G_User.Name or ""}}&nbsp;<a href="./user?username={{G_User.Username}}">{{G_User.Username}}</a>&nbsp;</span><a href="{{GLOBAL_AppRootPath}}/auth/logout?redirect={{GLOBAL_AppRootPath}}/gui/index">log out</a>
+			                            <span style="color:#AAA">logged in as {{G_User.Name or ""}} <a href="./user?username={{G_User.Username}}">My Account</a>&nbsp;</span><a href="{{GLOBAL_AppRootPath}}/auth/logout?redirect={{GLOBAL_AppRootPath}}/gui/index">log out</a>
 			                        {% else %}
 			                            <a href="{{GLOBAL_AppRootPath}}/auth/login?redirect={{GLOBAL_AppRootPath}}/gui/index">log in</a>
 			                        {% endif %}
@@ -362,6 +379,7 @@
         <p class=error>{{error}}</p>
     {% endif %}
     <div id=content style="clear:both">{% block content %}{% endblock %}</div>
+    <div id=footer style="clear:both">{% block footer %}{% endblock %}</div>
 </div>	<!-- body -->
 
 <div id="version">Version: {{G_Version}}</div>

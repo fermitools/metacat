@@ -57,6 +57,7 @@
     </script>
     #}
     
+    {# disable
     {% if npages > 1 %}
         <p>Page:&nbsp;
             {%- for ipage, link in page_links -%}
@@ -68,6 +69,7 @@
             {%- endfor -%}
         </p>
     {% endif %}    
+    #}
     
     <table class="data">
     	<tr>
@@ -138,7 +140,13 @@
             </tr>
     	{% endfor %}
     </table>
+{% else %}
+    <p>No datasets found</p>
+{% endif %}
+
+{% endblock %}
     
+{% block footer %}
     <p style="color:gray">* - may not be accurate for non-frozen datasets: updated periodically, includes retired files</p>
 
     {% if npages > 1 %}
@@ -153,8 +161,4 @@
         </p>
     {% endif %}    
     
-{% else %}
-    <p>No datasets found</p>
-{% endif %}
-
 {% endblock %}
