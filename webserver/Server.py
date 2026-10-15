@@ -226,9 +226,9 @@ def create_application(config=None, prefix=None):
         return response
 
     fastapi_app.include_router(root_router, prefix=prefix)
-    fastapi_app.include_router(data_router, prefix=prefix + "/data")
-    fastapi_app.include_router(gui_categories_router, prefix=prefix + "/gui/categories")
-    fastapi_app.include_router(gui_router, prefix=prefix + "/gui")
+    fastapi_app.include_router(data_router, prefix=prefix)
+    fastapi_app.include_router(gui_categories_router, prefix=prefix)
+    fastapi_app.include_router(gui_router, prefix=prefix)
     fastapi_app.include_router(gui_auth_router, prefix=prefix + "/auth")
     fastapi_app.include_router(auth_router, prefix=prefix + "/auth")
     fastapi_app.mount(prefix + "/static", CachedStaticFiles(directory=static_location, cache_ttl=3600), name="static")
