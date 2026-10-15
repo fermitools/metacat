@@ -111,15 +111,15 @@ class DataHandler(MetaCatHandler):
         # iterable is an iterable, returning jsonable items, one item at a time
         return self.text_chunks(("%s%s%s" % (self.RS, json.dumps(item), self.LF) for item in iterable), chunk)
 
-    @data_router.api_route("/realm", methods=["GET", "POST"])
+    @data_router.api_route("/data/realm", methods=["GET", "POST"])
     def realm(self):
         return HTMLResponse(self.App.Realm)           # realm used for the digest password authentication
 
-    @data_router.api_route("/version", methods=["GET", "POST"])
+    @data_router.api_route("/data/version", methods=["GET", "POST"])
     def version(self):
         return PlainTextResponse(Version)
         
-    @data_router.api_route("/simulate_503", methods=["GET", "POST"])
+    @data_router.api_route("/data/simulate_503", methods=["GET", "POST"])
     def simulate_503(self, prob: Optional[str] = 0.5):
         prob = float(prob)
         if prob > random.random():
@@ -127,7 +127,7 @@ class DataHandler(MetaCatHandler):
         else:
             return PlainTextResponse("OK")
 
-    @data_router.api_route("/namespaces", methods=["GET", "POST"])
+    @data_router.api_route("/data/namespaces", methods=["GET", "POST"])
     @sanitized
     def namespaces(self, owner_user: Optional[str] = None, owner_role: Optional[str] = None, directly: str = "no"):
         directly = directly == "yes"
@@ -143,8 +143,8 @@ class DataHandler(MetaCatHandler):
                     key=lambda ns: ns.Name)
         return Response(json.dumps([ns.to_jsonable() for ns in lst]), media_type="application/json")
 
-    @data_router.api_route("/namespace", methods=["GET", "POST"])
-    @data_router.api_route("/namespace/{relpath:path}", methods=["GET", "POST"])
+    @data_router.api_route("/data/namespace", methods=["GET", "POST"])
+    @data_router.api_route("/data/namespace/{relpath:path}", methods=["GET", "POST"])
     @sanitized
     def namespace(self, relpath: str = "", name: Optional[str] = None):
         name = name or relpath
@@ -155,7 +155,7 @@ class DataHandler(MetaCatHandler):
             return PlainTextResponse("Not found", status_code=404)
         return Response(json.dumps(ns.to_jsonable()), media_type="application/json")
         
-    @data_router.api_route("/create_namespace", methods=["GET", "POST"])
+    @data_router.api_route("/data/create_namespace", methods=["GET", "POST"])
     @sanitized
     def create_namespace(self, name: Optional[str] = None, owner_role: Optional[str] = None, description: Optional[str] = None):
         
@@ -170,8 +170,8 @@ class DataHandler(MetaCatHandler):
                return HTMLResponse("Permission Denied" if code=="403" else "Namespace already exists", status_code=code)
         return Response(json.dumps(ns.to_jsonable()), media_type="application/json")
             
-    @data_router.api_route("/namespace_counts", methods=["GET", "POST"])
-    @data_router.api_route("/namespace_counts/{relpath:path}", methods=["GET", "POST"])
+    @data_router.api_route("/data/namespace_counts", methods=["GET", "POST"])
+    @data_router.api_route("/data/namespace_counts/{relpath:path}", methods=["GET", "POST"])
     @sanitized
     def namespace_counts(self, relpath: str = "", name: Optional[str] = None):
         self.sanitize(name, relpath)
@@ -189,7 +189,7 @@ class DataHandler(MetaCatHandler):
             "Access-Control-Allow-Origin":"*"
         }) 
         
-    @data_router.api_route("/datasets", methods=["GET", "POST"])
+    @data_router.api_route("/data/datasets", methods=["GET", "POST"])
     def datasets(self, with_file_counts: str = "no"):
         with_file_counts = with_file_counts == "yes"        # whether exact number of files is to be returned
         #print("data_server.datasets: with_file_counts:", with_file_counts)
@@ -203,8 +203,8 @@ class DataHandler(MetaCatHandler):
             out.append(dct)
         return Response(json.dumps(out), media_type="application/json")
         
-    @data_router.api_route("/dataset_files", methods=["GET", "POST"])
-    @data_router.api_route("/dataset_files/{relpath:path}", methods=["GET", "POST"])
+    @data_router.api_route("/data/dataset_files", methods=["GET", "POST"])
+    @data_router.api_route("/data/dataset_files/{relpath:path}", methods=["GET", "POST"])
     @sanitized
     def dataset_files(self, relpath: str = "", dataset: Optional[str] = None, with_metadata: str = "no", include_retired_files: str = "no", with_subsets: str = "no"):
         with_metadata=with_metadata == "yes"
@@ -219,8 +219,8 @@ class DataHandler(MetaCatHandler):
                         with_subsets="yes")
         return StreamingResponse(self.json_stream((f.to_jsonable(with_metadata=with_metadata) for f in files)), media_type="application/json-seq")
         
-    @data_router.api_route("/dataset", methods=["GET", "POST"])
-    @data_router.api_route("/dataset/{relpath:path}", methods=["GET", "POST"])
+    @data_router.api_route("/data/dataset", methods=["GET", "POST"])
+    @data_router.api_route("/data/dataset/{relpath:path}", methods=["GET", "POST"])
     @sanitized
     def dataset(self, relpath: str = "", dataset: Optional[str] = None, exact_file_count: str = "no", with_subsets: str = "no"):
         db = self.connect_with_timeout()
@@ -243,7 +243,7 @@ class DataHandler(MetaCatHandler):
 
         return Response(json.dumps(dct), media_type="application/json")
             
-    @data_router.api_route("/dataset_count", methods=["GET", "POST"])
+    @data_router.api_route("/data/dataset_count", methods=["GET", "POST"])
     @sanitized
     def dataset_count(self, dataset: Optional[str] = None, exact_file_count: str = "yes"):
         namespace, name = dataset.split(":", 1)
@@ -254,7 +254,7 @@ class DataHandler(MetaCatHandler):
             "Access-Control-Allow-Origin":"*"
         }) 
 
-    @data_router.api_route("/dataset_counts", methods=["GET", "POST"])
+    @data_router.api_route("/data/dataset_counts", methods=["GET", "POST"])
     @sanitized
     def dataset_counts(self, dataset: Optional[str] = None, exact_file_count: str = "yes"):
         namespace, name = dataset.split(":", 1)
@@ -292,7 +292,7 @@ class DataHandler(MetaCatHandler):
         self.sanitize(namespace, name)
         return self.App.dataset_file_counts(namespace, name)
 
-    @data_router.api_route("/create_dataset", methods=["GET", "POST"])
+    @data_router.api_route("/data/create_dataset", methods=["GET", "POST"])
     @sanitized
     def create_dataset(self):
         db = self.connect_with_timeout()
@@ -344,7 +344,7 @@ class DataHandler(MetaCatHandler):
         
         return Response(dataset.to_json(), media_type="application/json")
     
-    @data_router.api_route("/update_dataset", methods=["GET", "POST"])
+    @data_router.api_route("/data/update_dataset", methods=["GET", "POST"])
     @sanitized
     def update_dataset(self, dataset: Optional[str] = None):
         if not dataset:
@@ -393,7 +393,7 @@ class DataHandler(MetaCatHandler):
         ds.save(updated_by=user.Username)
         return Response(json.dumps(ds.to_jsonable()), media_type="application/json")
 
-    @data_router.api_route("/remove_child_dataset", methods=["GET", "POST"])
+    @data_router.api_route("/data/remove_child_dataset", methods=["GET", "POST"])
     @sanitized
     def remove_child_dataset(self, parent: Optional[str] = None, child: Optional[str] = None):
         if not parent or not child:
@@ -424,7 +424,7 @@ class DataHandler(MetaCatHandler):
         parent_ds.remove_child(child_ds)
         return HTMLResponse("OK")
 
-    @data_router.api_route("/add_child_dataset", methods=["GET", "POST"])
+    @data_router.api_route("/data/add_child_dataset", methods=["GET", "POST"])
     @sanitized
     def add_child_dataset(self, parent: Optional[str] = None, child: Optional[str] = None):
         if not parent or not child:
@@ -516,7 +516,7 @@ class DataHandler(MetaCatHandler):
         return json.dumps([f.to_jsonable() for f in files]), "application/json"
 
 
-    @data_router.api_route("/add_files", methods=["GET", "POST"])
+    @data_router.api_route("/data/add_files", methods=["GET", "POST"])
     @sanitized
     def add_files(self, dataset: Optional[str] = None):
         #
@@ -581,7 +581,7 @@ class DataHandler(MetaCatHandler):
                 return Response(e.as_json(), status_code=400, media_type="application/json")
         return Response(json.dumps({"files_added": nadded}), media_type="application/json")
 
-    @data_router.api_route("/remove_files", methods=["GET", "POST"])
+    @data_router.api_route("/data/remove_files", methods=["GET", "POST"])
     @sanitized
     def remove_files(self):
         user, error = self.authenticated_user()
@@ -643,8 +643,8 @@ class DataHandler(MetaCatHandler):
             nremoved = ds.remove_files(resolved, transaction=transaction)
         return Response(json.dumps({"files_removed": nremoved}), media_type="application/json")
         
-    @data_router.api_route("/remove_dataset", methods=["GET", "POST"])
-    @data_router.api_route("/remove_dataset/{relpath:path}", methods=["GET", "POST"])
+    @data_router.api_route("/data/remove_dataset", methods=["GET", "POST"])
+    @data_router.api_route("/data/remove_dataset/{relpath:path}", methods=["GET", "POST"])
     @sanitized
     def remove_dataset(self, relpath: str = "", dataset: Optional[str] = None):
         #
@@ -670,7 +670,7 @@ class DataHandler(MetaCatHandler):
         ds.delete()
         return HTMLResponse("OK")
 
-    @data_router.api_route("/datasets_for_files", methods=["GET", "POST"])
+    @data_router.api_route("/data/datasets_for_files", methods=["GET", "POST"])
     @sanitized
     def datasets_for_files(self):
         #
@@ -707,7 +707,7 @@ class DataHandler(MetaCatHandler):
         else:
             return ".", path
 
-    @data_router.api_route("/declare_files", methods=["GET", "POST"])
+    @data_router.api_route("/data/declare_files", methods=["GET", "POST"])
     @sanitized
     def declare_files(self, namespace: Optional[str] = None, dataset: Optional[str] = None, dry_run: str = "no"):
         # Declare new files, add to the dataset
@@ -990,7 +990,7 @@ class DataHandler(MetaCatHandler):
         out = [f.to_jsonable(with_metadata=True) for f in results]
         return Response(json.dumps(out), media_type="application/json")
 
-    @data_router.api_route("/move_files", methods=["GET", "POST"])
+    @data_router.api_route("/data/move_files", methods=["GET", "POST"])
     def move_files(self):
         """
         Moves files to new namespace
@@ -1116,7 +1116,7 @@ class DataHandler(MetaCatHandler):
 
         return Response(json.dumps(out), media_type="application/json")
 
-    @data_router.api_route("/delete_file", methods=["GET", "POST"])
+    @data_router.api_route("/data/delete_file", methods=["GET", "POST"])
     @sanitized
     def delete_file(self):
         # mode can be "update" - add/pdate metadata with new values
@@ -1167,7 +1167,7 @@ class DataHandler(MetaCatHandler):
                 if not ((c >= "0" and c <= "9") or (c >= "a" and c <= "f")):
                     errors.append({"name":f"checksum {ct}", "reason": f"contains invalid digit {c}"})
 
-    @data_router.api_route("/update_file", methods=["GET", "POST"])
+    @data_router.api_route("/data/update_file", methods=["GET", "POST"])
     @sanitized
     def update_file(self):
         # mode can be "update" - add/pdate metadata with new values
@@ -1283,7 +1283,7 @@ class DataHandler(MetaCatHandler):
         f.update(user)
         return Response(f.to_json(with_metadata=True, with_provenance=True), media_type="application/json")
                 
-    @data_router.api_route("/update_file_meta", methods=["GET", "POST"])
+    @data_router.api_route("/data/update_file_meta", methods=["GET", "POST"])
     @sanitized
     def update_file_meta(self):
         # mode can be "update" - add/pdate metadata with new values
@@ -1321,8 +1321,8 @@ class DataHandler(MetaCatHandler):
                 by_namespace_name.append({"namespace":spec.Namespace, "name":spec.Name})
         return self.__update_meta_bulk(db, user, data["metadata"], data["mode"], ids=by_fid, names=by_namespace_name)
         
-    @data_router.api_route("/file", methods=["GET", "POST"])
-    @data_router.api_route("/file/{relpath:path}", methods=["GET", "POST"])
+    @data_router.api_route("/data/file", methods=["GET", "POST"])
+    @data_router.api_route("/data/file/{relpath:path}", methods=["GET", "POST"])
     @sanitized
     def file(self, relpath: str = "", did: Optional[str] = None, namespace: Optional[str] = None, name: Optional[str] = None, fid: Optional[str] = None, with_metadata: str = "yes", with_provenance: str = "yes", with_datasets: str = "no"):
         with_metadata = with_metadata == "yes"
@@ -1349,7 +1349,7 @@ class DataHandler(MetaCatHandler):
             return HTMLResponse("File not found", status_code=404)
         return Response(f.to_json(with_metadata=with_metadata, with_provenance=with_provenance, with_datasets=with_datasets), media_type="application/json")
         
-    @data_router.api_route("/retire_file", methods=["GET", "POST"])
+    @data_router.api_route("/data/retire_file", methods=["GET", "POST"])
     @sanitized
     def retire_file(self):
         #print("retire file...")
@@ -1380,7 +1380,7 @@ class DataHandler(MetaCatHandler):
             f.set_retire(retire, user.Username)
         return Response(f.to_json(), media_type="application/json")
 
-    @data_router.api_route("/files", methods=["GET", "POST"])
+    @data_router.api_route("/data/files", methods=["GET", "POST"])
     @sanitized
     def files(self, with_metadata: str = "no", with_provenance: str = "no"):
         with_metadata = with_metadata=="yes"
@@ -1402,7 +1402,7 @@ class DataHandler(MetaCatHandler):
         ]
         return Response(json.dumps(out), media_type="application/json")
 
-    @data_router.api_route("/query", methods=["GET", "POST"])
+    @data_router.api_route("/data/query", methods=["GET", "POST"])
     @sanitized
     def query(self, query: Optional[str] = None, namespace: Optional[str] = None, with_meta: str = "no", with_provenance: str = "no", debug: str = "no", include_retired_files: str = "no", add_to: Optional[str] = None, save_as: Optional[str] = None, summary: Optional[str] = None):
 
@@ -1515,7 +1515,7 @@ class DataHandler(MetaCatHandler):
 
         return StreamingResponse(self.json_stream(data), media_type="application/json-seq")
         
-    @data_router.api_route("/search_queries", methods=["GET", "POST"])
+    @data_router.api_route("/data/search_queries", methods=["GET", "POST"])
     @sanitized
     def search_queries(self, query: Optional[str] = None):
         if query is not None:
@@ -1550,7 +1550,7 @@ class DataHandler(MetaCatHandler):
         data = ( q.to_jsonable() for q in results )
         return StreamingResponse(self.json_stream(data), media_type="application/json-seq")
         
-    @data_router.api_route("/named_queries", methods=["GET", "POST"])
+    @data_router.api_route("/data/named_queries", methods=["GET", "POST"])
     @sanitized
     def named_queries(self, namespace: Optional[str] = None):
         db = self.connect_with_timeout()
@@ -1558,7 +1558,7 @@ class DataHandler(MetaCatHandler):
         data = [q.to_jsonable() for q in queries]
         return Response(json.dumps(data), media_type="application/json")
 
-    @data_router.api_route("/named_query", methods=["GET", "POST"])
+    @data_router.api_route("/data/named_query", methods=["GET", "POST"])
     @sanitized
     def named_query(self, namespace: Optional[str] = None, name: Optional[str] = None):
         db = self.connect_with_timeout()
@@ -1567,7 +1567,7 @@ class DataHandler(MetaCatHandler):
             return HTMLResponse("Query not found", status_code=404)
         return Response(q.to_json(), media_type="application/json")
     
-    @data_router.api_route("/create_named_query", methods=["GET", "POST"])
+    @data_router.api_route("/data/create_named_query", methods=["GET", "POST"])
     @sanitized
     def create_named_query(self, update: str = "no"):
         update = update == "yes"
@@ -1602,15 +1602,15 @@ class DataHandler(MetaCatHandler):
     #
     # Parameter categories
     #
-    @data_router.api_route("/categories", methods=["GET", "POST"])
+    @data_router.api_route("/data/categories", methods=["GET", "POST"])
     def categories(self):
         db = self.connect_with_timeout()
         lst = DBParamCategory.list(db)
         out = [cat.to_jsonable() for cat in lst]
         return Response(json.dumps(out), media_type="application/json")
 
-    @data_router.api_route("/category", methods=["GET", "POST"])
-    @data_router.api_route("/category/{relpath:path}", methods=["GET", "POST"])
+    @data_router.api_route("/data/category", methods=["GET", "POST"])
+    @data_router.api_route("/data/category/{relpath:path}", methods=["GET", "POST"])
     @sanitized
     def category(self, relpath: str = "", path: Optional[str] = None):
         path = path or relpath
@@ -1624,7 +1624,7 @@ class DataHandler(MetaCatHandler):
             out = cat.to_jsonable()
         return Response(json.dumps(out), media_type="application/json")
 
-    @data_router.api_route("/create_category", methods=["GET", "POST"])
+    @data_router.api_route("/data/create_category", methods=["GET", "POST"])
     @sanitized
     def create_category(self):
         db = self.connect_with_timeout()
@@ -1670,7 +1670,7 @@ class DataHandler(MetaCatHandler):
         cat.create()
         return Response(json.dumps(cat.to_jsonable()), media_type="application/json")
 
-    @data_router.api_route("/update_category", methods=["GET", "POST"])
+    @data_router.api_route("/data/update_category", methods=["GET", "POST"])
     @sanitized
     def update_category(self):
         db = self.connect_with_timeout()
@@ -1729,8 +1729,8 @@ class DataHandler(MetaCatHandler):
         cat.save()
         return Response(json.dumps(cat.to_jsonable()), media_type="application/json")
 
-    @data_router.api_route("/remove_category", methods=["GET", "POST"])
-    @data_router.api_route("/remove_category/{relpath:path}", methods=["GET", "POST"])
+    @data_router.api_route("/data/remove_category", methods=["GET", "POST"])
+    @data_router.api_route("/data/remove_category/{relpath:path}", methods=["GET", "POST"])
     @sanitized
     def remove_category(self, relpath: str = "", path: Optional[str] = None):
         path = path or relpath
@@ -1746,7 +1746,7 @@ class DataHandler(MetaCatHandler):
         cat.delete()
         return Response("null", media_type="text/json")
 
-    @data_router.api_route("/report_metadata_keys", methods=["GET", "POST"])
+    @data_router.api_route("/data/report_metadata_keys", methods=["GET", "POST"])
     @sanitized
     def report_metadata_keys(self):
         db = self.connect_with_timeout(report=True)
@@ -1757,7 +1757,7 @@ class DataHandler(MetaCatHandler):
         out = fobj.report_metadata_keys()
         return Response(json.dumps(list(out)), media_type="application/json")
 
-    @data_router.api_route("/report_metadata_counts_ranges", methods=["GET", "POST"])
+    @data_router.api_route("/data/report_metadata_counts_ranges", methods=["GET", "POST"])
     @sanitized
     def report_metadata_counts_ranges(self, keylist: str = ""):
         db = self.connect_with_timeout(report=True)
@@ -1769,7 +1769,7 @@ class DataHandler(MetaCatHandler):
         out = fobj.report_metadata_counts_ranges(keylist)
         return Response(json.dumps(dict(out)), media_type="application/json")
 
-    @data_router.api_route("/report_metadata_values", methods=["GET", "POST"])
+    @data_router.api_route("/data/report_metadata_values", methods=["GET", "POST"])
     @sanitized
     def report_metadata_values(self, key: Optional[str] = None):
         db = self.connect_with_timeout(report=True)

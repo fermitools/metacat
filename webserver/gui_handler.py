@@ -19,13 +19,13 @@ gui_categories_router = APIRouter()
 @cbv(gui_categories_router)
 class GUICategoryHandler(MetaCatHandler):
 
-    # "/gui" and "/gui/categories" without the trailing slash are redirected here by Starlette (redirect_slashes)
-    @gui_categories_router.api_route("/", methods=["GET", "POST"])
+    @gui_categories_router.api_route("/gui/categories", methods=["GET", "POST"])
+    @gui_categories_router.api_route("/gui/categories/", methods=["GET", "POST"])
     def default(self):
         self.redirect(self.appRootPath() + "/gui/categories/index")
     
-    @gui_categories_router.api_route("/index", methods=["GET", "POST"])
-    @gui_categories_router.api_route("/categories", methods=["GET", "POST"])
+    @gui_categories_router.api_route("/gui/categories/index", methods=["GET", "POST"])
+    @gui_categories_router.api_route("/gui/categories/categories", methods=["GET", "POST"])
     def categories(self):
         me, auth_error = self.authenticated_user()
         if not me and not self.App.Cfg.get("allow_public", False):
@@ -34,7 +34,7 @@ class GUICategoryHandler(MetaCatHandler):
         cats = sorted(list(DBParamCategory.list(db)), key=lambda c:c.Path)
         return self.render_to_response("categories.html", categories=cats, **self.messages())
 
-    @gui_categories_router.api_route("/show", methods=["GET", "POST"])
+    @gui_categories_router.api_route("/gui/categories/show", methods=["GET", "POST"])
     @sanitize()
     def show(self, path: Optional[str] = None):
         me, auth_error = self.authenticated_user()
@@ -56,7 +56,7 @@ class GUICategoryHandler(MetaCatHandler):
             types = DBParamCategory.Types,
             **self.messages())
         
-    @gui_categories_router.api_route("/create", methods=["GET", "POST"])
+    @gui_categories_router.api_route("/gui/categories/create", methods=["GET", "POST"])
     @sanitize()
     def create(self):
         db = self.connect()
@@ -190,7 +190,7 @@ class GUICategoryHandler(MetaCatHandler):
         cat.create()
         self.redirect(f"./show?path={path}")
         
-    @gui_categories_router.api_route("/save", methods=["GET", "POST"])
+    @gui_categories_router.api_route("/gui/categories/save", methods=["GET", "POST"])
     @sanitize(exclude="description")
     def save(self):
         db = self.connect()
@@ -246,7 +246,7 @@ class GUICategoryHandler(MetaCatHandler):
         cat.save()
         self.redirect(f"./show?path={path}")
         
-    @gui_categories_router.api_route("/remove_definition", methods=["GET", "POST"])
+    @gui_categories_router.api_route("/gui/categories/remove_definition", methods=["GET", "POST"])
     @sanitize()
     def remove_definition(self, path: Optional[str] = None, param: Optional[str] = None):
         db = self.connect()
@@ -263,12 +263,12 @@ class GUICategoryHandler(MetaCatHandler):
 @cbv(gui_router)
 class GUIHandler(MetaCatHandler):
 
-    # "/gui" and "/gui/categories" without the trailing slash are redirected here by Starlette (redirect_slashes)
-    @gui_router.api_route("/", methods=["GET", "POST"])
+    @gui_router.api_route("/gui", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/", methods=["GET", "POST"])
     def default(self):
         self.redirect(self.appRootPath() + "/gui/index")
         
-    @gui_router.api_route("/index", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/index", methods=["GET", "POST"])
     @sanitize()
     def index(self, error: Optional[str] = None, message: Optional[str] = None):
         me, auth_error = self.authenticated_user()
@@ -282,7 +282,7 @@ class GUIHandler(MetaCatHandler):
             url += "?" + "&".join(messages)
         return self.redirect(url)
         
-    @gui_router.api_route("/mql", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/mql", methods=["GET", "POST"])
     @sanitize()
     def mql(self):
         me, auth_error = self.authenticated_user()
@@ -323,7 +323,7 @@ class GUIHandler(MetaCatHandler):
             query_text = query_text or "", parsed = parsed, assembled = assembled, optimized = optimized,
                     with_sql = with_sql)
 
-    @gui_router.api_route("/show_file", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/show_file", methods=["GET", "POST"])
     @sanitize()
     def show_file(self, fid: Optional[str] = None, namespace: Optional[str] = None, name: Optional[str] = None, did: Optional[str] = None, show_form: str = "no"):
         me, auth_error = self.authenticated_user()
@@ -348,7 +348,7 @@ class GUIHandler(MetaCatHandler):
         show_form = show_form == "yes"
         return self.render_to_response("show_file.html", f=f, show_form=show_form, namespace=namespace, name=name, did=did, fid=fid)
         
-    @gui_router.api_route("/find_file", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/find_file", methods=["GET", "POST"])
     @sanitize()
     def find_file(self):
         self.redirect("./show_file?show_form=yes")
@@ -378,11 +378,11 @@ class GUIHandler(MetaCatHandler):
             out.append((name, sorted(clist, key=lambda vc: (-vc[1], str(vc[0])))))
         return sorted(out)
         
-    @gui_router.api_route("/filters", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/filters", methods=["GET", "POST"])
     def filters(self):
         return self.render_to_response("filters.html", standard=self.App.StandardFilters, custom=self.App.CustomFilters)
 
-    @gui_router.api_route("/query", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/query", methods=["GET", "POST"])
     @sanitize(exclude="query")
     def query(self, query: str = "", namespace: Optional[str] = None, action: str = "show", summary: str = "off",
                     include_retired_files: str = "off", view_meta_as: str = "json"):
@@ -537,7 +537,7 @@ class GUIHandler(MetaCatHandler):
             namespace=namespace or "")
         return resp
         
-    @gui_router.api_route("/named_queries", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/named_queries", methods=["GET", "POST"])
     @sanitize()
     def named_queries(self, namespace: Optional[str] = None):
         me, auth_error = self.authenticated_user()
@@ -548,7 +548,7 @@ class GUIHandler(MetaCatHandler):
         return self.render_to_response("named_queries.html", namespace=namespace, queries = queries, logged_in = me is not None,
                 **self.messages())
             
-    @gui_router.api_route("/named_query", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/named_query", methods=["GET", "POST"])
     @sanitize()
     def named_query(self, name: Optional[str] = None, edit: str = "no"):
         me, auth_error = self.authenticated_user()
@@ -570,14 +570,14 @@ class GUIHandler(MetaCatHandler):
             meta_attr_names = sorted(meta.keys()),
             meta_as_json=json.dumps(meta, sort_keys=True, indent=4))
 
-    @gui_router.api_route("/create_named_query", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/create_named_query", methods=["GET", "POST"])
     def create_named_query(self):
         me, auth_error = self.authenticated_user()
         if me is None:   
             self.redirect(self.scriptUri() + "/auth/login?redirect=" + self.scriptUri() + "/gui/create_named_query")
         return self.render_to_response("named_query.html", namespaces=me.namespaces(), create=True)
 
-    @gui_router.api_route("/save_named_query", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/save_named_query", methods=["GET", "POST"])
     @sanitize(exclude="text")
     def save_named_query(self):
         user, auth_error = self.authenticated_user()
@@ -625,7 +625,7 @@ class GUIHandler(MetaCatHandler):
         
         return self.render_to_response("named_query.html", query=query, edit = True)
 
-    @gui_router.api_route("/search_named_queries", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/search_named_queries", methods=["GET", "POST"])
     def search_named_queries(self, query: Optional[str] = None, error: str = "", message: str = ""):
         if not query:
             # just show the form
@@ -655,7 +655,7 @@ class GUIHandler(MetaCatHandler):
                 results=results, query=query_text, error=error
             )
 
-    @gui_router.api_route("/users", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/users", methods=["GET", "POST"])
     @sanitize()
     def users(self, error: str = ""):
         me, auth_error = self.authenticated_user()
@@ -677,8 +677,8 @@ class GUIHandler(MetaCatHandler):
         return self.render_to_response("users.html", users=users, error=unquote_plus(error), admin = me.is_admin(),
                 index = index)
         
-    @gui_router.api_route("/user", methods=["GET", "POST"])
-    @gui_router.api_route("/user/{relpath:path}", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/user", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/user/{relpath:path}", methods=["GET", "POST"])
     @sanitize()
     def user(self, relpath: str = "", username: Optional[str] = None, error: str = "", message: str = ""):
         me, auth_error = self.authenticated_user()
@@ -709,7 +709,7 @@ class GUIHandler(MetaCatHandler):
             admin=me.is_admin()
         )
             
-    @gui_router.api_route("/create_user", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/create_user", methods=["GET", "POST"])
     @sanitize()
     def create_user(self, error: str = ""):
         db = self.App.connect()
@@ -719,7 +719,7 @@ class GUIHandler(MetaCatHandler):
         return self.render_to_response("user.html", error=error, mode="create", all_roles = DBRole.list(db),
             digest_realm = self.App.Realm)
         
-    @gui_router.api_route("/save_user", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/save_user", methods=["GET", "POST"])
     @sanitize()
     def save_user(self):
         db = self.App.connect()
@@ -780,7 +780,7 @@ class GUIHandler(MetaCatHandler):
                 u.save()
         self.redirect(f"./user?username={username}")
 
-    @gui_router.api_route("/generate_token", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/generate_token", methods=["GET", "POST"])
     def generate_token(self):
         db = self.App.connect()
         me, auth_error = self.authenticated_user()
@@ -795,7 +795,7 @@ class GUIHandler(MetaCatHandler):
 # --- namespaces
 #
 
-    @gui_router.api_route("/namespaces", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/namespaces", methods=["GET", "POST"])
     def namespaces(self, all: str = "no"):
         user, auth_error = self.authenticated_user()
         if not user and not self.App.Cfg.get("allow_public", False): 
@@ -810,7 +810,7 @@ class GUIHandler(MetaCatHandler):
         namespaces = sorted(namespaces, key=lambda ns: ns.Name)
         return self.render_to_response("namespaces.html", namespaces=namespaces, logged_in=user is not None, showing_all=all, **self.messages())
 
-    @gui_router.api_route("/namespace", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/namespace", methods=["GET", "POST"])
     @sanitize()
     def namespace(self, name: Optional[str] = None):
         me, auth_error = self.authenticated_user()
@@ -833,7 +833,7 @@ class GUIHandler(MetaCatHandler):
             datasets = datasets,
             **self.messages())
         
-    @gui_router.api_route("/create_namespace", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/create_namespace", methods=["GET", "POST"])
     def create_namespace(self, error: str = ""):
         db = self.App.connect()
         me, auth_error = self.authenticated_user()
@@ -844,7 +844,7 @@ class GUIHandler(MetaCatHandler):
         users = DBUser.list(db) if admin else [me]
         return self.render_to_response("namespace.html", user=me, roles=roles, users=users, create=True, edit=False, error=unquote_plus(error))
 
-    @gui_router.api_route("/save_namespace", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/save_namespace", methods=["GET", "POST"])
     @sanitize(exclude="description")
     def save_namespace(self):
         db = self.App.connect()
@@ -902,7 +902,7 @@ class GUIHandler(MetaCatHandler):
         return links
             
     
-    @gui_router.api_route("/datasets", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/datasets", methods=["GET", "POST"])
     @sanitize()
     def datasets(self, selection: Optional[str] = None, page: Optional[str] = 0, page_size: Optional[str] = 1000, sort_by: str = "Name", sort_asc: str = "a", namematch: str = ""):
         user, auth_error = self.authenticated_user()
@@ -965,7 +965,7 @@ class GUIHandler(MetaCatHandler):
             owned_namespaces = owned_namespaces, other_namespaces=other_namespaces,
             selection=selection, user=user, **self.messages())
 
-    @gui_router.api_route("/create_dataset", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/create_dataset", methods=["GET", "POST"])
     def create_dataset(self):
         user, auth_error = self.authenticated_user()
         if not user:
@@ -980,7 +980,7 @@ class GUIHandler(MetaCatHandler):
             self.redirect("./create_namespace?error=%s" % (quote_plus("You do not own any namespace. Create one first"),))
         return self.render_to_response("dataset.html", namespaces=namespaces, edit=False, create=True, mode="create")
         
-    @gui_router.api_route("/dataset", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/dataset", methods=["GET", "POST"])
     @sanitize()
     def dataset(self, namespace: Optional[str] = None, name: Optional[str] = None):
         me, auth_error = self.authenticated_user()
@@ -1016,7 +1016,7 @@ class GUIHandler(MetaCatHandler):
             edit=edit, 
             create=False, namespaces=namespaces, **self.messages())
             
-    @gui_router.api_route("/child_subset_candidates", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/child_subset_candidates", methods=["GET", "POST"])
     @sanitize()
     def child_subset_candidates(self, namespace: Optional[str] = None, prefix: Optional[str] = None, ds_namespace: Optional[str] = None, ds_name: Optional[str] = None):
         db = self.App.connect()
@@ -1028,7 +1028,7 @@ class GUIHandler(MetaCatHandler):
             datasets = datasets - children - ancestors
         return Response(json.dumps({"namespace": namespace, "names": sorted([name for namespace, name in datasets])}), media_type="text/json")
 
-    @gui_router.api_route("/delete_dataset", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/delete_dataset", methods=["GET", "POST"])
     @sanitize()
     def delete_dataset(self, namespace: Optional[str] = None, name: Optional[str] = None):
         user, auth_error = self.authenticated_user()
@@ -1093,7 +1093,7 @@ class GUIHandler(MetaCatHandler):
                 del reqs[n]
         return reqs
 
-    @gui_router.api_route("/save_dataset", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/save_dataset", methods=["GET", "POST"])
     @sanitize()
     def save_dataset(self):
         #print("save_dataset:...")
@@ -1147,7 +1147,7 @@ class GUIHandler(MetaCatHandler):
             
         self.redirect(f"./dataset?namespace={namespace}&name={name}" + ("&message=" + quote_plus(warning) if warning else ""))
         
-    @gui_router.api_route("/remove_child_dataset", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/remove_child_dataset", methods=["GET", "POST"])
     @sanitize()
     def remove_child_dataset(self, namespace: Optional[str] = None, name: Optional[str] = None, child_namespace: Optional[str] = None, child_name: Optional[str] = None):
         user, auth_error = self.authenticated_user()
@@ -1172,7 +1172,7 @@ class GUIHandler(MetaCatHandler):
 #
 # --- roles
 #
-    @gui_router.api_route("/roles", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/roles", methods=["GET", "POST"])
     def roles(self):
         me, auth_error = self.authenticated_user()
         if me is None:
@@ -1182,8 +1182,8 @@ class GUIHandler(MetaCatHandler):
         admin = me.is_admin()
         return self.render_to_response("roles.html", roles=roles, edit=admin, create=admin, **self.messages())
         
-    @gui_router.api_route("/role", methods=["GET", "POST"])
-    @gui_router.api_route("/role/{relpath:path}", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/role", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/role/{relpath:path}", methods=["GET", "POST"])
     @sanitize()
     def role(self, relpath: str = "", name: Optional[str] = None):
         name = name or relpath
@@ -1197,7 +1197,7 @@ class GUIHandler(MetaCatHandler):
         #print("all_users:", all_users)
         return self.render_to_response("role.html", role=role, users=users, edit=admin or me in role, create=False, **self.messages())
 
-    @gui_router.api_route("/create_role", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/create_role", methods=["GET", "POST"])
     def create_role(self):
         me, auth_error = self.authenticated_user()
         if me is None:
@@ -1208,7 +1208,7 @@ class GUIHandler(MetaCatHandler):
         all_users = list(DBUser.list(db))
         return self.render_to_response("role.html", all_users=all_users, edit=False, create=True)
         
-    @gui_router.api_route("/save_role", methods=["GET", "POST"])
+    @gui_router.api_route("/gui/save_role", methods=["GET", "POST"])
     @sanitize(exclude="description")
     def save_role(self):
         me, auth_error = self.authenticated_user()
