@@ -904,7 +904,7 @@ class GUIHandler(MetaCatHandler):
     
     @gui_router.api_route("/gui/datasets", methods=["GET", "POST"])
     @sanitize()
-    def datasets(self, selection: Optional[str] = None, page: Optional[str] = 0, page_size: Optional[str] = 1000, sort_by: str = "Name", sort_asc: str = "a", namematch: str = ""):
+    def datasets(self, selection: Optional[str] = None, page: Optional[str] = "0", page_size: Optional[str] = "1000", sort_by: str = "Name", sort_asc: str = "a", namematch: str = ""):
         user, auth_error = self.authenticated_user()
         if not user and not self.App.Cfg.get("allow_public", False):
             self.redirect(self.scriptUri() + "/auth/login?redirect=" + self.scriptUri() + f"/gui/datasets?selection={selection if selection else ''}&page={page if page else ''}&page_size={page_size if page_size else ''}&sort_by={sort_by if sort_by else ''}&sort_asc={sort_asc}&namematch={namematch}")
