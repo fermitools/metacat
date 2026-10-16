@@ -2,18 +2,21 @@
 # Multi-group authentication server
 #
 
-from metacat.auth.server import AuthHandler
+from metacat.auth.server import auth_router, install_exception_handlers
 from metacat.auth.auth_core import AuthenticationCore
-from webpie import Response, WPApp, WPHandler
 from metacat.util import to_str
+from fastapi import FastAPI
+from fastapi.responses import Response, PlainTextResponse
+from a2wsgi import ASGIMiddleware
 
-import time, os, yaml, os.path
+import time, os, yaml, os.path, sys
 from urllib.parse import quote_plus, unquote_plus
 
-class MultiGroupAuthServerApp(WPApp):
+class MultiGroupAuthServerApp(object):
 
-    def __init__(self, config, root_handler, **args):
-        WPApp.__init__(self, root_handler, **args)
+    TokenExpiration = 24*3600*7
+
+    def __init__(self, config):
         self.Cfg = config
 
         self.Cores = {
@@ -27,7 +30,7 @@ class MultiGroupAuthServerApp(WPApp):
     def auth_core(self, group):
         return self.Cores.get(group)
         
-    def response_with_auth_cookie(self, user, redirect, token=None, expiration=None):
+    def response_with_auth_cookie(self, user, redirect, token=None, expiration=None, group=None):
         # expiration here is absolute time
         #print("response_with_auth_cookie: user:", user, "  redirect:", redirect)
         if expiration is None:
@@ -35,29 +38,19 @@ class MultiGroupAuthServerApp(WPApp):
         if token is not None:
             encoded = token.encode()
         else:
-            token, encoded = self.AuthCore.generate_token(user, {"user": user}, expiration=expiration)
+            token, encoded = self.auth_core(group).generate_token(user, {"user": user}, expiration=expiration)
         #print("Server.App.response_with_auth_cookie: new token created:", token.Payload)
         #print("   ", encoded)
         #print("   time:", time.time())
         if redirect:
-            resp = Response(status=302, headers={"Location": redirect})
+            resp = Response(status_code=302, headers={"Location": redirect})
         else:
-            resp = Response(status=200, content_type="text/plain")
+            resp = PlainTextResponse("")
         #print ("response:", resp, "  reditrect=", redirect)
         resp.headers["X-Authentication-Token"] = to_str(encoded)
-        resp.set_cookie("auth_token", encoded, max_age = max(0, int(expiration - time.time())))
+        resp.set_cookie("auth_token", to_str(encoded), max_age = max(0, int(expiration - time.time())))
         #print("BaseApp.response_with_auth_cookie: returning", resp)
         return resp
-
-        
-class MultiGroupTopHandler(WPHandler):
-
-    def __init__(self, request, app):
-        WPHandler.__init__(self, request, app)
-        for group in app.groups():
-            self.addHandler(group, AuthHandler(request, app, group))
-        # allow /auth/ on front for direct uwsgi setup
-        self.addHandler('auth', self)
 
 def create_application(config=None):
     if config is None:  config = os.environ.get("AUTH_SERVER_CFG")
@@ -66,16 +59,19 @@ def create_application(config=None):
         sys.exit(1)
     if isinstance(config, str):
         config = yaml.load(open(config, "r"), Loader=yaml.SafeLoader)
-    app = MultiGroupAuthServerApp(config, MultiGroupTopHandler)
-    #templdir = config.get("templates", "")
-    #if templdir.startswith("$"):
-    #    templdir = os.environ[templdir[1:]]
-    #app.initJinjaEnvironment(tempdirs=[templdir, "."])
-    return app
+    app = MultiGroupAuthServerApp(config)
+
+    fastapi_app = FastAPI(title="MetaCat Multi-Group Authentication Server", docs_url=None, redoc_url=None, openapi_url=None)
+    fastapi_app.state.metacat_app = app
+    install_exception_handlers(fastapi_app)
+    # each group has its own set of the authentication methods under /<group>/...
+    # allow /auth/ on front for direct uwsgi setup
+    fastapi_app.include_router(auth_router, prefix="/auth/{group}")
+    fastapi_app.include_router(auth_router, prefix="/{group}")
+    return fastapi_app
 
 if __name__ == "__main__":
-    from webpie import HTTPServer
-    import sys, getopt
+    import uvicorn, getopt, ssl
     
     Usage = """
     python mg_auth_server.py [-p <port>] [-c <config.yaml>]
@@ -94,14 +90,19 @@ if __name__ == "__main__":
         print("Port number is not configured")
         sys.exit(1)
 
-    key = cert = ca_file = None
+    ssl_args = {}
     if "ssl" in config:
-        key = config["ssl"]["key"]
-        cert = config["ssl"]["cert"]
-        ca_file = config["ssl"]["ca_bundle"]
+        ssl_args = dict(
+            ssl_keyfile = config["ssl"]["key"],
+            ssl_certfile = config["ssl"]["cert"],
+            ssl_ca_certs = config["ssl"]["ca_bundle"],
+            ssl_cert_reqs = ssl.CERT_OPTIONAL
+        )
         
-    server = HTTPServer(port, app, certfile=cert, keyfile=key, verify="optional", ca_file=ca_file)
     print("staring on port", port)
-    server.run()
+    uvicorn.run(app, host="0.0.0.0", port=port, **ssl_args)
 else:
-    application = create_application()
+    # FastAPI (ASGI) application, e.g. for uvicorn
+    app = create_application()
+    # WSGI application, e.g. for mod_wsgi or uWSGI
+    application = ASGIMiddleware(app)
