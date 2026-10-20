@@ -219,8 +219,8 @@ def _determine_needs_parens(i, n, precedence, associativity):
     t1 = None
     if not n:
         return False
-    if n.precedence is None:
-        t1 = False
+    if n.precedence is None or precedence is None:
+        return False 
     else:
         t1 = precedence < n.precedence
 
@@ -318,19 +318,29 @@ class SetNode(BinaryOperatorNode, NegatableNode):
         return hash((BinaryOperatorNode.__hash__(self), self.negated))
 
     def meta_render(self):
+        logging.debug("SetNode meta_render...")
         if self.negated:
             raise NotImplementedError("cannot negate set operations in Metacat")
         notnonelen = sum([1 for n in self.nodes if n])
+        logging.debug(f"{notnonelen=}")
         if notnonelen == 0:
             return
         if notnonelen == 1:
+            logging.debug(f"{self.nodes=}")
             if self.nodes[0]:
-                return self.nodes[0].meta_render()
+                logging.debug(f"meta_rendering {self.nodes[0]=}")
+                for x in self.nodes[0].meta_render():
+                    yield x
+                return
             else:
-                return self.nodes[1].meta_render()
+                logging.debug(f"meta_rendering {self.nodes[1]=}")
+                for x in self.nodes[1].meta_render():
+                    yield x
+                return
         # debugging
         # yield f"[{notnonelen=} {repr(self.nodes)}]"
         if self.op in ("union", "intersect"):
+            logging.debug("union or intersect case")
             if self.op == "intersect":
                 m_op = "join"
             else:
@@ -583,6 +593,7 @@ class DimNode(NegatableNode):
 
     def __init__(self, dim, op, value):
         self.dim, self.op, self.value = dim, op.replace(" ", ""), value
+        self.precedence = 0
 
         self.notmap = {
             "=": "!=",
@@ -806,6 +817,7 @@ class MetaDatasetNode(NodeBase):
         return hash(self.defname)
 
     def meta_render(self):
+        logging.debug("MetaDatasetNode.meta_render() {self.defname=}")
         yield "files from"
         yield self.default_namespace + "snapshot_" + str(self.defname)
 
@@ -1032,6 +1044,7 @@ class MetaCatTransformer(ParseTreeTransformer):
             if is_set_level_node(tree) and not is_set_level_node(subtree):
                 return True
         elif self.ptdepth == 0 and not is_set_level_node(self.node_path[0]):
+            logging.debug("toplevel non-set but zero")
             return True
         return False
 
@@ -1042,6 +1055,12 @@ class MetaCatTransformer(ParseTreeTransformer):
         else:
             self.node_path[self.ptdepth] = node
         self.ptdepth = self.ptdepth + 1
+
+        orflag = False
+        if hasattr(node,"op") and node.op == "or":
+            # necessary but not sufficient...
+            orflag = True
+
         logging.debug(f"visiting {self.ptdepth=} {node=}")
         # actually visit
         node = ParseTreeTransformer.visit(self, node)
@@ -1052,7 +1071,10 @@ class MetaCatTransformer(ParseTreeTransformer):
         # now add hoisted subtrees..
         if self.setboundary():
 
+
+
             logging.debug(f"hoisting:")
+            logging.debug(f"{orflag=} {self.ptdepth=}")
             logging.debug(f"{self.proj_terms=}")
             logging.debug(f"{self.rse_terms=}")
             logging.debug(f"{self.parentage_terms=}")
@@ -1065,7 +1087,7 @@ class MetaCatTransformer(ParseTreeTransformer):
                     if self.proj_terms[0].dim == 'consumer_id':
                         self.proj_id_term = self.proj_terms[0]
                 if len(self.proj_terms) > 1:
-                    pt = AndNode(*self.proj_terms)
+                    pt = OrNode(*self.proj_terms) if orflag else  AndNode(*self.proj_terms)
                 elif len(self.proj_terms) == 1:
                     pt = self.proj_terms[0]
                 self.proj_terms = []
@@ -1075,31 +1097,31 @@ class MetaCatTransformer(ParseTreeTransformer):
             if self.rse_terms:
                 self.modified = True
                 if len(self.rse_terms) > 1:
-                    rt = AndNode(*self.rse_terms)
+                    rt = OrNode(*self.rse_terms) if orflag else AndNode(*self.rse_terms)
                 elif len(self.rse_terms) == 1:
                     rt = self.rse_terms[0]
                 self.rse_terms = []
                 node = MetaFilterNode("rucio_replicas", None, node, rt)
 
             if self.parentage_terms:
-                node = SetNode("intersect", node, *self.parentage_terms)
+                node = SetNode("intersect" if orflag else "union", node, *self.parentage_terms)
 
             if self.snapshot_terms:
                 if len(self.snapshot_terms) == 1:
                     n1 = MetaDatasetNode(self.snapshot_terms[0].value)
                 else:
                     n1 = SetNode(
-                        "intersect",
+                        "union" if orflag else "intersection",
                         *[MetaDatasetNode(n.value) for n in self.snapshot_terms],
                     )
-                node = SetNode("intersect", n1, node)
+                node = SetNode("union" if orflag else "intersect", n1, node)
 
             if self.def_terms:
                 # xxx this currently assumes defname:whatever is and-ed
                 # or similar; need a separate list of or-ed ones that
                 # we would combine with "union" if needed...
                 self.def_terms.append(node)
-                node = SetNode("intersect", *self.def_terms)
+                node = SetNode("union" if orflag else "intersect", *self.def_terms)
                 self.def_terms = []
 
             # similarly for project, definitions
@@ -1161,7 +1183,7 @@ class MetaCatTransformer(ParseTreeTransformer):
             # 2) have as base files from snapshot for the project
             self.modified = True
             self.proj_id_term = node
-            node2 = DimNode(node.dim, "=", "for_project_" + node.value)
+            node2 = DimNode(node.dim, "=", "for_project_" + str(node.value))
             if self.parent_sets():
                 logging.debug(f"snapshot dim rendered here: {repr(node2)}")
                 return MetaDatasetNode(node2.value)

@@ -31,12 +31,12 @@ if __name__ == "__main__":
     for dims in sys.stdin.readlines():
         m = leading_re.match( dims )
         if m:
-            #print("saw leading: ", m.group(0))
+            logging.debug(f"saw leading: {m.group(0)}")
             leading_cols = m.group(0)
             dims = leading_re.sub('', dims)
             m = trailing_re.search( dims )
             if m:
-                #print("saw trailing: ", m.group(0))
+                logging.debug(f"saw trailing: {m.group(0)}")
                 trailing_cols = m.group(0)
                 dims = trailing_re.sub('', dims)
             else:
@@ -46,17 +46,17 @@ if __name__ == "__main__":
             trailing_cols = ''
 
 
-        #print("=-=-=-=-=-=-=-=-=-=")
-        #print(dims) 
-        #print("===================")
+        logging.debug("=-=-=-=-=-=-=-=-=-=")
+        logging.debug(dims) 
+        logging.debug("===================")
         try:
             t = parser.parse_string(dims)
-            #print("parse tree: ", str(t), "\n\n")
-            #print("-------------------")
-            mt = MetaCatTransformer(dbconninfo).visit(t)
+            logging.debug(f"parse tree: {str(t)}\n\n")
+            logging.debug("-------------------")
+            mt = MetaCatTransformer().visit(t)
             mt = MetaCatTransformerPart2().visit(mt)
-            #print("meta tree: ", str(mt), "\n\n")
+            logging.debug(f"meta tree: {str(mt)}\n\n")
             meta = meta_render_dimensions_tree(mt)
         except DimParserError:
             meta = dims.strip()
-        print(leading_cols, meta, trailing_cols)
+        print(f"{leading_cols}{meta}{trailing_cols}")
