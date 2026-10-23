@@ -113,6 +113,7 @@ class NodeBase(object):
         self.precedence = None
         self.nodes = []  # No children by default
         self.default_namespace = "mengel:"
+        self._depth = None
 
     def __str__(self):
         return formatTree(self)
@@ -1081,6 +1082,7 @@ class MetaCatTransformer(ParseTreeTransformer):
             self.node_path.append(node)
         else:
             self.node_path[self.ptdepth] = node
+        node._depth = self.ptdepth
         self.ptdepth = self.ptdepth + 1
 
         orflag = False
@@ -1095,8 +1097,36 @@ class MetaCatTransformer(ParseTreeTransformer):
         self.ptdepth = self.ptdepth - 1
         logging.debug(f"filtered to: {node}")
 
+        if self.setboundary():
+
+            logging.debug(f"set hoisting:")
+            logging.debug(f"{orflag=} {self.ptdepth=}")
+            logging.debug(f"{self.parentage_terms=}")
+            logging.debug(f"{self.snapshot_terms=}")
+
+            if self.parentage_terms:
+                node = SetNode("intersection" if orflag else "union", node, *self.parentage_terms)
+
+            if self.snapshot_terms:
+                if len(self.snapshot_terms) == 1:
+                    n1 = MetaDatasetNode(self.snapshot_terms[0].value)
+                else:
+                    n1 = SetNode(
+                        "union" if orflag else "intersection",
+                        *[MetaDatasetNode(n.value) for n in self.snapshot_terms],
+                    )
+                node = SetNode("union" if orflag else "intersect", n1, node)
+
+            if self.def_terms:
+                # xxx this currently assumes defname:whatever is and-ed
+                # or similar; need a separate list of or-ed ones that
+                # we would combine with "union" if needed...
+                self.def_terms.append(node)
+                node = SetNode("union" if orflag else "intersect", *self.def_terms)
+                self.def_terms = []
+
         if self.ptdepth == 0:
-        # now add hoisted subtrees..
+            # now add hoisted subtrees..
             logging.debug(f"filter hoisting:")
             logging.debug(f"{self.proj_terms=}")
             logging.debug(f"{self.rse_terms=}")
@@ -1128,35 +1158,7 @@ class MetaCatTransformer(ParseTreeTransformer):
                     "every_nth", None, node, None, filter_int_values = [self.nth_term, 1]
                 )
 
-        if self.setboundary():
 
-            logging.debug(f"set hoisting:")
-            logging.debug(f"{orflag=} {self.ptdepth=}")
-            logging.debug(f"{self.parentage_terms=}")
-            logging.debug(f"{self.snapshot_terms=}")
-
-            if self.parentage_terms:
-                node = SetNode("intersect" if orflag else "union", node, *self.parentage_terms)
-
-            if self.snapshot_terms:
-                if len(self.snapshot_terms) == 1:
-                    n1 = MetaDatasetNode(self.snapshot_terms[0].value)
-                else:
-                    n1 = SetNode(
-                        "union" if orflag else "intersection",
-                        *[MetaDatasetNode(n.value) for n in self.snapshot_terms],
-                    )
-                node = SetNode("union" if orflag else "intersect", n1, node)
-
-            if self.def_terms:
-                # xxx this currently assumes defname:whatever is and-ed
-                # or similar; need a separate list of or-ed ones that
-                # we would combine with "union" if needed...
-                self.def_terms.append(node)
-                node = SetNode("union" if orflag else "intersect", *self.def_terms)
-                self.def_terms = []
-
-            # similarly for project, definitions
         return node
 
     def visit_NotNode(self, node):
