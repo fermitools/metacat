@@ -185,6 +185,8 @@ def _meta_infix_render(op, nodes, precedence):
         if i > 0:
             yield op
         if n:
+            if op == "-" and not is_set_level_node(n):
+                 yield "files where"
             r = n.meta_render()
         else:
             r = []
@@ -339,9 +341,9 @@ class SetNode(BinaryOperatorNode, NegatableNode):
                 return
         # debugging
         # yield f"[{notnonelen=} {repr(self.nodes)}]"
-        if self.op in ("union", "intersect"):
+        if self.op in ("union", "intersect", "intersection"):
             logging.debug("union or intersect case")
-            if self.op == "intersect":
+            if self.op in ("intersect", "intersection"):
                 m_op = "join"
             else:
                 m_op = self.op
@@ -439,6 +441,8 @@ class WithNode(UnaryNode):
                 v = ",".join(_quote_value(str(e)) for e in v)
             else:
                 v = _quote_value(str(v))
+            if k == 'offset':
+                k = 'skip'
             yield "%s %s" % (k, v)
 
     def render(self):
@@ -568,6 +572,7 @@ def _quote_value(val):
     """Determine if a value should be quoted
     (This function quotes more than is really necessary"""
     quote = None
+    val = str(val)
     if "'" in val:
         quote = '"'
     elif val == "" or '"' in val or " " in val or _quotechars.search(val):
@@ -604,6 +609,7 @@ class DimNode(NegatableNode):
             ">": "<=",
             "in": "not in",
             "notin": "in",
+            "notlike": "~",
             "not in": "in",
             "not like": "~",
             "like": "!~",
@@ -652,7 +658,7 @@ class DimNode(NegatableNode):
 
     def meta_trans(self, name):
         name = re.sub(
-            "^(data_stream|run_number|run_type|data_tier|end_time|event_count|file_content_status|file_format|file_partition|file_type|first_event_number|last_event_number|process_id|retired_date|runs|scope|start_time)$",
+            "^(data_stream|first_event|last_event|run_number|run_type|data_tier|end_time|event_count|file_content_status|file_format|file_partition|file_type|first_event_number|last_event_number|process_id|retired_date|runs|scope|start_time)$",
             "core.\\1",
             name,
         )
@@ -686,25 +692,39 @@ class DimNode(NegatableNode):
                 yield ")"  # mwm -- added parens
 
             val = _gen()
+
+
         elif isinstance(self.value, NodeBase):
             val = self.value.render()
         else:
             val = [_quote_value(self.value)]
 
-        if self.op.startswith("not") or self.negated:
+        if self.negated:
             op = self.notmap[self.op]
         else:
             op = self.op
 
+        if isinstance(self.value, list) and op == "=":
+            op = "in"
+
+        if isinstance(self.value, str) and  "%" in self.value and op == "=":
+            op = "~"
+
         if op == "like":
             op = "~"
+
+        if op == "notlike":
+            op = "!~"
 
         yield self.meta_trans(self.dim)
         yield op
         for v in val:
             if self.dim == 'consumed_status' and v in ('consumed','completed'):
                 v = 'done'
-            yield v
+            if op in ("~", "!~"):
+                yield f"'{v}'".replace('%','.*')
+            else:
+                yield v
 
     def render(self):
         if self.negated:
@@ -819,6 +839,8 @@ class MetaDatasetNode(NodeBase):
     def meta_render(self):
         logging.debug("MetaDatasetNode.meta_render() {self.defname=}")
         yield "files from"
+        if "%" in self.defname:
+            yield "datasets matching"
         yield self.default_namespace + "snapshot_" + str(self.defname)
 
     def render(self):
@@ -831,10 +853,11 @@ class MetaFilterNode(NodeBase):
     def fromTokens(cls, instr, loc, tokens):
         return cls(tokens[0])
 
-    def __init__(self, filter_name, filter_param_nodes, node, where_nodes):
+    def __init__(self, filter_name, filter_param_nodes, node, where_nodes, filter_int_values=[]):
         NodeBase.__init__(self)
         self.filter_name = filter_name
         self.filter_param_nodes = filter_param_nodes
+        self.filter_int_values = filter_int_values
         self.nodes = []
         self.nodes.append(node)
         self.where_nodes = where_nodes
@@ -863,6 +886,11 @@ class MetaFilterNode(NodeBase):
         if self.filter_param_nodes:
             for t in self.filter_param_nodes.meta_render():
                 yield t
+        sep = ''
+        if self.filter_int_values:
+            for n in self.filter_int_values:
+                yield sep + str(n)
+                sep = ','
         yield ")"
         yield "("
         if self.nodes and self.nodes[0]:
@@ -990,6 +1018,7 @@ class MetaCatTransformer(ParseTreeTransformer):
         self.node_path = []
         self.rse_terms = []
         self.def_terms = []
+        self.nth_term = None
         self.snapshot_terms = []
         self.proj_id_term = None
         self.proj_terms = []
@@ -998,12 +1027,6 @@ class MetaCatTransformer(ParseTreeTransformer):
         self.rse_dims = {
             "full_path",
             "tape_label",
-        }
-        self.def_dims = {
-            "dataset_def_id",
-            "dataset_def_name",
-            "dataset_def_name_newest_snapshot",
-            "def_snapshot",
         }
         self.projname_dims = {
             "project_description",
@@ -1017,8 +1040,12 @@ class MetaCatTransformer(ParseTreeTransformer):
             "consumer_process_id",
         }
         self.snapshot_dims = {
+            "dataset_def_id",
+            "dataset_def_name",
+            "def_snapshot",
             "snapshot_id",
             "snapshot_for_project_name",
+            "dataset_def_name_newest_snapshot",
         }
 
     def allsets(self, offset=0):
@@ -1068,24 +1095,18 @@ class MetaCatTransformer(ParseTreeTransformer):
         self.ptdepth = self.ptdepth - 1
         logging.debug(f"filtered to: {node}")
 
+        if self.ptdepth == 0:
         # now add hoisted subtrees..
-        if self.setboundary():
-
-
-
-            logging.debug(f"hoisting:")
-            logging.debug(f"{orflag=} {self.ptdepth=}")
+            logging.debug(f"filter hoisting:")
             logging.debug(f"{self.proj_terms=}")
             logging.debug(f"{self.rse_terms=}")
-            logging.debug(f"{self.parentage_terms=}")
-            logging.debug(f"{self.snapshot_terms=}")
             if self.proj_terms:
                 self.modified = True
                 if not self.proj_id_term:
                     # if consumer_id mentioned but no project_name, make
                     # it the project lookup term
-                    if self.proj_terms[0].dim == 'consumer_id':
-                        self.proj_id_term = self.proj_terms[0]
+                    if self.proj_terms[0].dim in  ('consumer_id','consumer_process_id'):
+                        self.proj_id_term = DimNode( self.proj_terms[0].dim, self.proj_terms[0].op, self.proj_terms[0].value[0])
                 if len(self.proj_terms) > 1:
                     pt = OrNode(*self.proj_terms) if orflag else  AndNode(*self.proj_terms)
                 elif len(self.proj_terms) == 1:
@@ -1102,6 +1123,17 @@ class MetaCatTransformer(ParseTreeTransformer):
                     rt = self.rse_terms[0]
                 self.rse_terms = []
                 node = MetaFilterNode("rucio_replicas", None, node, rt)
+            if self.nth_term:
+                node = MetaFilterNode(
+                    "every_nth", None, node, None, filter_int_values = [self.nth_term, 1]
+                )
+
+        if self.setboundary():
+
+            logging.debug(f"set hoisting:")
+            logging.debug(f"{orflag=} {self.ptdepth=}")
+            logging.debug(f"{self.parentage_terms=}")
+            logging.debug(f"{self.snapshot_terms=}")
 
             if self.parentage_terms:
                 node = SetNode("intersect" if orflag else "union", node, *self.parentage_terms)
@@ -1184,17 +1216,15 @@ class MetaCatTransformer(ParseTreeTransformer):
             self.modified = True
             self.proj_id_term = node
             node2 = DimNode(node.dim, "=", "for_project_" + str(node.value))
-            if self.parent_sets():
-                logging.debug(f"snapshot dim rendered here: {repr(node2)}")
-                return MetaDatasetNode(node2.value)
-            else:
-                logging.debug(f"snapshot dim pushed up: {repr(node)}")
-                self.snapshot_terms.append(node2)
-                return None
+            logging.debug(f"snapshot dim pushed up: {repr(node)}")
+            self.snapshot_terms.append(node2)
+            return None
+
         if node.dim in self.proj_dims:
             self.modified = True
             self.proj_terms.append(node)
             return None
+
         if node.dim in self.rse_dims:
             logging.debug(f"handling {node}: should be returning None")
             self.modified = True
@@ -1202,16 +1232,16 @@ class MetaCatTransformer(ParseTreeTransformer):
             return None
         if node.dim in self.snapshot_dims:
             self.modified = True
-            if self.parent_sets():
-                logging.debug(f"snapshot dim rendered here: {repr(node)}")
-                return MetaDatasetNode(node.value)
-            else:
-                logging.debug(f"snapshot dim pushed up: {repr(node)}")
-                self.snapshot_terms.append(node)
-                return None
+            logging.debug(f"snapshot dim pushed up: {repr(node)}")
+            self.snapshot_terms.append(node)
+            return None
         return node
 
     def visit_WithNode(self, node):
+        if "stride" in node.params:
+              self.nth_term = node.params["stride"]
+              del node.params["stride"]
+
         return WithNode(self.visit(node.node), node.params)
 
     def visit_DefinitionNode(self, node):

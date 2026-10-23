@@ -18,6 +18,9 @@ trailing_re =  re.compile(r'(,[^,]*){4}$')
 if __name__ == "__main__":
 
     loglevel = logging.INFO
+    query_only = False
+    if "-q" in sys.argv:
+        query_only  = True
     if "-d" in sys.argv:
         loglevel = logging.DEBUG
     if "--db" in sys.argv:
@@ -30,7 +33,7 @@ if __name__ == "__main__":
 
     for dims in sys.stdin.readlines():
         m = leading_re.match( dims )
-        if m:
+        if m and not query_only:
             logging.debug(f"saw leading: {m.group(0)}")
             leading_cols = m.group(0)
             dims = leading_re.sub('', dims)
