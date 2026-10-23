@@ -352,15 +352,16 @@ class SetNode(BinaryOperatorNode, NegatableNode):
             yield "("
             cflag = False
             for n in self.nodes:
+                if not n:
+                    continue
+
                 if cflag:
                     yield ","
                 cflag = True
                 if not is_set_level_node(n):
                     yield "files where"
-
-                if n:
-                    for t in n.meta_render():
-                        yield t
+                for t in n.meta_render():
+                    yield t
             yield ")"
         else:
             for t in BinaryOperatorNode.meta_render(self):
@@ -1166,6 +1167,11 @@ class MetaCatTransformer(ParseTreeTransformer):
         return self.visit(node.node)
 
     def visit_AndNode(self, node):
+        setconvert = any([ isinstance(n, SetNode) for n in node.nodes])
+        if setconvert:
+            node = SetNode("union" if node.negated else "intersection", *node.nodes )
+            return self.visit(node)
+
         if node.negated:
             for n in node.nodes:
                 n.negated = not n.negated
@@ -1187,12 +1193,19 @@ class MetaCatTransformer(ParseTreeTransformer):
             return node
 
     def visit_OrNode(self, node):
+        setconvert = any([ isinstance(n, SetNode) for n in node.nodes])
+
+        if setconvert:
+            node = SetNode("intersection" if node.negated else "union", *node.nodes )
+            return self.visit(node)
+
         if node.negated:
             # DeMorgan is my friend...
             for n in node.nodes:
                 n.negated = not n.negated
             node = AndNode(*node.nodes)
             # print(f"vist_OrNode converted to {node}", file=sys.stderr)
+
 
         nn = []
         for i, n in enumerate(node.nodes):
@@ -1302,6 +1315,7 @@ class MetaCatTransformerPart2(ParseTreeTransformer):
             if hangunder and tohang:
                 break
 
+
         if hangunder and tohang:
             self.modified = True
             hangunder.nodes[0] = tohang
@@ -1310,15 +1324,23 @@ class MetaCatTransformerPart2(ParseTreeTransformer):
             else:
                 del node.nodes[tohangslot]
 
+        for rep in range(4):
+            for i  in range(len(node.nodes)):
+                # collapse union( union (...)) etc
+                if isinstance(node.nodes[i], SetNode) and node.nodes[i].op == node.op:
+                    self.modified = True
+                    node.nodes.extend(node.nodes[i].nodes)
+                    del node.nodes[i] 
+
         # fix 'join(files something, files where)'
         if (
-            node.op == "intersect"
+            node.op in  ("intersect", "intersection")
             and isinstance(node.nodes[1], BinaryOperatorNode)
             and not node.nodes[1].nodes
         ):
             node = node.nodes[0]
 
-        if node.op == "intersect" and isinstance(node.nodes[1], IsRelativeOfNode):
+        if node.op in ("intersect", "intersection") and isinstance(node.nodes[1], IsRelativeOfNode):
             if node.nodes[1].subtree == None:
                 node = node.nodes[0]
 
