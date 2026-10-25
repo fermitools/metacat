@@ -4,32 +4,59 @@ import configparser
 import os
 import sys
 
-class migrator:
 
+class migrator:
     def __init__(self, cnf):
         self.psql_sam = cnf.get("psql_commands", "sam_db")
         self.psql_meta = cnf.get("psql_commands", "meta_db")
-        os.environ.update(dict(cnf['env']))
+        self.psql_ddisp = cnf.get("psql_commands", "ddisp_db")
+        os.environ.update(dict(cnf["env"]))
         self.ordered_tables = [
-            'users',
-            'roles',
-            'namespaces',
-            'files',
-            'parent_child',
-            'queries',
-            'datasets',
-            'datasets_parent_child',
-            'files_datasets',
+            "users",
+            "roles",
+            "namespaces",
+            "files",
+            "parent_child",
+            "queries",
+            "datasets",
+            "datasets_parent_child",
+            "files_datasets",
+        ]
+        self.ddisp_tables = [
+            "file_handles",
+            "file_handles_log",
+            "projects",
+            "project_users",
         ]
 
-    def schlep_table(self, table, filter = "cat", format=""):
+    def schlep_table(
+        self,
+        table,
+        filter="cat",
+        format="",
+        filter_only=False,
+        tprefix="meta_",
+        ddisp=False,
+    ):
 
-       os.system(f'''
+        if filter_only:
+            psql_meta = "cat > /dev/null"
+        else:
+            psql_meta = self.psql_meta
+
+        sp = "metacat"
+        if ddisp:
+            sp = "data_dispatcher"
+            psql_meta = self.psql_ddisp
+
+        os.system(
+            f"""
            set -x;
-           {self.psql_sam}  -c "copy (select * from meta_{table}) TO stdout {format};" | 
+           {self.psql_sam}  -c "copy (select * from {tprefix}{table}) TO stdout {format};" | 
               {filter} |
-              {self.psql_meta} -c "set search_path=metacat; copy {table} from stdin {format};" 
-       ''')
+              {psql_meta} -c "set search_path=metacat; copy {table} from stdin {format};" 
+       """
+        )
 
     def migrate(self):
 
@@ -38,15 +65,27 @@ class migrator:
         os.system(f"{self.psql_meta} < clean_slate.sql")
 
         # schlep data...
-        for table in self.ordered_tables: 
+        for table in self.ordered_tables:
 
-            if table == 'queries':
-                self.schlep_table(table, filter='./sam_parser/new_query_converter.py', format='csv')
+            if table == "queries":
+                self.schlep_table(
+                    table, filter="./sam_parser/new_query_converter.py", format="csv"
+                )
             else:
                 self.schlep_table(table)
 
+        for table in self.ddisp_tables:
+            self.shlep_table(table, ddisp=True)
 
-if __name__ == '__main__':
+        self.schlep_table(
+            "file_names_locations",
+            filter="./upload_rucio.py",
+            format="csv",
+            tprefix="rucio_",
+        )
+
+
+if __name__ == "__main__":
 
     cp = configparser.ConfigParser()
 
@@ -55,4 +94,3 @@ if __name__ == '__main__':
 
     cp.read("migrator.ini")
     migrator(cp).migrate()
-

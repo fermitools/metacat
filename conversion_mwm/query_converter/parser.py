@@ -4,9 +4,13 @@
 import threading
 
 #import samutil.parser
+
 from pyparsing import *
 
-from parse_tree import *
+if not 'downcaseTokens' in globals():
+    downcaseTokens = common.downcaseTokens
+
+from .parse_tree import *
 
 #from dimension_query.exc import DimParserError, ForbiddenQuery
 class DimParserError(Exception):

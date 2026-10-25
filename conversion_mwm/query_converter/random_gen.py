@@ -1,9 +1,9 @@
 
 import sys
 import os
-from parse_tree import *
+from query_converter.parse_tree import *
 from random import random, randint, choice, seed
-from parser import DimParserError
+import query_converter.parser
 
 #def genTree(d):
 #    print "genTree(%d)" % d
@@ -117,7 +117,7 @@ def _genAvail():
      return choice(["any","virtual","bad","good"])
 
 if __name__ == "__main__":
-    import parser
+    import query_converter.parser
     #import dimension_query.exc
     if len(sys.argv) > 1:
        print("using seed:", int(sys.argv[1]))
@@ -130,12 +130,8 @@ if __name__ == "__main__":
     print(t)
     print("-------")
     dims = render_dimensions_tree(t)
-       
     print(dims)
     print("======")
-    if len(dims) > 4096:
-       print("too long!")
-       sys.exit(0)
     mt = MetaCatTransformer().visit(t)
     mt = MetaCatTransformerPart2().visit(mt)
     meta = meta_render_dimensions_tree(mt)
@@ -143,7 +139,7 @@ if __name__ == "__main__":
     sys.exit(0)
     try:
         newt = parser.parse_string(dims)
-    except DimParserError as ex:
+    except parser.DimParserError as ex:
         print("Parsing failed: %s" % ex)
         sys.exit(1)
     if newt != t:
@@ -152,7 +148,4 @@ if __name__ == "__main__":
         print()
         print("Mismatch!")
         sys.exit(1)
-
-
-
 

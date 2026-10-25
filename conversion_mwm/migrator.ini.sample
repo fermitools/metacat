@@ -5,3 +5,4 @@ PGPASSFILE=/some/place/.pgpass
 [psql_commands]
 sam_db = psql -h sam.dev.host -p 1234 -d sam_db -U sam_user
 meta_db = psql -h meta.dev.host -p 5678 -d meta_db -U meta_user
+ddisp_db = psql -h meta.dev.host -p 5678 -d meta_db -U meta_user
