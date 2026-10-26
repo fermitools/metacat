@@ -1181,7 +1181,39 @@ class MetaCatTransformer(ParseTreeTransformer):
         node.node.negated = not node.node.negated
         return self.visit(node.node)
 
+    def _is_dimlist(self, nodes, dimlist):
+        for i in range(len(dimlist)):
+            if not isinstance(nodes[i], DimNode) or nodes[i].dim != dimlist[i]:
+                logging.debug("_is_dimlist returning False")
+                return False
+        return True
+
     def visit_AndNode(self, node):
+
+        # special case:
+        #        snapshot_id 12082 
+        #    and snapshot_file_number >= 599 
+        #    and snapshot_file_number <= 797
+        # make it snapshot id 12082 with offset 599 limit 198
+        if ( node.nodes and 
+             len(node.nodes) == 3 and 
+             self._is_dimlist(
+                node.nodes, 
+                [
+                    "snapshot_id",
+                    "snapshot_file_number",
+                    "snapshot_file_number"
+                ]
+             )
+          ):
+            if node.nodes[1].op == ">=" and node.nodes[2].op == "<=":
+                low = int(node.nodes[1].value)
+                nvals = int(node.nodes[2].value) - low
+            else:
+                low = int(node.nodes[2].value)
+                nvals = int(node.nodes[1].value) - low
+            return WithNode( node.nodes[0], {"offset":low, "limit":nvals})
+
         setconvert = any([ isinstance(n, SetNode) for n in node.nodes])
         if setconvert:
             node = SetNode("union" if node.negated else "intersection", *node.nodes )
