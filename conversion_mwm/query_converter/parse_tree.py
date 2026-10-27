@@ -903,7 +903,7 @@ class MetaFilterNode(NodeBase):
                 sep = ','
         yield ")"
         yield "("
-        if self.nodes and self.nodes[0] and self.nodes[0].nodes:
+        if hasattr(self, 'nodes') and self.nodes and self.nodes[0] and self.nodes[0].nodes:
             logging.debug(f"{self.nodes[0]=}\n{is_set_level_node(self.nodes[0])=}")
             if not is_set_level_node(self.nodes[0]):
                 yield "files where"
@@ -1212,7 +1212,8 @@ class MetaCatTransformer(ParseTreeTransformer):
             else:
                 low = int(node.nodes[2].value)
                 nvals = int(node.nodes[1].value) - low
-            return WithNode( node.nodes[0], {"offset":low, "limit":nvals})
+            node = WithNode( node.nodes[0], {"offset":low, "limit":nvals})
+            return self.visit(node)
 
         setconvert = any([ isinstance(n, SetNode) for n in node.nodes])
         if setconvert:
