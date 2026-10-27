@@ -232,7 +232,7 @@ class HTTPClient(object):
         if response.headers.get("Content-Type") != "application/json-seq":
             raise WebAPIError(url, response)
 
-        return get_json_stream2(self, response)
+        return self.get_json_stream2(response)
 
     def get_json_stream2(self, response):
         for line in response.iter_lines():
