@@ -197,6 +197,9 @@ class GUICategoryHandler(MetaCatHandler):
             self.redirect("./index?error=%s" % (quote_plus(f"Permission denied"),))
 
         if request.POST.get("delete"):
+            subcategories = [c.Path for c in DBParamCategory.list(db, parent=path)]
+            if subcategories:
+                self.redirect(f"./show?path={path}&error=%s" % (quote_plus(f"Category has subcategories: {', '.join(subcategories)}"),))
             cat.delete()
             self.redirect("./index")
             

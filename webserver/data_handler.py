@@ -1600,8 +1600,14 @@ class DataHandler(MetaCatHandler):
 
         if not path:
             return 404, "Category path not specified"
-        if '.' in path and path != '.':
-            return 409, "Invalid relative category path. Cannot contain dot"
+        if path != '.':
+            words = path.split('.')
+            if not all(words):
+                return 400, f"Invalid category path {path}. Path segments can not be empty"
+            if len(words) > 1:
+                parent_path = '.'.join(words[:-1])
+                if not DBParamCategory.exists(db, parent_path):
+                    return 404, f"Parent category {parent_path} does not exist"
         if DBParamCategory.exists(db, path):
             return 409, f"Category {path} already exists"
         if not definitions:
@@ -1693,8 +1699,11 @@ class DataHandler(MetaCatHandler):
         cat = DBParamCategory.get(db, path)
         if cat is None:
             return 404, "Category not found"
-        if not (user.is_admin() or user in cat.owners()):
+        if not (user and user.is_admin()):
             return 403, "Permission denied"
+        subcategories = [c.Path for c in DBParamCategory.list(db, parent=path)]
+        if subcategories:
+            return 400, f"Category {path} has subcategories: {', '.join(subcategories)}"
         cat.delete()
         return "null", "text/json"
 

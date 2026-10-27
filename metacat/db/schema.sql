@@ -178,7 +178,7 @@ create table parameter_categories
     creator             text references users(username),
     created_timestamp   timestamp with time zone     default now(),
     definitions         jsonb,
-    required    boolean default 'false',
+    required    boolean default 'false'
 );
 
 grant select, insert, update, delete, truncate, references, trigger on all tables in schema metacat to dm_admin;

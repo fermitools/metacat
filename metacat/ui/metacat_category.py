@@ -116,6 +116,8 @@ class CreateCommand(CLICommand):
             defs = load_json(defs_file)
             if not isinstance(defs, dict):
                 raise InvalidArguments("Definitions must be a dictionary")
+        else:
+            defs = None
 
         cat = client.create_category(path=catname, owner_role=owner, restricted=restricted, required=required, description=description, definitions=defs)
         if "-j" in opts:

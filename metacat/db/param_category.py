@@ -68,12 +68,13 @@ class DBParamCategory(DBObject):
         c = db.cursor()
         columns = DBParamCategory.columns()
         if parent:
+            prefix = parent + "."
             c.execute(f"""
                 select {columns}
                     from parameter_categories
-                    where path like '{parent}.%'
+                    where left(path, length(%s)) = %s
                     order by path
-            """)
+            """, (prefix, prefix))
         else:
             c.execute(f"""
                 select {columns}
