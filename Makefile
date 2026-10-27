@@ -21,7 +21,7 @@ generic:
 	make VERSION=`python metacat/version.py` generic_with_version_defined
 
 dune:
-        echo "just make 'generic' now"
+	echo "just make 'generic' now"
 	# make VERSION=`python metacat/version.py`_dune dune_with_version_defined
 
 
