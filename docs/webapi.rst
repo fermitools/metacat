@@ -39,21 +39,23 @@ Exceptions
 
 MetaCatClient methods can raise the following exceptions:
 
-* ``metacat.webapi.InvalidArgument`` - method was called with an invalid argument
-* ``metacat.webapi.NotFoundError`` - an object is not found in the database
-* ``metacat.webapi.BadRequestError`` - invalid request
-* ``metacat.webapi.AlreadyExistsError`` - an object already exists in the database
-* ``metacat.webapi.PermissionDeniedError`` - permission denied
-* ``metacat.webapi.InvalidMetadataError`` - metadata validation failed
+* ``metacat.webapi.webapi.InvalidArgument`` - method was called with an invalid argument
+* ``metacat.webapi.webapi.NotFoundError`` - an object is not found in the database
+* ``metacat.webapi.webapi.BadRequestError`` - invalid request
+* ``metacat.webapi.webapi.AlreadyExistsError`` - an object already exists in the database
+* ``metacat.webapi.webapi.PermissionDeniedError`` - permission denied
+* ``metacat.webapi.webapi.InvalidMetadataError`` - metadata validation failed
 
-All these exceptions inherit from ``metacat.webapi.WebAPIError`` class. ``WebAPIError.__str__`` can be
+All these exceptions inherit from ``metacat.webapi.MCWebAPIError`` class. ``MCWebAPIError.__str__`` can be
 used to get humanly readable description of the exceptions, e.g.:
 
 .. code-block:: python
 
+    from metacat.webapi import MCWebAPIError
+
     try:
       results = metacat_client.method(...)
-    except metacat.webapi.WebAPIError as e:
+    except MCWebAPIError as e:
       print(e)
 
 
