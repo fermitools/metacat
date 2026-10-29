@@ -66,7 +66,7 @@ class ShowNamedQueryCommand(CLICommand):
 
 class CreateNamedQueryCommand(CLICommand):
 
-    Opts = "f:u update file="
+    Opts = "f:um:d: metadata description update file="
     Usage = """                                                -- create named query
         create [options] <namespace>:<name> <MQL query>         - inline query
         create [options] -f|--file <file> <namespace>:<name>    - read query from file
@@ -74,6 +74,8 @@ class CreateNamedQueryCommand(CLICommand):
         
         Options:
             -u|--update                -- update if the named query if exists
+            -m|--metadata              -- metadata to store with query
+            -d|--description           -- description to store with query
     """
     MinArgs = 1
     
@@ -90,9 +92,10 @@ class CreateNamedQueryCommand(CLICommand):
             else:
                 query_text = open(input_file, "r").read()
 
-        update = "-u" in opts or "--update" in opts
+        description = opts.get("-d", opts.get("--description",""))
+        metadata = json.loads(opts.get("-m", opts.get("--metadata","{}")))
         namespace, name = args[0].split(':', 1)
-        query = client.create_named_query(namespace, name, query_text, update=update)
+        query = client.create_named_query(namespace, name, query_text, update=update, metadata=metadata, description=description)
 
 class SearchCommand(CLICommand):
 

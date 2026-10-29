@@ -1691,7 +1691,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
             url += f"?namespace={namespace}"
         return self.get_json(url)
 
-    def create_named_query(self, namespace, name, source, parameters=[], update=False):
+    def create_named_query(self, namespace, name, source, parameters=[], update=False, description="", metadata={}):
         """
         Arguments
         ---------
@@ -1710,7 +1710,7 @@ class MetaCatClient(HTTPClient, TokenAuthClientMixin):
         -------
              JSON dump of data used to create query
         """
-        data = dict(namespace=namespace, name=name, source=source, parameters=parameters)
+        data = dict(namespace=namespace, name=name, source=source, parameters=parameters, description=description, metadata=metadata)
         url = "data/create_named_query"
         if update: url += "?update=yes"
         return self.post_json(url, data)
