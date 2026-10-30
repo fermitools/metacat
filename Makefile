@@ -15,18 +15,19 @@ CLIENT_TAR=$(TARDIR)/$(PRODUCT)_client_$(VERSION).tar
 CANNED_MODULES=pythreader jwt requests
 CANNED_PIP_MODULES="pythreader>=2.8.0" "pyjwt" "requests"
 
-all:	
-	echo Use "make dune" or "make generic"
-
-dune:
-	make VERSION=`python metacat/version.py`_dune dune_with_version_defined
+all: generic
 
 generic:
 	make VERSION=`python metacat/version.py` generic_with_version_defined
 
-dune_with_version_defined:	clean dune_specifics tars
+dune:
+	echo "just make 'generic' now"
+	# make VERSION=`python metacat/version.py`_dune dune_with_version_defined
 
-generic_with_version_defined:	clean tars
+
+# dune_with_version_defined:	clean dune_specifics common_filters_build tars
+
+generic_with_version_defined:	clean dune_specifics common_filters_build tars
 
 tars:  build $(TARDIR)
 	cd $(BUILD_DIR); tar cf $(SERVER_TAR) lib server daemon
@@ -49,6 +50,9 @@ canned_client: build $(DEPS_DIR)
 	rm -rf $(DEPS_DIR)/*/__pycache__
 	find $(DEPS_DIR) -type f -name \*.pyc -exec rm -f {} \;
 	cp canned_client_setup.sh $(BUILD_DIR)
+
+common_filters_build:
+	cd common_filters; make SERVER_DIR=$(SERVER_DIR) build
 
 dune_specifics:
 	cd DUNE_specials; make SERVER_DIR=$(SERVER_DIR) build
