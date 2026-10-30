@@ -23,6 +23,7 @@ setup(
                 'metacat.mql', 'metacat.mql.grammar', 'metacat.common', 'metacat.logs'],
     include_package_data = True,
     install_requires=["pyjwt", "requests", "pythreader>=2.8.0", "lark"],
+    extras_require={"async": ["httpx"]},
     zip_safe = False,
     classifiers=[
     ],
