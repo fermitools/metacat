@@ -58,7 +58,7 @@ copybutton_prompt_text = r"\$ "
 copybutton_prompt_is_regexp = True
 
 html_theme_options = {
-    "repository_url": "https://github.com/fermitools/data_dispatcher",
+    "repository_url": "https://github.com/fermitools/metacat",
     "use_repository_button": True,
     "navigation_depth": 4,  # how many levels of nested headers show in sidebar
     "collapse_navigation": False,
