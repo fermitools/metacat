@@ -802,7 +802,7 @@ class DefinitionNode(NodeBase):
 
     def __init__(self, defname):
         NodeBase.__init__(self)
-        self.defname = self.default_namespace + defname.replace("-", "_")
+        self.defname = self.default_namespace + defname.replace("-", "_").replace("+","_")
         self.negated = False
 
     def __str__(self):
@@ -847,6 +847,7 @@ class MetaDatasetNode(NodeBase):
 
     def meta_render(self):
         logging.debug("MetaDatasetNode.meta_render() {self.defname=}")
+        self.defname = self.defname.replace("+","_")
         yield "files from"
         if "%" in self.defname:
             yield "datasets matching"
@@ -903,7 +904,7 @@ class MetaFilterNode(NodeBase):
                 sep = ','
         yield ")"
         yield "("
-        if hasattr(self, 'nodes') and self.nodes and self.nodes[0] and self.nodes[0].nodes:
+        if self.nodes and self.nodes[0] and self.nodes[0].nodes:
             logging.debug(f"{self.nodes[0]=}\n{is_set_level_node(self.nodes[0])=}")
             if not is_set_level_node(self.nodes[0]):
                 yield "files where"
@@ -931,6 +932,7 @@ class IsRelativeOfNode(NegatableNode):
         return cls(*tokens)
 
     def __init__(self, relation, subtree):
+        NegatableNode.__init__(self)
         self.relation = relation
         self.subtree = subtree
 
@@ -1094,6 +1096,8 @@ class MetaCatTransformer(ParseTreeTransformer):
 
     def visit(self, node):
         # bookkeeping...
+        if not node:
+            return
         if len(self.node_path) == self.ptdepth:
             self.node_path.append(node)
         else:
@@ -1180,6 +1184,7 @@ class MetaCatTransformer(ParseTreeTransformer):
     def visit_NotNode(self, node):
         node.node.negated = not node.node.negated
         return self.visit(node.node)
+
 
     def _is_dimlist(self, nodes, dimlist):
         for i in range(len(dimlist)):
@@ -1276,6 +1281,7 @@ class MetaCatTransformer(ParseTreeTransformer):
             # two parter:
             # 1) save term for argument to data_dispatcher filter
             # 2) have as base files from snapshot for the project
+            node.value = node.value.replace("+","_")
             self.modified = True
             self.proj_id_term = node
             node2 = DimNode(node.dim, "=", "for_project_" + str(node.value))
@@ -1318,16 +1324,23 @@ class MetaCatTransformer(ParseTreeTransformer):
         return None
 
     def visit_IsRelativeOfNode(self, node):
-        if node.subtree:
-            if self.parent_sets():
-                logging.debug(f"expanding here: {repr(node)}")
-                return IsRelativeOfNode(node.relation, self.visit(node.subtree))
+        if not node.subtree:
+            return None
+        # propogate negation through the parentage
+        if node.negated:
+            node.subtree.negated = not node.subtree.negated
+            self.negated = False
 
+        node = IsRelativeOfNode(node.relation, self.visit(node.subtree))
+        if self.parent_sets():
+            logging.debug(f"expanding here: {repr(node)}")
+            return node
+        else:
             logging.debug(f"bumping up: {repr(node)}")
             self.parentage_terms.append(
                 IsRelativeOfNode(node.relation, self.visit(node.subtree))
             )
-        return None
+            return None
 
 
 class MetaCatTransformerPart2(ParseTreeTransformer):
