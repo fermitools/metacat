@@ -1,6 +1,9 @@
-from metacat.auth.server import BaseHandler
+from metacat.auth.server import BaseHandler, HTTPRedirect
 from metacat.db import DBUser, DBNamespace, DBRole
-import re, json
+from fastapi import Request
+from fastapi.responses import Response
+from starlette.exceptions import HTTPException as StarletteHTTPException
+import re, json, functools
 from metacat.logs import Logged, Logger, init
 import traceback
 from urllib.parse import unquote_plus
@@ -87,25 +90,28 @@ def _error_response(code, message, reason=None, type="json"):
     else:
         text = message
         content_type = "text/plain"
-    return code, text, content_type
+    return Response(text, status_code=code, media_type=content_type)
 
-    
+async def sanitize_exception_handler(request: Request, exc: SanitizeException):
+    return _error_response(400, str(exc))
+
 def sanitized(method):
+    # SanitizeException is converted to the 400 response by sanitize_exception_handler
+    @functools.wraps(method)
     def decorated(self, *params, **agrs):
-        try:    out = method(self, *params, **agrs)
-        except SanitizeException as e:
-            out = _error_response(400, str(e))
+        try:    return method(self, *params, **agrs)
+        except (SanitizeException, HTTPRedirect, StarletteHTTPException):
+            raise
         except Exception as e:
             self.log("Uncaught exception:" + str(e))
             self.log(traceback.format_exc())
             raise
-        return out
     return decorated
 
 class MetaCatHandler(BaseHandler, Logged):
     
-    def __init__(self, *params, **args):
-        BaseHandler.__init__(self, *params, **args)
+    def __init__(self):
+        BaseHandler.__init__(self)
         self.NamespaceAuthorizations = {}
         Logged.__init__(self, debug=True, logger=self.App.Logger)
         
@@ -146,31 +152,9 @@ class MetaCatHandler(BaseHandler, Logged):
             self.NamespaceAuthorizations[namespace] = authorized
         return authorized
 
-    def _handle_request(self, request, path, path_down, args):
-        response = super()._handle_request(request, path, path_down, args)
-        if isinstance(response, tuple):
-            status = response[0]
-        try:
-            if isinstance(status, int) and status != 200:
-                clientaddr = request.client_addr
-                if clientaddr is not None:
-                    self.log("%s %s %s %s %s" % (clientaddr, response[0], response[1], path, args), who="metacat", channel="error")
-                else:
-                    self.log("%s %s %s %s" % (response[0], response[1], path, args), who="metacat", channel="error")
-        except UnboundLocalError:
-            pass
-        return response
-
     def error_response(self, code, message, reason=None, type="json"):
-        reason = reason or _StatusReasons.get(code, "unknown")
-        if type == "json":
-            text = json.dumps({ "message": message, "code":"%s %s" % (code, reason), "title":reason })
-            content_type = "application/json"
-        else:
-            text = message
-            content_type = "text/plain"
         self.log('%s' % message)
-        return code, text, content_type
+        return _error_response(code, message, reason, type)
 
     def namespace_create_common(self, current_user, name, owner_role, description, owner_user=None):
         """ Namespace creation code that was going to be repeated in 

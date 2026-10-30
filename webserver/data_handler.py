@@ -1,4 +1,7 @@
-from webpie import WPApp, WPHandler, Response, WPStaticHandler
+from fastapi import APIRouter
+from fastapi.responses import Response, HTMLResponse, PlainTextResponse, StreamingResponse
+from fastapi_utils.cbv import cbv
+from typing import Optional
 import psycopg2, json, time, secrets, traceback, hashlib, pprint, uuid, random
 import re
 from metacat.db import DBFile, DBDataset, DBFileSet, DBNamedQuery, DBUser, DBNamespace, DBRole, \
@@ -35,12 +38,15 @@ def validate_param_definitions(definitions):
             errors.append("Parameter '%s' has unrecognized field(s): %s" % (name, ", ".join(sorted(invalid_keys))))
     return errors
 
+data_router = APIRouter()
+
+@cbv(data_router)
 class DataHandler(MetaCatHandler):
     
     MAX_ERRORS = 100                # Truncate error list if it is too long
     
-    def __init__(self, request, app):
-        MetaCatHandler.__init__(self, request, app)
+    def __init__(self):
+        MetaCatHandler.__init__(self)
         self.Categories = None
         self.Datasets = {}            # {(ns,n)->DBDataset}
         # for validate_checksums, below...
@@ -105,25 +111,29 @@ class DataHandler(MetaCatHandler):
         # iterable is an iterable, returning jsonable items, one item at a time
         return self.text_chunks(("%s%s%s" % (self.RS, json.dumps(item), self.LF) for item in iterable), chunk)
 
-    def realm(self, request, relpath, **args):
-        return self.App.Realm           # realm used for the digest password authentication
+    @data_router.api_route("/data/realm", methods=["GET", "POST"])
+    def realm(self):
+        return HTMLResponse(self.App.Realm)           # realm used for the digest password authentication
 
-    def version(self, request, relpath, **args):
-        return Version, "text/plain"
+    @data_router.api_route("/data/version", methods=["GET", "POST"])
+    def version(self):
+        return PlainTextResponse(Version)
         
-    def simulate_503(self, request, relpath, prob=0.5, **args):
+    @data_router.api_route("/data/simulate_503", methods=["GET", "POST"])
+    def simulate_503(self, prob: Optional[str] = 0.5):
         prob = float(prob)
         if prob > random.random():
-            return 503, "try later", "text/plain"
+            return PlainTextResponse("try later", status_code=503)
         else:
-            return "OK", "text/plain"
+            return PlainTextResponse("OK")
 
+    @data_router.api_route("/data/namespaces", methods=["GET", "POST"])
     @sanitized
-    def namespaces(self, request, relpath, owner_user=None, owner_role=None, directly="no", **args):
+    def namespaces(self, owner_user: Optional[str] = None, owner_role: Optional[str] = None, directly: str = "no"):
         directly = directly == "yes"
         db = self.connect_with_timeout()
-        if request.body:
-            names = json.loads(request.body)
+        if self.body:
+            names = json.loads(self.body)
             for name in names:
                 self.sanitize(namespace=name)
                 
@@ -131,34 +141,39 @@ class DataHandler(MetaCatHandler):
         else:
             lst = sorted(DBNamespace.list(db, owned_by_user=owner_user, owned_by_role=owner_role, directly=directly), 
                     key=lambda ns: ns.Name)
-        return json.dumps([ns.to_jsonable() for ns in lst]), "application/json"
+        return Response(json.dumps([ns.to_jsonable() for ns in lst]), media_type="application/json")
 
+    @data_router.api_route("/data/namespace", methods=["GET", "POST"])
+    @data_router.api_route("/data/namespace/{relpath:path}", methods=["GET", "POST"])
     @sanitized
-    def namespace(self, request, relpath, name=None, **args):
+    def namespace(self, relpath: str = "", name: Optional[str] = None):
         name = name or relpath
         self.sanitize(name=name)
         db = self.connect_with_timeout()
         ns = DBNamespace.get(db, name)
         if ns is None:
-            return 404, "Not found", "text/plain"
-        return json.dumps(ns.to_jsonable()), "application/json"
+            return PlainTextResponse("Not found", status_code=404)
+        return Response(json.dumps(ns.to_jsonable()), media_type="application/json")
         
+    @data_router.api_route("/data/create_namespace", methods=["GET", "POST"])
     @sanitized
-    def create_namespace(self, request, relpath, name=None, owner_role=None, description=None, **args):
+    def create_namespace(self, name: Optional[str] = None, owner_role: Optional[str] = None, description: Optional[str] = None):
         
         self.sanitize(owner_role, name)
         
         user, error = self.authenticated_user()
         if user is None:
-            return 401, error
+            return HTMLResponse(error, status_code=401)
 
         code, ns = self.namespace_create_common(user, name, owner_role, description)
         if not ns:
-               return code, "Permission Denied" if code=="403" else "Namespace already exists"
-        return json.dumps(ns.to_jsonable()), "application/json"
+               return HTMLResponse("Permission Denied" if code=="403" else "Namespace already exists", status_code=code)
+        return Response(json.dumps(ns.to_jsonable()), media_type="application/json")
             
+    @data_router.api_route("/data/namespace_counts", methods=["GET", "POST"])
+    @data_router.api_route("/data/namespace_counts/{relpath:path}", methods=["GET", "POST"])
     @sanitized
-    def namespace_counts(self, request, relpath, name=None, **args):
+    def namespace_counts(self, relpath: str = "", name: Optional[str] = None):
         self.sanitize(name, relpath)
         name = name or relpath
         db = self.connect_with_timeout()
@@ -170,11 +185,12 @@ class DataHandler(MetaCatHandler):
                 nqueries = ns.query_count()
             )
         )
-        return out, {"Content-Type":"application/json",
+        return Response(out, headers={"Content-Type":"application/json",
             "Access-Control-Allow-Origin":"*"
-        } 
+        }) 
         
-    def datasets(self, request, relpath, with_file_counts="no", **args):
+    @data_router.api_route("/data/datasets", methods=["GET", "POST"])
+    def datasets(self, with_file_counts: str = "no"):
         with_file_counts = with_file_counts == "yes"        # whether exact number of files is to be returned
         #print("data_server.datasets: with_file_counts:", with_file_counts)
         db = self.connect_with_timeout()
@@ -185,30 +201,34 @@ class DataHandler(MetaCatHandler):
             if with_file_counts:        # otherwise the file_count column will be used
                 dct["file_count"] = ds.nfiles(exact=True)
             out.append(dct)
-        return json.dumps(out), "application/json"
+        return Response(json.dumps(out), media_type="application/json")
         
+    @data_router.api_route("/data/dataset_files", methods=["GET", "POST"])
+    @data_router.api_route("/data/dataset_files/{relpath:path}", methods=["GET", "POST"])
     @sanitized
-    def dataset_files(self, request, relpath, dataset=None, with_metadata="no", include_retired_files="no", with_subsets="no", **args):
+    def dataset_files(self, relpath: str = "", dataset: Optional[str] = None, with_metadata: str = "no", include_retired_files: str = "no", with_subsets: str = "no"):
         with_metadata=with_metadata == "yes"
         namespace, name = (dataset or relpath).split(":", 1)
         self.sanitize(namespace, name)
         db = self.connect_with_timeout()
         dataset = DBDataset.get(db, namespace, name)
         if dataset is None:
-            return 404, "Dataset not found"
+            return HTMLResponse("Dataset not found", status_code=404)
         files = dataset.list_files(with_metadata=with_metadata, 
                         include_retired_files = include_retired_files == "yes",
                         with_subsets="yes")
-        return self.json_stream((f.to_jsonable(with_metadata=with_metadata) for f in files)), "application/json-seq"
+        return StreamingResponse(self.json_stream((f.to_jsonable(with_metadata=with_metadata) for f in files)), media_type="application/json-seq")
         
+    @data_router.api_route("/data/dataset", methods=["GET", "POST"])
+    @data_router.api_route("/data/dataset/{relpath:path}", methods=["GET", "POST"])
     @sanitized
-    def dataset(self, request, relpath, dataset=None, exact_file_count="no", with_subsets="no", **args):
+    def dataset(self, relpath: str = "", dataset: Optional[str] = None, exact_file_count: str = "no", with_subsets: str = "no"):
         db = self.connect_with_timeout()
         namespace, name = (dataset or relpath).split(":", 1)
         self.sanitize(namespace, name)
         dataset = DBDataset.get(db, namespace, name)
         if dataset is None:
-            return 404, "Dataset not found"
+            return HTMLResponse("Dataset not found", status_code=404)
                
         dct = dataset.to_jsonable()
         dct["file_count"] = dataset.nfiles(exact_file_count == "yes")
@@ -221,20 +241,22 @@ class DataHandler(MetaCatHandler):
                 sdlist.append(sdct)
             dct["subsets"] = sdlist
 
-        return json.dumps(dct), "application/json"
+        return Response(json.dumps(dct), media_type="application/json")
             
+    @data_router.api_route("/data/dataset_count", methods=["GET", "POST"])
     @sanitized
-    def dataset_count(self, request, relpath, dataset=None, exact_file_count="yes", **args):
+    def dataset_count(self, dataset: Optional[str] = None, exact_file_count: str = "yes"):
         namespace, name = dataset.split(":", 1)
         self.sanitize(namespace, name)
         db = self.connect_with_timeout()
         nfiles = DBDataset(db, namespace, name).nfiles(exact_file_count == "yes")
-        return '{"file_count":%d}\n' % (nfiles,), {"Content-Type":"application/json",
+        return Response('{"file_count":%d}\n' % (nfiles,), headers={"Content-Type":"application/json",
             "Access-Control-Allow-Origin":"*"
-        } 
+        }) 
 
+    @data_router.api_route("/data/dataset_counts", methods=["GET", "POST"])
     @sanitized
-    def dataset_counts(self, request, relpath, dataset=None, exact_file_count="yes", **args):
+    def dataset_counts(self, dataset: Optional[str] = None, exact_file_count: str = "yes"):
         namespace, name = dataset.split(":", 1)
         self.sanitize(namespace, name)
         db = self.connect_with_timeout()
@@ -260,9 +282,9 @@ class DataHandler(MetaCatHandler):
             "subset_file_count": subset_file_count,
             "subset_file_total": subset_file_total,
         }
-        return json.dumps(data), {"Content-Type":"application/json",
+        return Response(json.dumps(data), headers={"Content-Type":"application/json",
             "Access-Control-Allow-Origin":"*"
-        }
+        })
 
     @sanitized
     def ____dataset_counts(self, request, relpath, dataset=None, **args):
@@ -270,25 +292,26 @@ class DataHandler(MetaCatHandler):
         self.sanitize(namespace, name)
         return self.App.dataset_file_counts(namespace, name)
 
+    @data_router.api_route("/data/create_dataset", methods=["GET", "POST"])
     @sanitized
-    def create_dataset(self, request, relpath):
+    def create_dataset(self):
         db = self.connect_with_timeout()
         user, error = self.authenticated_user()
         if user is None:
-            return 401, error
-        if not request.body:
-            return 400, "Dataset parameters are not specified"
-        params = json.loads(request.body)
+            return HTMLResponse(error, status_code=401)
+        if not self.body:
+            return HTMLResponse("Dataset parameters are not specified", status_code=400)
+        params = json.loads(self.body)
         namespace = params["namespace"]
         name = params["name"]
         self.sanitize(namespace=namespace, name=name)
         ns = DBNamespace.get(db, namespace)
         if ns is None:
-            return 404, "Namespace not found"
+            return HTMLResponse("Namespace not found", status_code=404)
         if not user.is_admin() and not ns.owned_by_user(user):
-            return 403, "Permission denied"
+            return HTMLResponse("Permission denied", status_code=403)
         if DBDataset.get(db, namespace, name) is not None:
-            return 409, "Already exists"
+            return HTMLResponse("Already exists", status_code=409)
 
         creator = user.Username 
 
@@ -297,13 +320,13 @@ class DataHandler(MetaCatHandler):
         if files_query:
             query = MQLQuery.parse(files_query, default_namespace=namespace or None)
             if query.Type != "file":
-                return 400, f"Invalid file query: {files_query}"
+                return HTMLResponse(f"Invalid file query: {files_query}", status_code=400)
             files = query.run(db, filters=self.App.filters(), with_meta=True, with_provenance=False)
 
         metadata = params.get("metadata") or {}
         for k in metadata.keys():
             if '.' not in k:
-                return 400, f"Metadata parameter without a category: {k}"
+                return HTMLResponse(f"Metadata parameter without a category: {k}", status_code=400)
 
         dataset = DBDataset(db, namespace, name,
             frozen = params.get("frozen", False), monotonic = params.get("monotonic", False),
@@ -319,31 +342,32 @@ class DataHandler(MetaCatHandler):
                 dataset.FileCount = dataset.add_files(files, transaction=transaction)
                 dataset.save(transaction=transaction)
         
-        return dataset.to_json(), "application/json"
+        return Response(dataset.to_json(), media_type="application/json")
     
+    @data_router.api_route("/data/update_dataset", methods=["GET", "POST"])
     @sanitized
-    def update_dataset(self, request, relapth, dataset=None):
+    def update_dataset(self, dataset: Optional[str] = None):
         if not dataset:
-            return 400, "Dataset is not specified"
+            return HTMLResponse("Dataset is not specified", status_code=400)
         try:    spec = ObjectSpec(dataset)
         except ValueError as e:
-            return 400, str(e)
+            return HTMLResponse(str(e), status_code=400)
         namespace, name = spec.Namespace, spec.Name
         self.sanitize(namespace=namespace, name=name)
 
         user, error = self.authenticated_user()
         if user is None:
-            return 403, "Authentication required"
+            return HTMLResponse("Authentication required", status_code=403)
         db = self.connect_with_timeout()
 
         ds = DBDataset.get(db, namespace, name)
         if ds is None:
-            return 404, "Dataset not found"
+            return HTMLResponse("Dataset not found", status_code=404)
 
-        request_data = json.loads(request.body)
+        request_data = json.loads(self.body)
 
         if not user.is_admin() and not self._namespace_authorized(db, namespace, user):
-            return 403, f"Permission to update dataset in namespace {namespace} denied", "text/plain"
+            return PlainTextResponse(f"Permission to update dataset in namespace {namespace} denied", status_code=403)
         
         if "metadata" in request_data:
             meta = request_data["metadata"]
@@ -355,7 +379,7 @@ class DataHandler(MetaCatHandler):
 
             for name in ds.Metadata:
                 if '.' not in name:
-                    return 400, f"Metadata parameter without a category: {name}"
+                    return HTMLResponse(f"Metadata parameter without a category: {name}", status_code=400)
 
         if "monotonic" in request_data: 
             ds.Monotonic = request_data["monotonic"]
@@ -367,15 +391,16 @@ class DataHandler(MetaCatHandler):
             ds.Description = request_data["description"]
         
         ds.save(updated_by=user.Username)
-        return json.dumps(ds.to_jsonable()), "application/json"
+        return Response(json.dumps(ds.to_jsonable()), media_type="application/json")
 
+    @data_router.api_route("/data/remove_child_dataset", methods=["GET", "POST"])
     @sanitized
-    def remove_child_dataset(self, request, relpath, parent=None, child=None, **args):
+    def remove_child_dataset(self, parent: Optional[str] = None, child: Optional[str] = None):
         if not parent or not child:
-            return 400, "Parent or child dataset unspecified"
+            return HTMLResponse("Parent or child dataset unspecified", status_code=400)
         user, error = self.authenticated_user()
         if user is None:
-            return 401, error
+            return HTMLResponse(error, status_code=401)
         parent_namespace, parent_name = parent.split(":",1)
         self.sanitize(parent_namespace=parent_namespace, parent_name=parent_name)
         child_namespace, child_name = child.split(":",1)
@@ -385,27 +410,28 @@ class DataHandler(MetaCatHandler):
         child_ns = DBNamespace.get(db, child_namespace)
         if not user.is_admin() and not parent_ns.owned_by_user(user):      # allow adding unowned datasets as subsets 
                                                                             # was: or not child_ns.owned_by_user(user)):
-            return 403, "Permission denied"
+            return HTMLResponse("Permission denied", status_code=403)
         parent_ds = DBDataset.get(db, parent_namespace, parent_name)
         if parent_ds is None:
-            return 404, "Parent dataset not found", "text/plain"
+            return PlainTextResponse("Parent dataset not found", status_code=404)
         child_ds = DBDataset.get(db, child_namespace, child_name)
         if child_ds is None:
-            return 404, "Child dataset not found", "text/plain"
+            return PlainTextResponse("Child dataset not found", status_code=404)
         
         if not any(c.Namespace == child_namespace and c.Name == child_name for c in parent_ds.children()):
-            return 404, "Child dataset is not a child of parent", "text/plain"
+            return PlainTextResponse("Child dataset is not a child of parent", status_code=404)
 
         parent_ds.remove_child(child_ds)
-        return "OK"
+        return HTMLResponse("OK")
 
+    @data_router.api_route("/data/add_child_dataset", methods=["GET", "POST"])
     @sanitized
-    def add_child_dataset(self, request, relpath, parent=None, child=None, **args):
+    def add_child_dataset(self, parent: Optional[str] = None, child: Optional[str] = None):
         if not parent or not child:
-            return 400, "Parent or child dataset unspecified"
+            return HTMLResponse("Parent or child dataset unspecified", status_code=400)
         user, error = self.authenticated_user()
         if user is None:
-            return 401, error
+            return HTMLResponse(error, status_code=401)
         parent_namespace, parent_name = parent.split(":",1)
         self.sanitize(parent_namespace=parent_namespace, parent_name=parent_name)
         child_namespace, child_name = child.split(":",1)
@@ -415,21 +441,21 @@ class DataHandler(MetaCatHandler):
         child_ns = DBNamespace.get(db, child_namespace)
         if not user.is_admin() and not parent_ns.owned_by_user(user):      # allow adding unowned datasets as subsets 
                                                                             # was: or not child_ns.owned_by_user(user)):
-            return 403, "Permission denied"
+            return HTMLResponse("Permission denied", status_code=403)
         parent_ds = DBDataset.get(db, parent_namespace, parent_name)
         if parent_ds is None:
-            return 404, "Parent dataset not found", "text/plain"
+            return PlainTextResponse("Parent dataset not found", status_code=404)
         child_ds = DBDataset.get(db, child_namespace, child_name)
         if child_ds is None:
-            return 404, "Child dataset not found", "text/plain"
+            return PlainTextResponse("Child dataset not found", status_code=404)
         
         if any(a.Namespace == child_namespace and a.Name == child_name for a in parent_ds.ancestors()):
-            return 400, "Circular connection detected - child dataset is already an ancestor of the parent"
+            return HTMLResponse("Circular connection detected - child dataset is already an ancestor of the parent", status_code=400)
         
         if not any(c.Namespace == child_namespace and c.Name == child_name for c in parent_ds.children()):
             #print("Adding ", child_ds, " to ", parent_ds)
             parent_ds.add_child(child_ds)
-        return "OK"
+        return HTMLResponse("OK")
 
     @sanitized
     def remove_files(self, request, relpath, dataset=None, **args):
@@ -441,7 +467,7 @@ class DataHandler(MetaCatHandler):
         if user is None:
             return 403, "Client authentication failed"
 
-        params = json.loads(request.body)
+        params = json.loads(self.body)
         file_list = params.get("file_list")
         query_text = params.get("query")
 
@@ -490,43 +516,44 @@ class DataHandler(MetaCatHandler):
         return json.dumps([f.to_jsonable() for f in files]), "application/json"
 
 
+    @data_router.api_route("/data/add_files", methods=["GET", "POST"])
     @sanitized
-    def add_files(self, request, relpath, dataset=None, **args):
+    def add_files(self, dataset: Optional[str] = None):
         #
         # add existing files to a dataset
         #
 
         user, error = self.authenticated_user()
         if user is None:
-            return 403, "Client authentication failed"
+            return HTMLResponse("Client authentication failed", status_code=403)
 
-        params = json.loads(request.body)
+        params = json.loads(self.body)
         file_list = params.get("file_list")
         query_text = params.get("query")
         default_namespace = params.get("namespace")
 
         if not file_list and not query_text:
-            return 400, "No files to add", "text/plain"
+            return PlainTextResponse("No files to add", status_code=400)
         if file_list and query_text:
-            return 400, "Either file list or query must be specified, but not both", "text/plain"
+            return PlainTextResponse("Either file list or query must be specified, but not both", status_code=400)
             
         db = self.connect_with_timeout()
         ds_namespace, ds_name = parse_name(dataset, default_namespace)
         self.sanitize(namespace=default_namespace, dataset_namespace=ds_namespace, dataset_name=ds_name)
         if ds_namespace is None:
-            return 400, "Dataset namespace unspecified", "text/plain"
+            return PlainTextResponse("Dataset namespace unspecified", status_code=400)
         if not self._namespace_authorized(db, ds_namespace, user):
-            return 403, f"Permission to add files dataset {dataset} denied", "text/plain"
+            return PlainTextResponse(f"Permission to add files dataset {dataset} denied", status_code=403)
         ds = DBDataset.get(db, ds_namespace, ds_name)
         if ds is None:
-            return 404, "Dataset not found", "text/plain"
+            return PlainTextResponse("Dataset not found", status_code=404)
         if ds.Frozen:
-            return 403, "Dataset is frozen", "text/plain"
+            return PlainTextResponse("Dataset is frozen", status_code=403)
         
         if query_text:
             query = MQLQuery.parse(query_text)
             if query.Type != "file":
-                return 400, f"Invalid file query: {query_text}"
+                return HTMLResponse(f"Invalid file query: {query_text}", status_code=400)
             files = query.run(db, filters=self.App.filters(), with_meta=False, with_provenance=False)
             #print("add_files: files from query:", files)
 
@@ -551,43 +578,44 @@ class DataHandler(MetaCatHandler):
                     ds.FileCount += nadded
                     ds.save(transaction=transaction)
             except MetaValidationError as e:
-                return 400, e.as_json(), "application/json"
-        return json.dumps({"files_added": nadded}), "application/json"
+                return Response(e.as_json(), status_code=400, media_type="application/json")
+        return Response(json.dumps({"files_added": nadded}), media_type="application/json")
 
+    @data_router.api_route("/data/remove_files", methods=["GET", "POST"])
     @sanitized
-    def remove_files(self, request, relpath, **args):
+    def remove_files(self):
         user, error = self.authenticated_user()
         if user is None:
-            return 403, "Client authentication failed"
+            return HTMLResponse("Client authentication failed", status_code=403)
 
-        params = json.loads(request.body)
+        params = json.loads(self.body)
         file_list = params.get("file_list")
         query_text = params.get("query")
         default_namespace = params.get("namespace")
         ds_namespace = params.get("dataset_namespace", default_namespace)
         ds_name = params.get("dataset_name")
         if not ds_namespace or not ds_name:
-            return 400, "Dataset unspecified", "text/plain"
+            return PlainTextResponse("Dataset unspecified", status_code=400)
 
         self.sanitize(namespace=default_namespace, dataset_namespace=ds_namespace, dataset_name=ds_name)
 
         if not file_list and not query_text:
-            return 400, "No files to remove", "text/plain"
+            return PlainTextResponse("No files to remove", status_code=400)
         if file_list and query_text:
-            return 400, "Either file list or query must be specified, but not both", "text/plain"
+            return PlainTextResponse("Either file list or query must be specified, but not both", status_code=400)
             
         db = self.connect_with_timeout()
         if ds_namespace is None:
-            return 400, "Dataset namespace unspecified", "text/plain"
+            return PlainTextResponse("Dataset namespace unspecified", status_code=400)
         if not self._namespace_authorized(db, ds_namespace, user):
-            return 403, f"Permission to add files dataset {dataset} denied", "text/plain"
+            return PlainTextResponse(f"Permission to add files dataset {dataset} denied", status_code=403)
         ds = DBDataset.get(db, ds_namespace, ds_name)
         if ds is None:
-            return 404, "Dataset not found", "text/plain"
+            return PlainTextResponse("Dataset not found", status_code=404)
         if ds.Frozen:
-            return 403, "Dataset is frozen", "text/plain"
+            return PlainTextResponse("Dataset is frozen", status_code=403)
         if ds.Monotonic:
-            return 403, "Dataset is monotonic", "text/plain"
+            return PlainTextResponse("Dataset is monotonic", status_code=403)
         
         resolved = []
         to_resolve = []
@@ -595,7 +623,7 @@ class DataHandler(MetaCatHandler):
         if query_text:
             query = MQLQuery.parse(query_text)
             if query.Type != "file":
-                return 400, f"Invalid file query: {query_text}"
+                return HTMLResponse(f"Invalid file query: {query_text}", status_code=400)
             resolved = query.run(db, filters=self.App.filters(), with_meta=False, with_provenance=False)
             #print("add_files: files from query:", files)
 
@@ -613,10 +641,12 @@ class DataHandler(MetaCatHandler):
             if to_resolve:
                 resolved += list(DBFile.get_files(db, to_resolve, transaction=transaction))
             nremoved = ds.remove_files(resolved, transaction=transaction)
-        return json.dumps({"files_removed": nremoved}), "application/json"
+        return Response(json.dumps({"files_removed": nremoved}), media_type="application/json")
         
+    @data_router.api_route("/data/remove_dataset", methods=["GET", "POST"])
+    @data_router.api_route("/data/remove_dataset/{relpath:path}", methods=["GET", "POST"])
     @sanitized
-    def remove_dataset(self, request, relpath, dataset=None):
+    def remove_dataset(self, relpath: str = "", dataset: Optional[str] = None):
         #
         # add existing files to a dataset
         #
@@ -625,23 +655,24 @@ class DataHandler(MetaCatHandler):
 
         user, error = self.authenticated_user()
         if user is None:
-            return 403, "Client authentication failed"
+            return HTMLResponse("Client authentication failed", status_code=403)
 
         ds_namespace, ds_name = parse_name(dataset)
         self.sanitize(dataset_namespace=ds_namespace, dataset_name=ds_name)
         if ds_namespace is None or ds_name is None:
-            return 400, "Dataset specification error", "text/plain"
+            return PlainTextResponse("Dataset specification error", status_code=400)
         db = self.connect_with_timeout()
         ds = DBDataset.get(db, ds_namespace, ds_name)
         if ds is None:
-            return 404, "Dataset not found", "text/plain"
+            return PlainTextResponse("Dataset not found", status_code=404)
         if not self._namespace_authorized(db, ds_namespace, user):
-            return 403, f"Permission denied", "text/plain"
+            return PlainTextResponse(f"Permission denied", status_code=403)
         ds.delete()
-        return "OK"
+        return HTMLResponse("OK")
 
+    @data_router.api_route("/data/datasets_for_files", methods=["GET", "POST"])
     @sanitized
-    def datasets_for_files(self, request, relpath, **args):
+    def datasets_for_files(self):
         #
         # JSON data: list of one of the following
         #       { "namespace": "...", "name":"..." },
@@ -650,7 +681,7 @@ class DataHandler(MetaCatHandler):
         db = self.connect_with_timeout()
 
         # validate input data
-        file_list = json.loads(request.body) if request.body else []
+        file_list = json.loads(self.body) if self.body else []
         for item in file_list:
             fid = item.get(fid)
             namespace, name = item.get("namespace"), item.get("name")
@@ -668,7 +699,7 @@ class DataHandler(MetaCatHandler):
             elif namespace and name:
                 out_item["datasets"] = [ds.as_jsonable() for ds in datasets_by_file.get((namespace, name), [])]
             out.append(out_item)
-        return json.dumps(out), "application/json"
+        return Response(json.dumps(out), media_type="application/json")
 
     def split_cat(self, path):
         if '.' in path:
@@ -676,8 +707,9 @@ class DataHandler(MetaCatHandler):
         else:
             return ".", path
 
+    @data_router.api_route("/data/declare_files", methods=["GET", "POST"])
     @sanitized
-    def declare_files(self, request, relpath, namespace=None, dataset=None, dry_run="no", **args):
+    def declare_files(self, namespace: Optional[str] = None, dataset: Optional[str] = None, dry_run: str = "no"):
         # Declare new files, add to the dataset
         # request body: JSON with list:
         #
@@ -704,27 +736,27 @@ class DataHandler(MetaCatHandler):
         user, error = self.authenticated_user()
         if user is None:
             #print("Unauthenticated user")
-            return 401, error
+            return HTMLResponse(error, status_code=401)
 
         if dataset is None:
-            return 400, "Dataset not specified"
+            return HTMLResponse("Dataset not specified", status_code=400)
 
         db = self.connect_with_timeout()
 
         ds_namespace, ds_name = parse_name(dataset, default_namespace)
         try:
             if not self._namespace_authorized(db, ds_namespace, user):
-                return 403, f"Permission to add files to dataset {ds_namespace}:{ds_name} denied"
+                return HTMLResponse(f"Permission to add files to dataset {ds_namespace}:{ds_name} denied", status_code=403)
         except KeyError:
-            return 404, f"Namespace {ds_namespace} does not exist"
+            return HTMLResponse(f"Namespace {ds_namespace} does not exist", status_code=404)
 
         ds = DBDataset.get(db, namespace=ds_namespace, name=ds_name)
         if ds is None:
-            return 400, f"Dataset {ds_namespace}:{ds_name} does not exist"
+            return HTMLResponse(f"Dataset {ds_namespace}:{ds_name} does not exist", status_code=400)
 
-        file_list = json.loads(request.body) if request.body else []
+        file_list = json.loads(self.body) if self.body else []
         if not file_list:
-            return 400, "Empty file list"
+            return HTMLResponse("Empty file list", status_code=400)
         files = []
         errors = []
         parents_to_resolve = set()
@@ -737,7 +769,7 @@ class DataHandler(MetaCatHandler):
                     "message":"Metadata category validation errors",
                     "metadata_errors":item_errors
                 })
-            return METADATA_ERROR_CODE, json.dumps({"metadata_errors": errors}), "application/json"
+            return Response(json.dumps({"metadata_errors": errors}), status_code=METADATA_ERROR_CODE, media_type="application/json")
 
         checksum_validation_errors = []
         index = 0
@@ -755,7 +787,7 @@ class DataHandler(MetaCatHandler):
             index = index + 1
 
         if checksum_validation_errors:
-            return METADATA_ERROR_CODE, json.dumps({"metadata_errors": errors}), "application/json"
+            return Response(json.dumps({"metadata_errors": errors}), status_code=METADATA_ERROR_CODE, media_type="application/json")
         
         for inx, file_item in enumerate(file_list):
             #print("data_handler.declare_files: file_item:", inx, file_item)
@@ -920,13 +952,13 @@ class DataHandler(MetaCatHandler):
                                 
         if errors:
             #print("data_handler.declare_files: errors:", errors)
-            return METADATA_ERROR_CODE, json.dumps({
+            return Response(json.dumps({
                     "message": "Invalid file data",
                     "metadata_errors": errors
-                    }), "application/json"
+                    }), status_code=METADATA_ERROR_CODE, media_type="application/json")
 
         if dry_run:
-            return 202, json.dumps(
+            return Response(json.dumps(
                 [
                     {
                         "name": f.Name,
@@ -935,7 +967,7 @@ class DataHandler(MetaCatHandler):
                     }
                     for f in files
                 ]
-            ), "application/json"
+            ), status_code=202, media_type="application/json")
 
         with db.transaction() as transaction:
             try:    
@@ -950,15 +982,16 @@ class DataHandler(MetaCatHandler):
                         message += "\n  " + f.did()
                 else:
                     message = f"Integrity error: {e}"
-                return 409, message
+                return HTMLResponse(message, status_code=409)
             
             #print("server:declare_files(): calling ds.add_files...")
             ds.add_files(files, validate_meta=False, transaction=transaction)
         
         out = [f.to_jsonable(with_metadata=True) for f in results]
-        return json.dumps(out), "application/json"
+        return Response(json.dumps(out), media_type="application/json")
 
-    def move_files(self, request, relpath, **args):
+    @data_router.api_route("/data/move_files", methods=["GET", "POST"])
+    def move_files(self):
         """
         Moves files to new namespace
         the request body expected to be:
@@ -976,42 +1009,42 @@ class DataHandler(MetaCatHandler):
         
         user, error = self.authenticated_user()
         if user is None:
-            return 403, "Authentication required"
+            return HTMLResponse("Authentication required", status_code=403)
 
         db = self.connect_with_timeout()
-        data = json.loads(request.body)
+        data = json.loads(self.body)
         if not isinstance(data, dict):
-            return 400, "Unsupported request data format"
+            return HTMLResponse("Unsupported request data format", status_code=400)
         if "namespace" not in data:
-            return 400, "Request must contain target namespace"
+            return HTMLResponse("Request must contain target namespace", status_code=400)
         
         authorized_namespaces = set(ns.Name for ns in user.namespaces())
         target_namespace = data["namespace"]
         if DBNamespace.get(db, target_namespace) is None:
-            return 404, f"Namespace {target_namespace} not found"
+            return HTMLResponse(f"Namespace {target_namespace} not found", status_code=404)
         if target_namespace not in authorized_namespaces:
-            return 401, f"Not authorized to rename into namespace {target_namespace}"
+            return HTMLResponse(f"Not authorized to rename into namespace {target_namespace}", status_code=401)
             
         if "files" in data:
             files = DBFile.get_files(db, data["files"])
         else:
             query = MQLQuery.parse(data["query"])
             if query.Type != "file":
-                return 400, f"Invalid file query: {query_text}"
+                return HTMLResponse(f"Invalid file query: {query_text}", status_code=400)
             files = query.run(db, filters=self.App.filters(), with_meta=False, with_provenance=False)
 
         nmoved, errors = DBFile.move_to_namespace(db, target_namespace, files, authorized_namespaces=authorized_namespaces)
         nerrors = len(errors)
-        return json.dumps({"files_moved": nmoved, "errors":errors[:self.MAX_ERRORS], "nerrors":nerrors}), "application/json"
+        return Response(json.dumps({"files_moved": nmoved, "errors":errors[:self.MAX_ERRORS], "nerrors":nerrors}), media_type="application/json")
 
     def __update_meta_bulk(self, db, user, new_meta, mode, names=None, ids=None):
         metadata_errors = DBParamCategory.validate_metadata_bulk(db, [new_meta])
         if metadata_errors:
             metadata_errors = metadata_errors[0][1]  # Get errors from first (only) item
-            return METADATA_ERROR_CODE, json.dumps({
+            return Response(json.dumps({
                 "message":"Metadata validation errors",
                 "metadata_errors":metadata_errors
-            }), "application/json"
+            }), status_code=METADATA_ERROR_CODE, media_type="application/json")
         
         file_sets = []
         out = []
@@ -1039,10 +1072,10 @@ class DataHandler(MetaCatHandler):
 
             if metadata_errors:
                 #print("update_files_bulk:", metadata_errors)
-                return METADATA_ERROR_CODE, json.dumps({
+                return Response(json.dumps({
                     "message":"Metadata validation errors",
                     "metadata_errors":metadata_errors
-                }), "application/json"
+                }), status_code=METADATA_ERROR_CODE, media_type="application/json")
 
             #
             # check namespace permissions
@@ -1051,9 +1084,9 @@ class DataHandler(MetaCatHandler):
                 namespace = f.Namespace
                 try:
                     if not self._namespace_authorized(db, namespace, user):
-                        return 403, f"Permission to update files in namespace {namespace} denied"
+                        return HTMLResponse(f"Permission to update files in namespace {namespace} denied", status_code=403)
                 except KeyError:
-                    return 404, f"Namespace {namespace} does not exist"
+                    return HTMLResponse(f"Namespace {namespace} does not exist", status_code=404)
             
                 #
                 # update the metadata
@@ -1066,7 +1099,7 @@ class DataHandler(MetaCatHandler):
 
                 for k in meta.keys():
                     if '.' not in k:
-                        return 400, f"Metadata parameter without a category: {k}"
+                        return HTMLResponse(f"Metadata parameter without a category: {k}", status_code=400)
 
                 f.Metadata = meta
 
@@ -1081,10 +1114,11 @@ class DataHandler(MetaCatHandler):
 
             DBFile.update_many(db, file_set, user)
 
-        return json.dumps(out), "application/json"
+        return Response(json.dumps(out), media_type="application/json")
 
+    @data_router.api_route("/data/delete_file", methods=["GET", "POST"])
     @sanitized
-    def delete_file(self, request, relpath, **args):
+    def delete_file(self):
         # mode can be "update" - add/pdate metadata with new values
         #             "replace" - discard old metadata and update with new values
         # 
@@ -1092,14 +1126,14 @@ class DataHandler(MetaCatHandler):
         #
         user, error = self.authenticated_user()
         if user is None:
-            return 403, "Authentication required"
+            return HTMLResponse("Authentication required", status_code=403)
         db = self.connect_with_timeout()
-        #print("request.body:", request.body)
-        data = json.loads(request.body)
+        #print("self.body:", self.body)
+        data = json.loads(self.body)
         if not isinstance(data, dict):
-            return 400, "Unsupported request data format"
+            return HTMLResponse("Unsupported request data format", status_code=400)
 
-        data = json.loads(request.body)
+        data = json.loads(self.body)
         
         spec = ObjectSpec.from_dict(data)
 
@@ -1110,13 +1144,13 @@ class DataHandler(MetaCatHandler):
             self.sanitize(namespace=spec.Namespace, name=spec.Name)
             f = DBFile.get(db, namespace=spec.Namespace, name=spec.Name, with_metadata=True)
         if f is None:
-            return 404, "File not found"
+            return HTMLResponse("File not found", status_code=404)
 
         if not self._namespace_authorized(db, f.Namespace, user):
-            return 403, "Not authorized"
+            return HTMLResponse("Not authorized", status_code=403)
             
         f.delete()
-        return '{"fid":"%s"}' % (f.FID,)
+        return HTMLResponse('{"fid":"%s"}' % (f.FID,))
 
     def validate_checksums(self, data, errors):
         """validate checksums are in hex and of appropriate length """
@@ -1133,8 +1167,9 @@ class DataHandler(MetaCatHandler):
                 if not ((c >= "0" and c <= "9") or (c >= "a" and c <= "f")):
                     errors.append({"name":f"checksum {ct}", "reason": f"contains invalid digit {c}"})
 
+    @data_router.api_route("/data/update_file", methods=["GET", "POST"])
     @sanitized
-    def update_file(self, request, relpath, **args):
+    def update_file(self):
         # mode can be "update" - add/pdate metadata with new values
         #             "replace" - discard old metadata and update with new values
         # 
@@ -1142,13 +1177,13 @@ class DataHandler(MetaCatHandler):
         #
         user, error = self.authenticated_user()
         if user is None:
-            return 403, "Authentication required"
+            return HTMLResponse("Authentication required", status_code=403)
         db = self.connect_with_timeout()
-        data = json.loads(request.body)
+        data = json.loads(self.body)
         if not isinstance(data, dict):
-            return 400, "Unsupported request data format"
+            return HTMLResponse("Unsupported request data format", status_code=400)
 
-        data = json.loads(request.body)
+        data = json.loads(self.body)
         spec = ObjectSpec.from_dict(data)
 
         if spec.FID:
@@ -1159,10 +1194,10 @@ class DataHandler(MetaCatHandler):
             f = DBFile.get(db, namespace=spec.Namespace, name=spec.Name, with_metadata=True)
 
         if not f:
-            return 404, "File not found"
+            return HTMLResponse("File not found", status_code=404)
         
         if not self._namespace_authorized(db, f.Namespace, user):
-            return 403, "Not authtorized"
+            return HTMLResponse("Not authtorized", status_code=403)
 
         mode = data.get("mode", "add-update")
 
@@ -1185,7 +1220,7 @@ class DataHandler(MetaCatHandler):
             for ds_ns, ds_n in f.datasets:
                 ds = DBDataset(db, ds_ns, ds_n)
                 if ds is None:
-                    return 500, f"Can not load dataset {ds_ns}:{ds_n}"
+                    return HTMLResponse(f"Can not load dataset {ds_ns}:{ds_n}", status_code=500)
                 errors += ds.validate_file_metadata(new_metadata)
         
             if not errors:
@@ -1194,10 +1229,10 @@ class DataHandler(MetaCatHandler):
         if "checksums" in data:
             self.validate_checksums(data, errors)
             if errors:
-                return METADATA_ERROR_CODE, json.dumps({
+                return Response(json.dumps({
                     "message":          "Metadata validation errors",
                     "metadata_errors":  errors
-                }), "application/json"
+                }), status_code=METADATA_ERROR_CODE, media_type="application/json")
                
             if mode == "add-update":
                 new_checksums = (f.Checksums or {}).copy()
@@ -1209,10 +1244,10 @@ class DataHandler(MetaCatHandler):
                 f.Checksums = new_checksums
 
         if errors:
-            return METADATA_ERROR_CODE, json.dumps({
+            return Response(json.dumps({
                 "message":          "Metadata validation errors",
                 "metadata_errors":  errors
-            }), "application/json"
+            }), status_code=METADATA_ERROR_CODE, media_type="application/json")
 
         if "parents" in data:
             # parents are specified as dictionaries either {"fid":...} or {"namespace":..., "name":...}
@@ -1246,10 +1281,11 @@ class DataHandler(MetaCatHandler):
         f.Size = data.get("size", f.Size or 0)
 
         f.update(user)
-        return f.to_json(with_metadata=True, with_provenance=True), "application/json"
+        return Response(f.to_json(with_metadata=True, with_provenance=True), media_type="application/json")
                 
+    @data_router.api_route("/data/update_file_meta", methods=["GET", "POST"])
     @sanitized
-    def update_file_meta(self, request, relpath, **args):
+    def update_file_meta(self):
         # mode can be "update" - add/pdate metadata with new values
         #             "replace" - discard old metadata and update with new values
         # 
@@ -1264,14 +1300,14 @@ class DataHandler(MetaCatHandler):
         #
         user, error = self.authenticated_user()
         if user is None:
-            return 403, "Authentication required"
+            return HTMLResponse("Authentication required", status_code=403)
         db = self.connect_with_timeout()
-        data = json.loads(request.body)
+        data = json.loads(self.body)
         if not isinstance(data, dict):
-            return 400, "Unsupported request data format"
+            return HTMLResponse("Unsupported request data format", status_code=400)
         mode = data["mode"]
         if mode not in ("update", "replace"):
-            return 400, "Invalid mode"
+            return HTMLResponse("Invalid mode", status_code=400)
 
         by_fid = []
         by_namespace_name = []
@@ -1285,9 +1321,10 @@ class DataHandler(MetaCatHandler):
                 by_namespace_name.append({"namespace":spec.Namespace, "name":spec.Name})
         return self.__update_meta_bulk(db, user, data["metadata"], data["mode"], ids=by_fid, names=by_namespace_name)
         
+    @data_router.api_route("/data/file", methods=["GET", "POST"])
+    @data_router.api_route("/data/file/{relpath:path}", methods=["GET", "POST"])
     @sanitized
-    def file(self, request, relpath, did=None, namespace=None, name=None, fid=None, with_metadata="yes", with_provenance="yes", 
-            with_datasets="no", **args):
+    def file(self, relpath: str = "", did: Optional[str] = None, namespace: Optional[str] = None, name: Optional[str] = None, fid: Optional[str] = None, with_metadata: str = "yes", with_provenance: str = "yes", with_datasets: str = "no"):
         with_metadata = with_metadata == "yes"
         with_provenance = with_provenance == "yes"
         with_datasets = with_datasets == "yes"
@@ -1309,17 +1346,18 @@ class DataHandler(MetaCatHandler):
         else:
             f = DBFile.get(db, namespace=namespace, name=name)
         if f is None:
-            return 404, "File not found"
-        return f.to_json(with_metadata=with_metadata, with_provenance=with_provenance, with_datasets=with_datasets), "application/json"
+            return HTMLResponse("File not found", status_code=404)
+        return Response(f.to_json(with_metadata=with_metadata, with_provenance=with_provenance, with_datasets=with_datasets), media_type="application/json")
         
+    @data_router.api_route("/data/retire_file", methods=["GET", "POST"])
     @sanitized
-    def retire_file(self, request, relpath):
+    def retire_file(self):
         #print("retire file...")
         user, error = self.authenticated_user()
         if user is None:
-            return 403, "Authentication required"
+            return HTMLResponse("Authentication required", status_code=403)
 
-        data = json.loads(request.body)
+        data = json.loads(self.body)
         retire = data["retire"]
         db = self.connect_with_timeout()
         spec = ObjectSpec.from_dict(data)
@@ -1329,26 +1367,27 @@ class DataHandler(MetaCatHandler):
         else:
             f = DBFile.get(db, namespace=spec.Namespace, name=spec.Name)
         if f is None:
-            return 404, "File not found"
+            return HTMLResponse("File not found", status_code=404)
         namespace = f.Namespace
         try:
             if not self._namespace_authorized(db, namespace, user):
-                return 403, f"Permission to manage files in namespace {namespace} denied"
+                return HTMLResponse(f"Permission to manage files in namespace {namespace} denied", status_code=403)
         except KeyError:
-            return 404, f"Namespace {namespace} does not exist"
+            return HTMLResponse(f"Namespace {namespace} does not exist", status_code=404)
         #print("retire_file: doing it: retire:", retire, "  f.Retired:", f.Retired)
         if retire != f.Retired:
             #print("retire_file: doing it: retire:", retire, "  f.Retired:", f.Retired)
             f.set_retire(retire, user.Username)
-        return f.to_json(), "application/json"
+        return Response(f.to_json(), media_type="application/json")
 
+    @data_router.api_route("/data/files", methods=["GET", "POST"])
     @sanitized
-    def files(self, request, relpath, with_metadata="no", with_provenance="no", **args):
+    def files(self, with_metadata: str = "no", with_provenance: str = "no"):
         with_metadata = with_metadata=="yes"
         with_provenance = with_provenance=="yes"
         #print("data_handler.files(): with_metadata:", with_metadata,"  with_provenance:", with_provenance)
-        #print("environ:", request.environ)
-        file_list = json.loads(request.body)
+        #print("environ:", self.Request.environ)
+        file_list = json.loads(self.body)
         lookup_lst = []
         for f in file_list:
             spec = ObjectSpec(f)
@@ -1361,16 +1400,14 @@ class DataHandler(MetaCatHandler):
         out = [f.to_jsonable(with_metadata = with_metadata, with_provenance = with_provenance) 
                 for f in files
         ]
-        return json.dumps(out), "application/json"
+        return Response(json.dumps(out), media_type="application/json")
 
+    @data_router.api_route("/data/query", methods=["GET", "POST"])
     @sanitized
-    def query(self, request, relpath, query=None, namespace=None, 
-                    with_meta="no", with_provenance="no", debug="no", include_retired_files="no",
-                    add_to=None, save_as=None, summary=None,
-                    **args):
+    def query(self, query: Optional[str] = None, namespace: Optional[str] = None, with_meta: str = "no", with_provenance: str = "no", debug: str = "no", include_retired_files: str = "no", add_to: Optional[str] = None, save_as: Optional[str] = None, summary: Optional[str] = None):
 
         if summary not in ("count", "keys", None):
-            return 400, f"Unsupported summary type: {summary}"
+            return HTMLResponse(f"Unsupported summary type: {summary}", status_code=400)
 
         with_meta = with_meta == "yes"
         with_provenance = with_provenance == "yes"
@@ -1389,11 +1426,11 @@ class DataHandler(MetaCatHandler):
         if query is not None:
             query_text = unquote_plus(query)
             #print("query from URL:", query_text)
-        elif "query" in request.POST:
-            query_text = request.POST["query"]
+        elif "query" in self.form:
+            query_text = self.form["query"]
             #print("query from POST:", query_text)
         else:
-            query_text = request.body
+            query_text = self.body
             #print("query from body:", query_text)
         query_text = to_str(query_text or "")
         
@@ -1402,7 +1439,7 @@ class DataHandler(MetaCatHandler):
         db = self.connect_with_timeout()
         user, error = self.authenticated_user()
         if (save_as or add_to) and user is None:
-            return 401, error
+            return HTMLResponse(error, status_code=401)
 
         add_to_dataset = None
         if save_as:
@@ -1411,13 +1448,13 @@ class DataHandler(MetaCatHandler):
             ns = DBNamespace.get(db, ds_namespace)
 
             if ns is None:
-                return 404, f"Namespace {ds_namespace} does not exist"
+                return HTMLResponse(f"Namespace {ds_namespace} does not exist", status_code=404)
 
             if not ns.owned_by_user(user):
-                return 403, f"Permission to create a dataset in the namespace {ds_namespace} denied"
+                return HTMLResponse(f"Permission to create a dataset in the namespace {ds_namespace} denied", status_code=403)
 
             if DBDataset.exists(db, ds_namespace, ds_name):
-                return 409, f"Dataset {ds_namespace}:{ds_name} already exists"
+                return HTMLResponse(f"Dataset {ds_namespace}:{ds_name} already exists", status_code=409)
                 
             add_to_dataset = DBDataset(db, ds_namespace, ds_name)
             add_to_dataset.create()
@@ -1428,18 +1465,18 @@ class DataHandler(MetaCatHandler):
             ns = DBNamespace.get(db, add_namespace)
 
             if ns is None:
-                return 404, f"Namespace {add_namespace} does not exist"
+                return HTMLResponse(f"Namespace {add_namespace} does not exist", status_code=404)
 
             if not ns.owned_by_user(user):
-                return 403, f"Permission to add files to dataset in the namespace {add_namespace} denied"
+                return HTMLResponse(f"Permission to add files to dataset in the namespace {add_namespace} denied", status_code=403)
 
             add_to_dataset = DBDataset.get(db, add_namespace, add_name)
             if add_to_dataset is None:
-                return 404, f"Dataset {add_namespace}:{add_name} does not exist"
+                return HTMLResponse(f"Dataset {add_namespace}:{add_name} does not exist", status_code=404)
 
         t0 = time.time()
         if not query_text:
-            return "[]", "application/json"
+            return Response("[]", media_type="application/json")
             
         try:
             query = MQLQuery.parse(query_text, 
@@ -1453,99 +1490,103 @@ class DataHandler(MetaCatHandler):
             )
         except (AssertionError, ValueError, MQLError) as e:
             #traceback.print_exc()
-            return 400, e.__class__.__name__ + ": " + e.Message
+            return HTMLResponse(e.__class__.__name__ + ": " + e.Message, status_code=400)
 
         if results is None: 
-            return "[]", "application/json"
+            return Response("[]", media_type="application/json")
 
         if query_type == "file":
 
             if summary == "count":
                 count, size = results.counts()
-                return json.dumps({"count":count, "total_size":size}), "application/json"
+                return Response(json.dumps({"count":count, "total_size":size}), media_type="application/json")
             elif summary == "keys":
-                return json.dumps(list(results.metadata_keys())), "application/json"
+                return Response(json.dumps(list(results.metadata_keys())), media_type="application/json")
 
             if add_to_dataset is not None:
                 results = list(results)
                 nfiles = add_to_dataset.add_files(results)
             data = (f.to_jsonable(with_metadata=with_meta, with_provenance=with_provenance) for f in results)
-            return self.json_stream(data), "application/json-seq"
+            return StreamingResponse(self.json_stream(data), media_type="application/json-seq")
 
         else:
             # dataset query
             data = ( d.to_jsonable(with_relatives=with_provenance) for d in results )
 
-        return self.json_stream(data), "application/json-seq"
+        return StreamingResponse(self.json_stream(data), media_type="application/json-seq")
         
+    @data_router.api_route("/data/search_queries", methods=["GET", "POST"])
     @sanitized
-    def search_queries(self, request, relpath, query=None,**args):
+    def search_queries(self, query: Optional[str] = None):
         if query is not None:
             query_text = unquote_plus(query)
             #print("query from URL:", query_text)
-        elif "query" in request.POST:
-            query_text = request.POST["query"]
+        elif "query" in self.form:
+            query_text = self.form["query"]
             #print("query from POST:", query_text)
         else:
-            query_text = request.body
+            query_text = self.body
             #print("query from body:", query_text)
         query_text = to_str(query_text or "")
         
         db = self.connect_with_timeout()
         t0 = time.time()
         if not query_text:
-            return "[]", "application/json"
+            return Response("[]", media_type="application/json")
             
         try:
             query = MQLQuery.parse(query_text, db=db)
             query_type = query.Type
             if query_type != "query":
-                return 400, "Invalid query type"
+                return HTMLResponse("Invalid query type", status_code=400)
             results = query.run(db, with_meta=True)
         except (AssertionError, ValueError, MQLError) as e:
             #traceback.print_exc()
-            return 400, e.__class__.__name__ + ": " + e.Message
+            return HTMLResponse(e.__class__.__name__ + ": " + e.Message, status_code=400)
 
         if results is None:
-            return "[]", "application/json"
+            return Response("[]", media_type="application/json")
 
         data = ( q.to_jsonable() for q in results )
-        return self.json_stream(data), "application/json-seq"
+        return StreamingResponse(self.json_stream(data), media_type="application/json-seq")
         
+    @data_router.api_route("/data/named_queries", methods=["GET", "POST"])
     @sanitized
-    def named_queries(self, request, relpath, namespace=None, **args):
+    def named_queries(self, namespace: Optional[str] = None):
         db = self.connect_with_timeout()
         queries = list(DBNamedQuery.list(db, namespace))
         data = [q.to_jsonable() for q in queries]
-        return json.dumps(data), "application/json"
+        return Response(json.dumps(data), media_type="application/json")
 
+    @data_router.api_route("/data/named_query", methods=["GET", "POST"])
     @sanitized
-    def named_query(self, request, relpath, namespace=None, name=None, **args):
+    def named_query(self, namespace: Optional[str] = None, name: Optional[str] = None):
         db = self.connect_with_timeout()
         q = DBNamedQuery.get(db, namespace, name)
         if q is None:
-            return 404, "Query not found"
-        return q.to_json(), "application/json"
+            return HTMLResponse("Query not found", status_code=404)
+        return Response(q.to_json(), media_type="application/json")
     
+    @data_router.api_route("/data/create_named_query", methods=["GET", "POST"])
     @sanitized
-    def create_named_query(self, request, relpath, update="no", **agrs):
+    def create_named_query(self, update: str = "no"):
         update = update == "yes"
         user, error = self.authenticated_user()
         if user is None:
-            return 401, "Authentication required"
-        data = json.loads(request.body)
+            return HTMLResponse("Authentication required", status_code=401)
+        data = json.loads(self.body)
         db = self.connect_with_timeout()
         namespace = data["namespace"]
         name = data["name"]
         try:
             if not self._namespace_authorized(db, namespace, user):
-                return 403, "Permission denied"
+                return HTMLResponse("Permission denied", status_code=403)
         except KeyError:
-            return 404, f"Namespace {namespace} does not exist"
+            return HTMLResponse(f"Namespace {namespace} does not exist", status_code=404)
         existing = DBNamedQuery.get(db, namespace, name)
         if existing is not None:
             if not update:
-                return 409, "Query already exists"
+                return HTMLResponse("Query already exists", status_code=409)
             existing.Source = data["source"]
             existing.Parameters = data.get("parameters", [])
             existing.Creator = user.Username
@@ -1556,40 +1597,44 @@ class DataHandler(MetaCatHandler):
             q = DBNamedQuery(db, namespace, name, data["source"], data.get("parameters", []))
             q.Creator = user.Username
             q.create()
-        return 200, q.to_json(), "application/json"
+        return Response(q.to_json(), media_type="application/json")
 
     #
     # Parameter categories
     #
-    def categories(self, request, relpath, **args):
+    @data_router.api_route("/data/categories", methods=["GET", "POST"])
+    def categories(self):
         db = self.connect_with_timeout()
         lst = DBParamCategory.list(db)
         out = [cat.to_jsonable() for cat in lst]
-        return json.dumps(out), "application/json"
+        return Response(json.dumps(out), media_type="application/json")
 
+    @data_router.api_route("/data/category", methods=["GET", "POST"])
+    @data_router.api_route("/data/category/{relpath:path}", methods=["GET", "POST"])
     @sanitized
-    def category(self, request, relpath, path=None, **args):
+    def category(self, relpath: str = "", path: Optional[str] = None):
         path = path or relpath
         if not path:
-            return 400, "Category path not specified", "text/plain"
+            return PlainTextResponse("Category path not specified", status_code=400)
         db = self.connect_with_timeout()
         cat = DBParamCategory.get(db, path)
         if cat is None:
             out = None
         else:
             out = cat.to_jsonable()
-        return json.dumps(out), "application/json"
+        return Response(json.dumps(out), media_type="application/json")
 
+    @data_router.api_route("/data/create_category", methods=["GET", "POST"])
     @sanitized
-    def create_category(self, request, relpath):
+    def create_category(self):
         db = self.connect_with_timeout()
         user, error = self.authenticated_user()
         if not (user and user.is_admin()):
-            return 403, "Permission denied -- must be admin"
-        if not request.body:
-            return 400, "Category parameters are not specified"
+            return HTMLResponse("Permission denied -- must be admin", status_code=403)
+        if not self.body:
+            return HTMLResponse("Category parameters are not specified", status_code=400)
 
-        params = json.loads(request.body)
+        params = json.loads(self.body)
         path = params["path"]
         owner_role = params["owner_role"]
         restricted = params["restricted"]
@@ -1599,18 +1644,18 @@ class DataHandler(MetaCatHandler):
         creator = user.Username
 
         if not path:
-            return 404, "Category path not specified"
+            return HTMLResponse("Category path not specified", status_code=404)
         if '.' in path and path != '.':
-            return 409, "Invalid relative category path. Cannot contain dot"
+            return HTMLResponse("Invalid relative category path. Cannot contain dot", status_code=409)
         if DBParamCategory.exists(db, path):
-            return 409, f"Category {path} already exists"
+            return HTMLResponse(f"Category {path} already exists", status_code=409)
         if not definitions:
-            return 400, "Empty category definitions"
+            return HTMLResponse("Empty category definitions", status_code=400)
 
         # Check that all given definitions are valid
         definition_errors = validate_param_definitions(definitions)
         if definition_errors:
-            return 400, "; ".join(definition_errors)
+            return HTMLResponse("; ".join(definition_errors), status_code=400)
 
         # Validate that required categories have at least one required parameter
         if required:
@@ -1619,29 +1664,30 @@ class DataHandler(MetaCatHandler):
                 for defn in definitions.values()
             )
             if not has_required_param:
-                return 400, "Required category must have at least one required parameter"
+                return HTMLResponse("Required category must have at least one required parameter", status_code=400)
 
         cat = DBParamCategory(db, path, restricted=restricted, required=required, owner_role=owner_role, owner_user=creator, creator=creator, description=description, definitions=definitions)
         cat.create()
-        return json.dumps(cat.to_jsonable()), "application/json"
+        return Response(json.dumps(cat.to_jsonable()), media_type="application/json")
 
+    @data_router.api_route("/data/update_category", methods=["GET", "POST"])
     @sanitized
-    def update_category(self, request, relpath):
+    def update_category(self):
         db = self.connect_with_timeout()
         user, error = self.authenticated_user()
         if not (user and user.is_admin()):
-            return 403, "Permission denied -- must be admin"
-        if not request.body:
-            return 400, "Category parameters are not specified"
+            return HTMLResponse("Permission denied -- must be admin", status_code=403)
+        if not self.body:
+            return HTMLResponse("Category parameters are not specified", status_code=400)
 
-        params = json.loads(request.body)
+        params = json.loads(self.body)
         path = params.get("path")
         if not path:
-            return 400, "Category path not specified"
+            return HTMLResponse("Category path not specified", status_code=400)
 
         cat = DBParamCategory.get(db, path)
         if cat is None:
-            return 404, "Category not found"
+            return HTMLResponse("Category not found", status_code=404)
 
         owner_role = params.get("owner_role")
         restricted = params.get("restricted")
@@ -1662,7 +1708,7 @@ class DataHandler(MetaCatHandler):
             # Check that all given definitions are valid
             definition_errors = validate_param_definitions(definitions)
             if definition_errors:
-                return 400, "; ".join(definition_errors)
+                return HTMLResponse("; ".join(definition_errors), status_code=400)
             if mode == "update":
                 new_defs = cat.Definitions.copy()
                 new_defs.update(definitions)
@@ -1678,54 +1724,59 @@ class DataHandler(MetaCatHandler):
                     for defn in cat.Definitions.values()
                 )
                 if not has_required_param:
-                    return 400, "Required category must have at least one required parameter"
+                    return HTMLResponse("Required category must have at least one required parameter", status_code=400)
 
         cat.save()
-        return json.dumps(cat.to_jsonable()), "application/json"
+        return Response(json.dumps(cat.to_jsonable()), media_type="application/json")
 
+    @data_router.api_route("/data/remove_category", methods=["GET", "POST"])
+    @data_router.api_route("/data/remove_category/{relpath:path}", methods=["GET", "POST"])
     @sanitized
-    def remove_category(self, request, relpath, path=None, **args):
+    def remove_category(self, relpath: str = "", path: Optional[str] = None):
         path = path or relpath
         if not path:
-            return 400, "Category path not specified", "text/plain"
+            return PlainTextResponse("Category path not specified", status_code=400)
         db = self.connect_with_timeout()
         user, error = self.authenticated_user()
         cat = DBParamCategory.get(db, path)
         if cat is None:
-            return 404, "Category not found"
+            return HTMLResponse("Category not found", status_code=404)
         if not (user.is_admin() or user in cat.owners()):
-            return 403, "Permission denied"
+            return HTMLResponse("Permission denied", status_code=403)
         cat.delete()
-        return "null", "text/json"
+        return Response("null", media_type="text/json")
 
+    @data_router.api_route("/data/report_metadata_keys", methods=["GET", "POST"])
     @sanitized
-    def report_metadata_keys(self, request, replpath,  **args):
+    def report_metadata_keys(self):
         db = self.connect_with_timeout(report=True)
         user, error = self.authenticated_user()
         if not (user and user.is_admin()): 
-            return 403, "Permission denied -- must be admin"
+            return HTMLResponse("Permission denied -- must be admin", status_code=403)
         fobj = DBFile(db)
         out = fobj.report_metadata_keys()
-        return json.dumps(list(out)), "application/json"
+        return Response(json.dumps(list(out)), media_type="application/json")
 
+    @data_router.api_route("/data/report_metadata_counts_ranges", methods=["GET", "POST"])
     @sanitized
-    def report_metadata_counts_ranges(self, request, relpath, keylist="", **args):
+    def report_metadata_counts_ranges(self, keylist: str = ""):
         db = self.connect_with_timeout(report=True)
         user, error = self.authenticated_user()
         if not (user and user.is_admin()): 
-            return 403, "Permission denied -- must be admin"
+            return HTMLResponse("Permission denied -- must be admin", status_code=403)
         fobj = DBFile(db)
         keylist = keylist.split(",")
         out = fobj.report_metadata_counts_ranges(keylist)
-        return json.dumps(dict(out)), "application/json"
+        return Response(json.dumps(dict(out)), media_type="application/json")
 
+    @data_router.api_route("/data/report_metadata_values", methods=["GET", "POST"])
     @sanitized
-    def report_metadata_values(self, request, relpath, key=None, **args):
+    def report_metadata_values(self, key: Optional[str] = None):
         db = self.connect_with_timeout(report=True)
         user, error = self.authenticated_user()
         if not (user and user.is_admin()): 
-            return 403, "Permission denied -- must be admin"
+            return HTMLResponse("Permission denied -- must be admin", status_code=403)
         fobj = DBFile(db)
         out = list(fobj.report_metadata_values(key))
-        return json.dumps(out), "application/json"
+        return Response(json.dumps(out), media_type="application/json")
 
