@@ -703,7 +703,7 @@ class DimNode(NegatableNode):
         name = re.sub("^consumed_status$", "project.status", name)
         return name
 
-    def meta_render(self):
+    def meta_render(self, in_filter_arg=False):
         if isinstance(self.value, list):
 
             def _gen():
@@ -740,6 +740,9 @@ class DimNode(NegatableNode):
 
         if op == "notlike":
             op = "!~"
+
+        if in_filter_arg:
+            op = "="
 
         yield self.meta_trans(self.dim)
         yield op
@@ -912,7 +915,7 @@ class MetaFilterNode(NodeBase):
         yield self.filter_name
         yield "("
         if self.filter_param_nodes:
-            for t in self.filter_param_nodes.meta_render():
+            for t in self.filter_param_nodes.meta_render(in_filter_arg=True):
                 yield t
         sep = ''
         if self.filter_int_values:
@@ -984,7 +987,9 @@ class IsRelativeOfNode(NegatableNode):
 
     def meta_render(self):
         if self.subtree:
-            yield {"ischildof": "children", "isparentof": "parents"}[self.relation]
+            # ZZZ: note isancestorof/isdescentantof is actually more than first order children/parents... 
+            # needs something fancier , maybe render it one, two and three levels deep or something...
+            yield {"ischildof": "children", "isparentof": "parents", "isdescendantof": "children", "isancestorof": "parents"}[self.relation]
             yield "("
             if not is_set_level_node(self.subtree):
                 yield "files where"
@@ -1143,6 +1148,7 @@ class MetaCatTransformer(ParseTreeTransformer):
 
             if self.parentage_terms:
                 node = SetNode("intersection" if orflag else "union", node, *self.parentage_terms)
+                self.parentage_terms = []
 
             if self.snapshot_terms:
                 if len(self.snapshot_terms) == 1:
@@ -1153,6 +1159,7 @@ class MetaCatTransformer(ParseTreeTransformer):
                         *[MetaDatasetNode(n.value) for n in self.snapshot_terms],
                     )
                 node = SetNode("union" if orflag else "intersect", n1, node)
+                self.snapshot_terms = []
 
             if self.def_terms:
                 # xxx this currently assumes defname:whatever is and-ed
@@ -1160,6 +1167,7 @@ class MetaCatTransformer(ParseTreeTransformer):
                 # we would combine with "union" if needed...
                 self.def_terms.append(node)
                 node = SetNode("union" if orflag else "intersect", *self.def_terms)
+                node.modified = True
                 self.def_terms = []
 
         if self.ptdepth == 0:
@@ -1194,6 +1202,7 @@ class MetaCatTransformer(ParseTreeTransformer):
                 node = MetaFilterNode(
                     "every_nth", None, node, None, filter_int_values = [self.nth_term, 1]
                 )
+                self.nth_term = None
 
 
         return node
