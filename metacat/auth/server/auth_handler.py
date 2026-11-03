@@ -5,68 +5,68 @@ from metacat.util import to_str, to_bytes
 
 import time, os, yaml, json, traceback
 from datetime import datetime
+from typing import Optional
 from urllib.parse import quote_plus, unquote_plus
-from webpie import Response
+from fastapi import APIRouter
+from fastapi.responses import Response, PlainTextResponse
+from fastapi_utils.cbv import cbv
 
+# Routes are relative to where the routers are included into the application:
+#   metacat server:             /auth
+#   auth server:                /
+#   multi-group auth server:    /{group} and /auth/{group}
+
+auth_router = APIRouter()
+
+@cbv(auth_router)
 class AuthHandler(BaseHandler):
-    
-    def __init__(self, request, app, group=None):
-        #
-        # group will be used by an app, which can do authentication for multiple groups
-        # standard BaseApp ignores it
-        BaseHandler.__init__(self, request, app, group)
-        #print("AuthHandler(): created with group:", group, "   core:", self.AuthCore)
-    
-    def whoami(self, request, relpath, **args):
-        user, error = self.AuthCore.user_from_request(request)
-        return user or "", "text/plain"
-        
-    def mydn(self, request, relpath):
-        ssl = request.environ.get("HTTPS") == "on" or request.environ.get("REQUEST_SCHEME") == "https"
+
+    @auth_router.api_route("/whoami", methods=["GET", "POST"])
+    def whoami(self):
+        user, error = self.AuthCore.user_from_request(self.Request)
+        return PlainTextResponse(user or "")
+
+    @auth_router.api_route("/mydn", methods=["GET", "POST"])
+    @auth_router.api_route("/mydn/{relpath:path}", methods=["GET", "POST"])
+    def mydn(self, relpath: str = ""):
+        environ = self.Request.environ
+        ssl = environ.get("HTTPS") == "on" or environ.get("REQUEST_SCHEME") == "https"
         if not ssl:
-            return "Use HTTPS connection\n", 400
+            return Response("Use HTTPS connection\n", status_code=400, media_type="text/html")
         if relpath == "issuer":
-            return request.environ.get("SSL_CLIENT_I_DN","") + "\n", "text/plain"
+            return PlainTextResponse(environ.get("SSL_CLIENT_I_DN","") + "\n")
         elif relpath == "subject":
-            return request.environ.get("SSL_CLIENT_S_DN","") + "\n", "text/plain"
+            return PlainTextResponse(environ.get("SSL_CLIENT_S_DN","") + "\n")
         else:
-            return json.dumps({
-                "subject":  request.environ.get("SSL_CLIENT_S_DN",""),
-                "issuer":  request.environ.get("SSL_CLIENT_I_DN","")
-            }) + "\n", "text/json"
-        
-    def ________token(self, request, relpath, download=False, **args):
-        encoded = self.App.encoded_token_from_request(request)
-        #print("token from request:", encoded)
-        token = None
-        if encoded:
-            token, error = self.App.verify_token(encoded)
-        if not token:
-            #print("redirecting. error:", error)
-            self.redirect("./login")
-        headers = {"Content-Type":"text/plan"}
-        if download == "yes":
-            headers["Content-Disposition"] = "attachment"
-        return 200, encoded, headers
+            return Response(json.dumps({
+                "subject":  environ.get("SSL_CLIENT_S_DN",""),
+                "issuer":  environ.get("SSL_CLIENT_I_DN","")
+            }) + "\n", media_type="text/json")
 
-    def verify(self, request, relpath, **args):
-        username, error = self.AuthCore.user_from_request(request)
-        return ("OK","text/plain") if username else (error, 401)
+    @auth_router.api_route("/verify", methods=["GET", "POST"])
+    def verify(self):
+        username, error = self.AuthCore.user_from_request(self.Request)
+        if username:
+            return PlainTextResponse("OK")
+        else:
+            return Response(error, status_code=401, media_type="text/html")
 
-    def auth(self, request, relpath, redirect=None, method="password", username=None, **args):
-        status, extra = self.AuthCore.authenticate(method, username, request, redirect)
+    @auth_router.api_route("/auth", methods=["GET", "POST"])
+    def auth(self, redirect: Optional[str] = None, method: str = "password", username: Optional[str] = None):
+        status, extra = self.AuthCore.authenticate(method, username, self.Request, redirect)
         #print("AuthHandler.auth:", method, status, extra)
         if status == "continue":
-            return extra
+            http_status, text, headers = extra
+            return Response(text, status_code=http_status, headers=headers, media_type="text/html")
         elif status == "reject":
-            return 401, (extra or "Authentication failed") + "\n"
+            return Response((extra or "Authentication failed") + "\n", status_code=401, media_type="text/html")
         elif status != "ok":
-            return 401, "Unknown authentication status\n"
-            
+            return Response("Unknown authentication status\n", status_code=401, media_type="text/html")
+
         # status == "ok":
         username = extra.get("username", username)
         if not username:
-            return 401, "Authentication failed: unknown username\n"
+            return Response("Authentication failed: unknown username\n", status_code=401, media_type="text/html")
 
         token, encoded = self.AuthCore.generate_token(username, expiration=extra.get("expiration"))
         headers = {"X-Authentication-Token": to_str(encoded)}
@@ -74,54 +74,65 @@ class AuthHandler(BaseHandler):
         if redirect:
             headers["Location"] = redirect
             http_status = 302
-        return http_status, "", headers
+        return Response("", status_code=http_status, headers=headers, media_type="text/html")
 
     # draft of adding probe check for monitoring
-    def probe(self, req, relpath, **args):
+    @auth_router.api_route("/probe", methods=["GET", "POST"])
+    def probe(self):
         try:    db = self.AuthCore.user_db()
         except Exception as e:
-            return 500, str(e)
+            return Response(str(e), status_code=500, media_type="text/html")
         c = db.cursor()
         c.execute("select 1")
-        return "OK" if c.fetchone()[0] == 1 else 500
+        if c.fetchone()[0] == 1:
+            return Response("OK", media_type="text/html")
+        return Response(status_code=500)
 
 
+gui_auth_router = APIRouter()
 
+@cbv(gui_auth_router)
 class GUIAuthHandler(AuthHandler):
-    
-    def logout(self, request, relpath, redirect=None, **args):
+
+    @gui_auth_router.api_route("/logout", methods=["GET", "POST"])
+    def logout(self, redirect: Optional[str] = None):
         if redirect:
-            resp = Response(status=302, headers={"Location": redirect})
+            resp = Response(status_code=302, headers={"Location": redirect})
         else:
-            resp = Response(status=200, content_type="text/plain")
-        try:    resp.set_cookie("auth_token", "-", max_age=1)
-        except: pass
+            resp = PlainTextResponse("")
+        resp.set_cookie("auth_token", "-", max_age=1)
         return resp
 
-    def login(self, request, relpath, redirect=None, **args):
+    @gui_auth_router.api_route("/login", methods=["GET", "POST"])
+    def login(self, redirect: Optional[str] = None):
         if redirect: redirect = unquote_plus(redirect)
-        return self.render_to_response("login.html", redirect=redirect, **self.messages(args))
-        
-    def logged_in(self, request, relpath, **args):
-        token = self.AuthCore.token_from_request(request)
+        return self.render_to_response("login.html", redirect=redirect, **self.messages())
+
+    @gui_auth_router.api_route("/logged_in", methods=["GET", "POST"])
+    def logged_in(self):
+        token, error = self.AuthCore.token_from_request(self.Request)
+        if token is None:
+            self.redirect("./login?error=%s" % (quote_plus(error or "Not logged in"),))
         encoded = to_str(token.encode())
         exp = datetime.utcfromtimestamp(token.expiration)
         return self.render_to_response("show_token.html", token=token, expiration=exp, encoded=encoded)
 
-    def do_login(self, request, relpath, **args):
+    @gui_auth_router.api_route("/do_login", methods=["GET", "POST"])
+    def do_login(self):
         # handle SciTokens here !!!
-        username = request.POST["username"]
-        hashed_password = request.POST.get("hashed_password")
-        password = request.POST.get("password")
-        token_text = request.POST.get("token")
-        redirect = request.POST.get("redirect")
+        form = self.form
+        username = form.get("username")
+        hashed_password = form.get("hashed_password")
+        password = form.get("password")
+        token_text = form.get("token")
+        redirect = form.get("redirect")
         relogin_url = "./login"
         if redirect:
             relogin_url += "?redirect=%s&" % (quote_plus(redirect),)
         else:
             relogin_url += "?"
         token = None
-        
+
         db = self.App.user_db()
         if token_text:
             token, error = self.AuthCore.verify_token(token_text)
@@ -129,15 +140,15 @@ class GUIAuthHandler(AuthHandler):
             if not subject:
                 self.redirect("%serror=%s" % (relogin_url, quote_plus(error)))
             username = subject
-            
+
         if not username:
             self.redirect("%serror=%s" % (relogin_url, quote_plus("Need username or token")))
-            
+
         u = DBUser.get(db, username)
         if not u:
             #print("authentication error")
             self.redirect("%serror=User+%s+not+found" % (relogin_url, username))
-        
+
         if not token:
             if (password or hashed_password) and username:
                 #print("GUIAuthHandler: password:", password,"  hashed_password:", hashed_password)
@@ -152,7 +163,7 @@ class GUIAuthHandler(AuthHandler):
 
         if token is not None:
             expiration = token.expiration
-            
+
         if expiration is None:
             expiration = self.AuthCore.TokenExpiration + time.time()
 
@@ -162,11 +173,11 @@ class GUIAuthHandler(AuthHandler):
             token, encoded = self.AuthCore.generate_token(username, expiration=expiration)
 
         if redirect:
-            resp = Response(status=302, headers={"Location": redirect})
+            resp = Response(status_code=302, headers={"Location": redirect})
         else:
-            resp = Response(status=200, content_type="text/plain")
+            resp = PlainTextResponse("")
         #print ("response:", resp, "  reditrect=", redirect)
         resp.headers["X-Authentication-Token"] = to_str(encoded)
-        resp.set_cookie("auth_token", encoded, max_age = max(0, int(expiration - time.time())))
+        resp.set_cookie("auth_token", to_str(encoded), max_age = max(0, int(expiration - time.time())))
         #print("GUIAuthHandler.do_login: returning", resp)
         return resp

@@ -22,7 +22,7 @@ RUN mkdir -p /metacat
 
 WORKDIR /metacat
 
-RUN pip install python-ldap pyyaml jinja2 pythreader webpie pyjwt requests lark mod_wsgi \
+RUN pip install python-ldap pyyaml jinja2 pythreader fastapi fastapi-utils typing-inspect a2wsgi python-multipart uvicorn pyjwt requests lark mod_wsgi \
     && mod_wsgi-express module-config > /etc/httpd/conf.modules.d/10-wsgi.conf \
     && rm -rf ~/.chache/pip 
 

@@ -55,6 +55,24 @@ Download and set up
     Once the MetaCat server is running, log in to GUI as the admin user and go to Users tab.
     In the future, you can add more admin users or make a regular user an admin.
 
+Running MetaCat server directly
+-------------------------------
+
+The MetaCat server is a `FastAPI <https://fastapi.tiangolo.com/>`_ application. Install the server dependencies
+listed in ``webserver/requirements.txt`` and build the server (``make generic``). Then either run it standalone
+under `uvicorn <https://www.uvicorn.org/>`_:
+
+    .. code-block:: shell
+
+        $ export METACAT_SERVER_CFG=/path/to/config/config.yaml
+        $ export METACAT_SERVER_TEMPLATES_DIR=/path/to/server/templates
+        $ python server/Server.py [-p <port>]
+
+or under a WSGI server such as Apache ``mod_wsgi`` or uWSGI, which should point to the ``application`` object in
+``Server.py``. ``application`` wraps the ASGI application ``app`` using `a2wsgi <https://github.com/abersheeran/a2wsgi>`_.
+X.509 client certificate authentication requires the ``SSL_CLIENT_*`` variables provided by the WSGI server
+(e.g. Apache ``SSLOptions +StdEnvVars``).
+
 Running MetaCat server as a Docker Container
 --------------------------------------------
 
