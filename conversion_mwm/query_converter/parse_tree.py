@@ -701,6 +701,7 @@ class DimNode(NegatableNode):
         name = re.sub("^consumed_status$", "project.state", name)
         name = re.sub("^consumer_process_description$", "project.description", name)
         name = re.sub("^consumed_status$", "project.status", name)
+        name = re.sub("^user$", "creator", name)
         return name
 
     def meta_render(self, in_filter_arg=False):
@@ -1086,6 +1087,7 @@ class MetaCatTransformer(ParseTreeTransformer):
             "def_snapshot",
             "snapshot_id",
             "snapshot_for_project_name",
+            "snapshot_for_project_id",
             "dataset_def_name_newest_snapshot",
         }
 
@@ -1272,7 +1274,9 @@ class MetaCatTransformer(ParseTreeTransformer):
             return node
 
     def visit_OrNode(self, node):
-        setconvert = any([ isinstance(n, SetNode) for n in node.nodes])
+        setconvert = any([ is_set_level_node(n) for n in node.nodes])
+        
+        logging.debug(f"visit_OrNode: {setconvert=} {node.nodes=}")
 
         if setconvert:
             node = SetNode("intersection" if node.negated else "union", *node.nodes )
