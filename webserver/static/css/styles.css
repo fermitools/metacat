@@ -1,0 +1,114 @@
+
+body { 
+    font-family: Helvetica, sans-serif;
+    background-color: #eeeeee;
+}
+
+#banner {
+    display: block;
+    width: 13em;
+    position: absolute;
+    height: 100%;
+    top: 0;
+}
+
+#banner h5 {
+    font-weight: normal;
+    font-size: larger;
+    font-family: sans-serif;
+    text-transform: uppercase;
+    margin: 0.5em;
+    color: #505050;
+}
+
+#createuser {
+    float: right;
+    border: 1px solid black;
+    background: blue;
+    color: white;
+    padding: 0.5em;
+    border-radius: 0.5em;
+    margin-top: -3em;
+    text-decoration: none;
+}
+#createuser:before { content: "+ "; }
+
+#searchbar {
+    padding: 0.5em;
+}
+#version {
+    margin-left: 13em;
+}
+#searchbar:before { content: "🔍 "; }
+
+#userinfo {
+     float: right;
+     padding: 0.5em;
+     width: 10em;
+}
+
+#userinfo span {
+     margin-left: 5em;
+}
+
+#logo {
+    width: 2em; 
+    height: 2em;
+}
+
+#body {
+    display: block;
+    padding: 2em;
+    width: auto;  
+    position: absolute;
+    left: 13em;
+    top: 2.5em;
+    background-color: #e5e5e5;
+}
+
+#banner span { 
+    display: block; 
+    padding: 1em; 
+} 
+#banner span:hover { 
+   background: #dddddd;
+}
+td {
+   border: 1px solid #eeeeee;
+   padding: 3px;
+}
+
+tr:hover {
+   background: #dddddd;
+}
+th {
+   background-color: #e5e5e5;
+   border: 1px solid #dddddd;
+   text-transform: uppercase;
+   font-weight: normal;
+   font-size: smaller;
+}
+
+table {
+   border-spacing: 0px;
+   background: white;
+}
+
+#banner span a { 
+   text-decoration: none; 
+   color: #202020;
+}
+
+#username:before { content: "🪪 "; }
+#logout:before { content: "🚪"; }
+#btn_home:before { content: "🏠 "; }
+#btn_users:before { content: "🪪 "; }
+#btn_roles:before { content: "👥 "; }
+#btn_namespaces:before { content: "🗃 "; }
+#btn_datasets:before { content: "🗂 "; }
+#btn_find:before { content: "🔍 "; }
+#btn_categories:before { content: "📑 "; }
+#btn_query:before { content: "📝 "; }
+#btn_named_query:before { content: "📝 "; }
+#btn_filter:before { content: "⚗ "; }
+#btn_docs:before { content: "📖 "; }
