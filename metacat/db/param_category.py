@@ -1,7 +1,7 @@
 from metacat.common import DBObject, transactioned
 from metacat.db import DBRole, DBUser
 import json
-from metacat.util import epoch, validate_metadata, fetch_generator
+from metacat.util import epoch, validate_metadata, validate_category_metadata, fetch_generator
 
 class DBParamCategory(DBObject):
 
@@ -188,55 +188,12 @@ class DBParamCategory(DBObject):
         #     (item, {"param name":"error", ...})
         #
 
-        # Collect all category paths from metadata
-        category_paths = set()
-        for item in items:
-            meta = item if isinstance(item, dict) else item.metadata()
-            for name in meta:
-                if "." in name:
-                    path, _ = name.rsplit(".", 1)
-                    category_paths.add(path)
-
-        categories = {path:DBParamCategory.category_for_path(db, path) for path in category_paths}
-
-        # Add required params from categories that are referenced in metadata and have required parameters
-        required_params = {}  # path -> set of required param names
-        for path, category in categories.items():
-            if category and category.Definitions:
-                for pname, definition in category.Definitions.items():
-                    if definition.get("required"):
-                        required_params.setdefault(path, set()).add(pname)
-
-        # Also add required params from required categories
-        all_categories = {c.Path: c for c in DBParamCategory.list(db)}
-        for path, category in all_categories.items():
-            if category and category.Required and category.Definitions:
-                for pname, definition in category.Definitions.items():
-                    if definition.get("required"):
-                        required_params.setdefault(path, set()).add(pname)
-
+        categories = {c.Path: c.to_jsonable() for c in DBParamCategory.list(db)}
         errors = []
         for index, item in enumerate(items):
             meta = item if isinstance(item, dict) else item.metadata()
-            item_errors = []
-
-            # Check required params for categories in metadata or required categories
-            for path, required_set in required_params.items():
-                for pname in required_set:
-                    param_key = path + "." + pname
-                    if param_key not in meta:
-                        item_errors.append({"name": param_key, "reason": f"required parameter '{pname}' is missing from category '{path}'", "value": None})
-
-            for name, value in meta.items():
-                if "." in name:
-                    path, vname = name.rsplit(".", 1)
-                    category = categories.get(path)
-                    if category is not None:
-                        ok, error = category.validate_parameter(vname, value)
-                        if not ok:
-                            item_errors.append({"name": name, "reason": error, "value": value})
-                else:
-                    item_errors.append({"name": name, "reason": "Parameter name without a category", "value": value})
+            item_errors = [{"name": name, "reason": error, "value": meta.get(name)}
+                            for name, error in validate_category_metadata(categories, meta)]
             if item_errors:
                 errors.append((index, item_errors))
         return errors

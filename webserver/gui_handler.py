@@ -55,7 +55,7 @@ class GUICategoryHandler(MetaCatHandler):
         else:
             roles = list(me.roles)
             cats = [c for c in cats if me.Username in c.owners()]
-        cats = sorted([c.Path for c in cats])
+        cats = sorted([c.Path for c in cats if c.Path != '.'])
         users = sorted(list(u.Username for u in DBUser.list(db))) if admin else [me.Username]
         return self.render_to_response("category.html", category=None, create=True, creator=me.Username, roles=roles, 
                 users=users, admin=admin, parent_categories=cats, user=me, types = DBParamCategory.Types)
@@ -128,7 +128,7 @@ class GUICategoryHandler(MetaCatHandler):
         if not me:
             self.redirect(self.scriptUri() + "/auth/login?redirect=" + self.scriptUri() + "/gui/categories/index")
         rpath = request.POST["rpath"]
-        if '.' in rpath and rpath != '.':
+        if '.' in rpath:
             self.redirect("./index?error=%s" % (quote_plus("Invalid relative category path. Can not contain dot."),))
         parent_path = request.POST.get("parent_path")
         if not parent_path:
