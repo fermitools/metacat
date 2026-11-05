@@ -13,7 +13,7 @@
 @property --de-emph-bg {
     syntax: "<color>";
     inherits: true;
-    initial-value: #f3f3f3;
+    initial-value: #f8f8f8;
 }
 
 @property --emph-bg {
@@ -23,9 +23,21 @@
 }
 
 body { 
-    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-family: Arial, sans-serif;
+    background-color: var(--de-emph-bg);
+    max-height: 98%;
+    max-width: 98%;
+}
+
+.de_emph {
     background-color: var(--de-emph-bg);
 }
+
+.copy_button {
+    width:2em;
+    height:2em;
+}
+
 
 #banner {
     display: block;
@@ -44,25 +56,34 @@ body {
     color: var(--de-emph-color);
 }
 
-#createuser  {
+#allbutton, #createbutton, #searchbutton,  .tab_button  {
     float: right;
     border: 1px solid black;
     background: blue;
     color: white;
     padding: 0.5em;
+    margin: 0.5em;
     border-radius: 0.5em;
-    margin-top: -3em;
+    text-decoration: none;
+    text-transform: capitalize;
+}
+
+.tab_button a {
+    color: white;
     text-decoration: none;
 }
 
-#createuser:before { content: "+ "; }
+#createbutton:before { content: "+ "; }
+#searchbutton:before { content: "🔍 "; }
 
 #searchbar {
     padding: 0.5em;
 }
+
 #version {
     margin-left: 13em;
 }
+
 #searchbar:before { content: "🔍 "; }
 
 #userinfo {
@@ -80,21 +101,31 @@ body {
     height: 2em;
 }
 
+#headline {
+    margin-top:-2em;
+    padding: 0;
+}
+#headline h2 {
+    margin: 0;
+    padding: 0;
+}
+
 #body {
-    display: block;
-    padding: 2em;
-    width: auto;  
-    position: absolute;
+    position: relative;
     left: 13em;
     top: 2.5em;
+    max-height: calc(100% - 2.5em);
+    max-width: calc(100% - 20em);  
+    padding: 2em;
     background-color: var(--de-emph-bg);
 }
 
 #content {
-    height:   80%;
+    max-height: calc(100% - 15em);
     overflow: scroll;
     clear: both;
 }
+
 #footer {
     clear: both;
 }
@@ -103,9 +134,11 @@ body {
     display: block; 
     padding: 1em; 
 } 
+
 #banner span:hover { 
    background: #dddddd;
 }
+
 td {
    border: 1px solid var(--de-emph-bg);
    padding: 3px;
@@ -114,6 +147,7 @@ td {
 tr:hover {
    background: #dddddd;
 }
+
 th {
    background-color: var(--de-emph-bg);
    border: 1px solid #dddddd;

@@ -2,8 +2,9 @@
 
 {% block headline %}Namespaces{% endblock %}
 
-{% block content %}
+{% block header %}
 
+<div>
 {% if logged_in %}
     <p><a id="createbutton" href="./create_namespace">create</a>&nbsp;&nbsp;&nbsp;
         {%- if showing_all -%}
@@ -14,6 +15,10 @@
     </p>
     <br>
 {% endif %}
+
+</div>
+{% endblock %}
+{% block content %}
 
 <script type="text/javascript">
     var request_queue = new RequestQueue(5);

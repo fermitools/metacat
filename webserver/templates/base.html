@@ -118,7 +118,7 @@
 
 <div id="body">
 
-    <div id="headline" style="clear:both">
+    <div id="headline">
 	<h2>{% block headline %}{% endblock %}</h2>
     </div>
     {% if message is defined and message %}
@@ -127,6 +127,7 @@
     {% if error is defined and error %}
         <p class=error>{{error}}</p>
     {% endif %}
+    <div id=header>{% block header %}{% endblock %}</div>
     <div id=content>{% block content %}{% endblock %}</div>
     <div id=footer>{% block footer %}{% endblock %}</div>
 </div>	<!-- body -->

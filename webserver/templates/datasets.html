@@ -2,8 +2,7 @@
 
 {% block headline %}Datasets{% endblock %}
 
-{% block content %}
-
+{% block header %}
 <p>
 <a id="createbutton" href="./create_dataset">create</a>
 </p>
@@ -46,7 +45,6 @@
 
 {% set logged_in = not user is none %}
 
-{% if datasets %}
 
     {# disable
     <script type="text/javascript">
@@ -69,6 +67,9 @@
         </p>
     {% endif %}    
     
+{% endblock %}
+{% block content %}
+{% if datasets %}
     <table class="data">
     	<tr>
 		<th>Name<a href="./datasets?sort_by=Name&sort_asc=d&namematch={{namematch}}&selection={{selection}}" style="text-decoration: none">&dArr;</a><a href="./datasets?sort_by=Name&sort_asc=a&namematch={{namematch}}&selection={{selection}}" style="text-decoration: none">&uArr;</a></th>
