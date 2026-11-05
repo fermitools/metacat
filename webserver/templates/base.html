@@ -127,7 +127,8 @@
     {% if error is defined and error %}
         <p class=error>{{error}}</p>
     {% endif %}
-    <div id=content style="clear:both">{% block content %}{% endblock %}</div>
+    <div id=content>{% block content %}{% endblock %}</div>
+    <div id=footer>{% block footer %}{% endblock %}</div>
 </div>	<!-- body -->
 
 </body>

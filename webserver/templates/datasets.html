@@ -5,7 +5,7 @@
 {% block content %}
 
 <p>
-<a href="./create_dataset">create</a>
+<a id="createbutton" href="./create_dataset">create</a>
 </p>
 
 <!-- Info: {{info}} -->
@@ -138,7 +138,14 @@
             </tr>
     	{% endfor %}
     </table>
+{% else %}
+    <p>No datasets found</p>
+{% endif %}
     
+{% endblock %}
+
+{% block footer %}
+
     <p style="color:gray">* - may not be accurate for non-frozen datasets: updated periodically, includes retired files</p>
 
     {% if npages > 1 %}
@@ -153,8 +160,5 @@
         </p>
     {% endif %}    
     
-{% else %}
-    <p>No datasets found</p>
-{% endif %}
 
 {% endblock %}

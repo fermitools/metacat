@@ -13,7 +13,7 @@
 @property --de-emph-bg {
     syntax: "<color>";
     inherits: true;
-    initial-value: #eeeeee;
+    initial-value: #f3f3f3;
 }
 
 @property --emph-bg {
@@ -23,7 +23,7 @@
 }
 
 body { 
-    font-family: Arial, sans-serif;
+    font-family: "Helvetica Neue", Arial, sans-serif;
     background-color: var(--de-emph-bg);
 }
 
@@ -88,6 +88,15 @@ body {
     left: 13em;
     top: 2.5em;
     background-color: var(--de-emph-bg);
+}
+
+#content {
+    height:   80%;
+    overflow: scroll;
+    clear: both;
+}
+#footer {
+    clear: both;
 }
 
 #banner span { 

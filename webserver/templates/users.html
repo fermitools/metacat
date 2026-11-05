@@ -4,7 +4,7 @@
 
 {% block content %}
 
-{% if admin %}<p><a id="createuser" href="./create_user">create</a></p>{% endif %}
+{% if admin %}<p><a id="createbutton" href="./create_user">create</a></p><br>{% endif %}
 
 {% if index %}
 
@@ -38,5 +38,16 @@
 	{% endfor %}
 </table>
 
+{% endblock %}
+
+{% block footer %}
+{% if index %}
+
+<p>index:&nbsp;{%- for a in index.keys()|sort -%}
+        <a href="#letter_{{a}}">{{a}}</a>&nbsp;{% if not loop.last %}-&nbsp;{% endif %}
+    {%- endfor -%}
+</p>
+
+{% endif %}
 
 {% endblock %}
