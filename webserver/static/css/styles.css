@@ -4,6 +4,11 @@
     inherits: true;
     initial-value: #505050;
 }
+@property --leftcolumn {
+    syntax: "<length> | <percentage>";
+    inherits: true;
+    initial-value: 13em;
+}
 @property --menu-color {
     syntax: "<color>";
     inherits: true;
@@ -11,6 +16,11 @@
 }
 
 @property --de-emph-bg {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: #fbfbfb;
+}
+@property --body-bg {
     syntax: "<color>";
     inherits: true;
     initial-value: #f8f8f8;
@@ -31,6 +41,7 @@ body {
 
 .de_emph {
     background-color: var(--de-emph-bg);
+    color: var(--de-emph-color);
 }
 
 .copy_button {
@@ -56,6 +67,12 @@ body {
     color: var(--de-emph-color);
 }
 
+#version {
+    color: var(--de-emph-color);
+    margin-top: 0.5em;
+}
+
+
 #allbutton, #createbutton, #searchbutton,  .tab_button  {
     float: right;
     border: 1px solid black;
@@ -78,12 +95,8 @@ body {
 
 #searchbar {
     padding: 0.5em;
-}
-
-#version {
     margin-left: 13em;
 }
-
 #searchbar:before { content: "🔍 "; }
 
 #userinfo {
@@ -102,7 +115,7 @@ body {
 }
 
 #headline {
-    margin-top:-2em;
+    margin-top:-1.5em;
     padding: 0;
 }
 #headline h2 {
@@ -114,10 +127,14 @@ body {
     position: relative;
     left: 13em;
     top: 2.5em;
-    max-height: calc(100% - 2.5em);
+    max-height: calc(100% - 3.5el);
     max-width: calc(100% - 20em);  
     padding: 2em;
-    background-color: var(--de-emph-bg);
+    background-color: var(--body-bg);
+}
+
+#header {
+    margin-top: -1em;
 }
 
 #content {
@@ -128,6 +145,10 @@ body {
 
 #footer {
     clear: both;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
 }
 
 #banner span { 
@@ -164,6 +185,7 @@ table {
 #banner span a { 
    text-decoration: none; 
    color: var(--menu-color);
+   padding: 0.5em 0em;
 }
 
 #username:before { content: "🪪 "; }

@@ -91,9 +91,24 @@
     <h5>Help</h5>
     <span id="btn_docs"><a href="https://fermitools.github.io/metacat/" target="_new">Documentation</a></span>
 </div>
-<span id="version">Version: {{G_Version}}</span>
+
+<script type="text/javascript">
+function search_for(s) {
+    let mybase = window.location.href;
+    let pos = mybase.search("/gui/")
+    mybase = mybase.substr(0, pos+5);
+
+    if ( !(s.startsWith("files ") || s.startsWith("datasets "))) {
+        /* not already a full query, make it a filename match */
+        s = "files where name ~ '" + s + "'"
+    }
+    url = mybase + 'query?action=run&query=' + encodeURIComponent(s)
+    document.location.href = url;
+}
+</script>
+
 <span id="searchbar">
-   <input id="searchbarinput" width=30%>
+   <input id="searchbarinput" width=30% onchange="search_for(this.value)">
 </span>
 
 <select id="userinfo" onchange="window.location=this.value">
@@ -129,7 +144,10 @@
     {% endif %}
     <div id=header>{% block header %}{% endblock %}</div>
     <div id=content>{% block content %}{% endblock %}</div>
-    <div id=footer>{% block footer %}{% endblock %}</div>
+    <div id=footer>
+         {% block footer %}{% endblock %}
+         <span id="version">MetaCat Version: {{G_Version}}</span>
+    </div>
 </div>	<!-- body -->
 
 </body>
