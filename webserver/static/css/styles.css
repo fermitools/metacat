@@ -32,11 +32,19 @@
     initial-value: #ffffff;
 }
 
+html {
+   height: 100%;
+   width: 100%;
+   margin: 0;
+}
+
 body { 
     font-family: Arial, sans-serif;
     background-color: var(--de-emph-bg);
     max-height: 98%;
     max-width: 98%;
+    height: 98%;
+    width: 98%;
 }
 
 .de_emph {
@@ -96,6 +104,7 @@ body {
 #searchbar {
     padding: 0.5em;
     margin-left: 13em;
+    margin-bottom: 0em;
 }
 #searchbar:before { content: "🔍 "; }
 
@@ -126,9 +135,11 @@ body {
 #body {
     position: relative;
     left: 13em;
-    top: 2.5em;
-    max-height: calc(100% - 3.5el);
-    max-width: calc(100% - 20em);  
+    top: 1.0em;
+    max-height: calc(100vh - 3.5em);
+    max-width: calc(100vw - 20em);  
+    height: calc(100vh - 3.5em);
+    min-height: 0;
     padding: 2em;
     background-color: var(--body-bg);
 }
