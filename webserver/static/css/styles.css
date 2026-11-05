@@ -1,7 +1,30 @@
 
+@property --de-emph-color {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: #505050;
+}
+@property --menu-color {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: #202020;
+}
+
+@property --de-emph-bg {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: #eeeeee;
+}
+
+@property --emph-bg {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: #ffffff;
+}
+
 body { 
-    font-family: Helvetica, sans-serif;
-    background-color: #eeeeee;
+    font-family: Arial, sans-serif;
+    background-color: var(--de-emph-bg);
 }
 
 #banner {
@@ -14,14 +37,14 @@ body {
 
 #banner h5 {
     font-weight: normal;
-    font-size: larger;
+    font-size: 90%;
     font-family: sans-serif;
     text-transform: uppercase;
     margin: 0.5em;
-    color: #505050;
+    color: var(--de-emph-color);
 }
 
-#createuser {
+#createuser  {
     float: right;
     border: 1px solid black;
     background: blue;
@@ -31,6 +54,7 @@ body {
     margin-top: -3em;
     text-decoration: none;
 }
+
 #createuser:before { content: "+ "; }
 
 #searchbar {
@@ -63,7 +87,7 @@ body {
     position: absolute;
     left: 13em;
     top: 2.5em;
-    background-color: #e5e5e5;
+    background-color: var(--de-emph-bg);
 }
 
 #banner span { 
@@ -74,7 +98,7 @@ body {
    background: #dddddd;
 }
 td {
-   border: 1px solid #eeeeee;
+   border: 1px solid var(--de-emph-bg);
    padding: 3px;
 }
 
@@ -82,21 +106,21 @@ tr:hover {
    background: #dddddd;
 }
 th {
-   background-color: #e5e5e5;
+   background-color: var(--de-emph-bg);
    border: 1px solid #dddddd;
    text-transform: uppercase;
    font-weight: normal;
-   font-size: smaller;
+   font-size: 90%;
 }
 
 table {
    border-spacing: 0px;
-   background: white;
+   background: var(--emph-bg);
 }
 
 #banner span a { 
    text-decoration: none; 
-   color: #202020;
+   color: var(--menu-color);
 }
 
 #username:before { content: "🪪 "; }
