@@ -124,7 +124,7 @@ body {
 }
 
 #headline {
-    margin-top:-1.5em;
+    margin-top:-1.5ex;
     padding: 0;
 }
 #headline h2 {
@@ -135,21 +135,23 @@ body {
 #body {
     position: relative;
     left: 13em;
-    top: 1.0em;
-    max-height: calc(100vh - 3.5em);
+    top: 1.3ex;
+    max-height: calc(100vh - 3.5ex);
     max-width: calc(100vw - 20em);  
-    height: calc(100vh - 3.5em);
+    height: calc(100vh - 3.5ex)
     min-height: 0;
     padding: 2em;
     background-color: var(--body-bg);
 }
 
 #header {
-    margin-top: -1em;
+    margin-top: -1.0ex;
 }
 
 #content {
-    max-height: calc(100% - 15em);
+    max-height: calc(100vh - 30ex);
+    height: calc(100vh - 30ex);
+    min-height: 0;
     overflow: scroll;
     clear: both;
 }
