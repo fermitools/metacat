@@ -2,10 +2,12 @@
 
 {% block headline %}Roles{% endblock %}
 
+{% block header %}
+
+{% if create %}<p><a id="createbutton" href="./create_role">create</a></p><br><br><br>{% endif %}
+
+{% endblock %}
 {% block content %}
-
-{% if create %}<p><a href="./create_role">create</a></p>{% endif %}
-
 <table class="data">
 	<tr>
 		<th>Name</th>

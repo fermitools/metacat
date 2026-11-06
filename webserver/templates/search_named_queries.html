@@ -43,7 +43,7 @@
     <table class="file_metadata">
         {% for query in results %}
             <tr>
-                <td class="filename"><a href="./named_query?name={{query.Namespace}}:{{query.Name}}">{{query.Namespace}}:{{query.Name}}</a>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/>
+                <td class="filename"><a href="./named_query?name={{query.Namespace}}:{{query.Name}}">{{query.Namespace}}:{{query.Name}}</a>&nbsp;<button class="copy_button" onclick="copy(event)">copy</button>
                 </td>
             </tr>
             {% if query.Metadata %}

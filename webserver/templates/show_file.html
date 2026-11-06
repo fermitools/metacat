@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 
+{% block headline %}Show File{% endblock %}
+
+{% block header  %}<br>{% endblock %}
 {% block content %}
 
 {% if show_form %}
@@ -7,23 +10,23 @@
     <input type="hidden" name="show_form" value="yes"/>
     <table class="form">
         <tr>
-            <th>Namespace</th><td><input type="text" name="namespace" value="{{namespace or ''}}" size=150></td>
+            <th>Namespace</th><td><input type="text" name="namespace" value="{{namespace or ''}}" size=80 ></td>
         </tr>
-        <tr><td>and</td></tr>
+        <tr><td class="de_emph">and</td><td class="de_emph"></td></tr>
         <tr>
-            <th>Name</th><td><input type="text" name="name" value="{{name or ''}}" size=150></td>
-        </tr>
-        <tr>
-            <td colspan=2>&nbsp;</td>
+            <th>Name</th><td><input type="text" name="name" value="{{name or ''}}" size=80 ></td>
         </tr>
         <tr>
-            <th>DID (namespace:name)</th><td><input type="text" name="did" value="{{did or ''}}" size=150></td>
+            <td class="de_emph" colspan=2>&nbsp;</td>
         </tr>
         <tr>
-            <th>File id</th><td><input type="text" name="fid" value="{{fid or ''}}" size=150></td>
+            <th>DID (namespace:name)</th><td><input type="text" name="did" value="{{did or ''}}" size=80 ></td>
         </tr>
         <tr>
-            <td></td><td><input type="submit" value="Find"/></td>
+            <th>File id</th><td><input type="text" name="fid" value="{{fid or ''}}" size=80 ></td>
+        </tr>
+        <tr>
+            <td class="de_emph"></td><td class="de_emph"><input type="submit" value="Find"/></td>
         <tr>
     </table>
 </form>
@@ -36,16 +39,16 @@
                 <h3>File Information</h3>
                 <table class=tabular>
                     <tr>
-    	                <th>File ID</th><td><span>{{f.FID}}</span>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/></td>
+    	                <th>File ID</th><td><span>{{f.FID}}</span>&nbsp;<button class="copy_button" onclick="copy(event)">copy</button></td>
                     </tr>
                     <tr>
-    	                <th>Namespace</th><td class="filename"><a href="./namespace?name={{f.Namespace}}">{{f.Namespace}}</a>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/></td>
+    	                <th>Namespace</th><td class="filename"><a href="./namespace?name={{f.Namespace}}">{{f.Namespace}}</a>&nbsp;<button class="copy_button" onclick="copy(event)">copy</button></td>
                     </tr>
                     <tr>
-    	                <th>Name</th><td><span class="filename">{{f.Name}}</span>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/></td>
+    	                <th>Name</th><td><span class="filename">{{f.Name}}</span>&nbsp;<button class="copy_button" onclick="copy(event)">copy</button></td>
                     </tr>
                     <tr>
-    	                <th>DID</th><td><span class="filename">{{f.Namespace}}:{{f.Name}}</span>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/></td>
+    	                <th>DID</th><td><span class="filename">{{f.Namespace}}:{{f.Name}}</span>&nbsp;<button class="copy_button" onclick="copy(event)">copy</button></td>
                     </tr>
                     <tr>
     	                <th>Size</th><td>{{f.Size}} {% if f.Size %}({{"%.3f" % (f.Size/1024.0/1024.0,)}} MB){% endif %}</td>
@@ -81,7 +84,7 @@
     	                <th>Parents</th>
                         <td>
     		                {% for p in f.parents(as_files=True) -%}
-    		                    <a href="./show_file?fid={{p.FID}}" class="filename">{{p.Namespace}}:{{p.Name}}</a>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/><br/>
+    		                    <a href="./show_file?fid={{p.FID}}" class="filename">{{p.Namespace}}:{{p.Name}}</a>&nbsp;<button class="copy_button" onclick="copy(event)">copy</button><br/>
     		                {%- endfor %}
     	                </td>
                     </tr>
@@ -89,7 +92,7 @@
     	                <th>Children</th>
                         <td>
     		                {% for p in f.children(as_files=True) -%}
-    		                    <a href="./show_file?fid={{p.FID}}" class="filename">{{p.Namespace}}:{{p.Name}}</a>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/><br/>
+    		                    <a href="./show_file?fid={{p.FID}}" class="filename">{{p.Namespace}}:{{p.Name}}</a>&nbsp;<button class="copy_button" onclick="copy(event)">copy</button><br/>
     		                {%- endfor %}
     	                </td>
                     </tr>
@@ -98,7 +101,7 @@
             <td>
                 <h3>Datasets</h3>
                 {% for ns, n in f.datasets %}
-                    <a class="filename" href="./dataset?namespace={{ns}}&name={{n}}">{{ns}}:{{n}}</a>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/><br/>
+                    <a class="filename" href="./dataset?namespace={{ns}}&name={{n}}">{{ns}}:{{n}}</a>&nbsp;<button class="copy_button" onclick="copy(event)">copy</button><br/>
                 {% endfor %}
             </td>
         </tr>

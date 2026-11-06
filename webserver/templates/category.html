@@ -4,10 +4,14 @@
 	{% if create %}
 		Create category
 	{% elif edit %}
-		Edit category {{category.Path}}
+		Edit category: {{category.Path}}
     {% else %}
         Category {{category.Path}}
 	{% endif %}
+{% endblock %}
+
+{% block header %}
+<p></p>
 {% endblock %}
 
 {% block content %}
@@ -200,11 +204,15 @@
         </td>
     </tr>                      
 	{% if edit or create %}
-        <tr><td></td><td><input type="submit" value="{{'Save' if edit else 'Create'}}"/></td>
+        <tr><td></td><td>
+            <input type="submit" value="{{'Save' if edit else 'Create'}}"/>
+            <input type="submit" class="delete" name="delete" value="Delete"  onclick="return confirm('Are you sure you want to delete this category?');"/>
+        </td>
 	    </tr>
     {% endif %}
         {% if edit %}
-        <tr><td></td><td><input type="submit" name="delete" value="Delete" style="background-color: #d9534f; color: white;" onclick="return confirm('Are you sure you want to delete this category?');"/></td>
+        <tr><td></td><td>
+</td>
             </tr>
     {% endif %}
 </table>

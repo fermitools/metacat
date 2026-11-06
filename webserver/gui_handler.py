@@ -916,7 +916,7 @@ class GUIHandler(MetaCatHandler):
             ds.GUI_OwnerRole = ns.OwnerRole
             ds.GUI_Authorized = user is not None and (admin or self._namespace_authorized(db, ds.Namespace, user))
 
-        all_page_links = [f"./datasets?selection={selection if selection else ''}&page_size={page_size if page_size else ''}&page={p if p else ''}&sort_by={sort_by}&sort_asc={sort_asc}&namematch={namematch}" for p in range(npages)]
+        all_page_links = [f"./datasets?selection={selection if selection else ''}&page_size={page_size if page_size else '0'}&page={p if p else '0'}&sort_by={sort_by}&sort_asc={sort_asc}&namematch={namematch}" for p in range(npages)]
         page_links = self.make_page_links(npages, page, page_size, all_page_links, 2)
 
         return self.render_to_response("datasets.html", datasets=datasets, 

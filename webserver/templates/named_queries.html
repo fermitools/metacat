@@ -2,13 +2,15 @@
 
 {% block headline %}Named Queries{% if namespace %} in Namespace {{namespace}}{% endif %}{% endblock %}
 
+{% block header %}
+
+<p><a id="createbutton" href="./create_named_query">create</a>&nbsp;&nbsp;<a id="searchbutton" href="./search_named_queries">search</a></p>
+
+{% endblock %}
 {% block content %}
-
-<p><a href="./create_named_query">create</a>&nbsp;&nbsp;<a href="./search_named_queries">search</a></p>
-
 <table class="data">
 	<tr>
-		<th></th>
+		<th>Name</th>
         {% if logged_in %}<th>Creator</th>{% endif %}
         <th>Created</th>
         <th>Description</th>

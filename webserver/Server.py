@@ -207,10 +207,10 @@ if __name__ == "__main__":
     if config_file is None:
         print("Config file must be specified with -c or METACAT_SERVER_CFG")
         sys.exit(1)
-    config_file = yaml.load(open(config_file, "r"), Loader=yaml.SafeLoader)
+    config_file_data = yaml.load(open(config_file, "r"), Loader=yaml.SafeLoader)
     #print("main: config:", config_file)
-    port = int(opts.get("-p", config_file.get("port", 8080)))
-    prefix = config_file.get("prefix")
+    port = int(opts.get("-p", config_file_data.get("port", 8080)))
+    prefix = config_file_data.get("prefix")
     print(f"Starting the server on port {port} ...")   
     server = HTTPServer(port, create_application(config_file, prefix), debug=False, logging=True)
     server.run()
