@@ -1548,12 +1548,14 @@ class DataHandler(MetaCatHandler):
                 return 409, "Query already exists"
             existing.Source = data["source"]
             existing.Parameters = data.get("parameters", [])
+            existing.Metadata = data.get("metadata", {})
+            existing.Description = data.get("description", "")
             existing.Creator = user.Username
             existing.CreatedTimestamp = datetime.now()
             existing.save()
             q = existing
         else:
-            q = DBNamedQuery(db, namespace, name, data["source"], data.get("parameters", []))
+            q = DBNamedQuery(db, namespace, name, data["source"], parameters=data.get("parameters", []), description=data.get("description", ""), metadata=data.get("metadata",{}))
             q.Creator = user.Username
             q.create()
         return 200, q.to_json(), "application/json"
