@@ -31,6 +31,16 @@
     inherits: true;
     initial-value: #ffffff;
 }
+@property --button-bg {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: blue;
+}
+@property --button-fg {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: white;
+}
 
 html {
    height: 100%;
@@ -38,6 +48,9 @@ html {
    margin: 0;
 }
 
+textarea {
+    border: 1px solid black !important;
+}
 body { 
     font-family: Arial, sans-serif;
     background-color: var(--de-emph-bg);
@@ -51,12 +64,6 @@ body {
     background-color: var(--de-emph-bg);
     color: var(--de-emph-color);
 }
-
-.copy_button {
-    width:2em;
-    height:2em;
-}
-
 
 #banner {
     display: block;
@@ -81,11 +88,11 @@ body {
 }
 
 
-#allbutton, #createbutton, #searchbutton,  .tab_button  {
+#allbutton, #createbutton, #searchbutton, .docbutton {
     float: right;
     border: 1px solid black;
-    background: purple;
-    color: white;
+    background: var(--button-bg);
+    color: var(--button-fg);
     padding: 0.5em;
     margin: 0.5em;
     border-radius: 0.5em;
@@ -100,6 +107,7 @@ body {
 
 #createbutton:before { content: "+ "; }
 #searchbutton:before { content: "🔍 "; }
+.docbutton:before { content: "📖 "; }
 
 #searchbar {
     padding: 0.5em;
@@ -144,6 +152,17 @@ body {
     background-color: var(--body-bg);
 }
 
+.copy_button {
+    color: var(--de-emph-color);
+    border: none !important;
+    padding: 0 !important;
+    background-color: var(--body-bg);
+    font-size: smaller;
+}
+.copy_button:before {
+    content: "📋"
+}
+
 #header {
     margin-top: -1.0ex;
 }
@@ -176,6 +195,7 @@ body {
 td {
    border: 1px solid var(--de-emph-bg);
    padding: 3px;
+   vertical-align: top;
 }
 
 tr:hover {
@@ -191,6 +211,72 @@ th {
 }
 
 table {
+   border-spacing: 0px;
+   background: var(--emph-bg);
+}
+
+form td {
+   border: none;
+   padding: 3px;
+   vertical-align: top;
+}
+form input {
+   border: 1px solid black !important;
+}
+
+form td :first-child {
+   border: none;
+   padding: 3px;
+   vertical-align: top;
+}
+
+form tr:hover {
+   background: inherit;
+}
+
+input[type="submit"] {
+   background: var(--button-bg);
+   border-radius: 5px !important;
+   padding: 5px !important;
+   color: var(--button-fg);
+   text-transform: capitalize;
+}
+input.delete {
+   background: red !important;
+}
+input.delete:before {
+    content: "🗑";
+}
+
+form th:first-child {
+   border: none;
+   background-color: inherit;
+   text-transform: capitalize;
+   font-weight: normal;
+   font-size: 90%;
+   text-align: right;
+}
+form table table th:first-child {
+   border: none;
+   background-color: inherit;
+   text-transform: capitalize;
+   font-weight: normal;
+   font-size: 90%;
+   text-align: center;
+}
+
+form th {
+   border: none;
+   background-color: inherit;
+   text-transform: capitalize;
+   font-weight: normal;
+   font-size: 90%;
+}
+form th:after {
+    content: ":";
+}
+
+form table {
    border-spacing: 0px;
    background: var(--emph-bg);
 }

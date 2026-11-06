@@ -51,18 +51,14 @@
             <td class="de_emph">
                 <textarea class="query_text" name="query" cols=80 rows=10 id="query_text">{{query}}</textarea>
             </td>
-            <td class="de_emph"><p style="width:100%; text-align:right">
-					<a href="https://fermitools.github.io/metacat/mql.html" target="_new">MQL documentation</a>
-				</p>
+            <td class="de_emph">
+                <a class="docbutton" href="https://fermitools.github.io/metacat/mql.html" target="_new">MQL documentation</a>
             </td>
 
         </tr>
         <tr class="de_emph">
             <td class="de_emph"></td>
-            <td class="tab_button"><img src="{{GLOBAL_AppTopPath}}/static/images/copy.png" class="copy_button" onclick="copy_query_url()"/>&nbsp;<a href="javascript:copy_query_url()">copy query URL</a>&nbsp;&nbsp;&nbsp;<span
-                    style="color:gray"
-                    id="copied_message_display">
-                    </span>
+            <td class="tab_button"><button class="copy_button" onclick="copy_query_url()"/>copy query url</button>
             </td>
             <td class="de_emph"></td>
         </tr>
@@ -147,7 +143,7 @@
     <table class="file_metadata">
         {% for d in datasets|sort(attribute="Name") %}
             <tr>
-                <td class="filename"><a href="./dataset?namespace={{d.Namespace}}&name={{d.Name}}">{{d.Namespace}}:{{d.Name}}</a>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/>
+                <td class="filename"><a href="./dataset?namespace={{d.Namespace}}&name={{d.Name}}">{{d.Namespace}}:{{d.Name}}</a>&nbsp;<button class="copy_button" onclick="copy(event)">copy</button>
                 </td>
             </tr>
             {% if d.Metadata %}
@@ -292,10 +288,10 @@
     <table class="file_metadata">
         {% for f in files %}
             <tr>
-                <td class="filename"><a href="./show_file?fid={{f.FID}}">{{f.Namespace}}:{{f.Name}}</a>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/>
+                <td class="filename"><a href="./show_file?fid={{f.FID}}">{{f.Namespace}}:{{f.Name}}</a>&nbsp;<button class="copy_button" onclick="copy(event)">copy</button>
                 </td>
                 <td>
-                     (&nbsp;fid = <span class=code>{{f.FID}}</span><img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/>&nbsp;)</td>
+                     (&nbsp;fid = <span class=code>{{f.FID}}</span><button class="copy_button" onclick="copy(event)">copy</button>&nbsp;)</td>
             </tr>
             {% if f.Metadata %}
                 {% if view_meta_as == "table" %}
