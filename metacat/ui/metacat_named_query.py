@@ -92,6 +92,7 @@ class CreateNamedQueryCommand(CLICommand):
             else:
                 query_text = open(input_file, "r").read()
 
+        update = "-u" in opts or "--update" in opts
         description = opts.get("-d", opts.get("--description",""))
         metadata = json.loads(opts.get("-m", opts.get("--metadata","{}")))
         namespace, name = args[0].split(':', 1)
