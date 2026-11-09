@@ -81,7 +81,7 @@ def tst_file_md_list():
 @pytest.fixture
 def tst_defs():
     tst_defs = {
-        "intfield": {"type": "int", "min": 0, "max": 10, "required": "True"},
+        "intfield": {"type": "int", "min": 0, "max": 10, "required": True},
         "textfield": {"type": "text", "values": ["a", "b", "c", "d"]}
     }
     return tst_defs
