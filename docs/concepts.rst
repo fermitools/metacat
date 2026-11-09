@@ -101,12 +101,13 @@ The purpose of the parameter category is to allow adding *metadata constraints* 
 * Allowed parameter values (range, enumeration, pattern)
 
 The category can be either *restricted* or not. If restricted, the category may not contain any parameters other than those listed in the category constraints.
+The category can be either *required* or not. If required, the file metadata must contain all required parameters in that category.
 
 .. _ownership:
 
 Ownership
 ---------
-MetaCat has the notion of object ownership. Namespaces and Parameter Categories are explicitly owned either by an
+MetaCat has the notion of object ownership. Namespaces are explicitly owned either by an
 individual user or by a *role* (group of users).
 The owner of a namespace automatically owns all the datasets, files and named queries in the namespace. 
 The following operations can only be performed by the object owner:

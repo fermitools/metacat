@@ -829,7 +829,7 @@ Metadata Categories
 Metadata categories define the structure and constraints for metadata parameters. 
 They are used to validate metadata values when files are declared or updated.
 
-MetaCat metadata has the format ``<category>.parameter>``.
+MetaCat metadata has the format ``<category>.<parameter>``, or ``<category>.<subcategory>.<parameter>``.
 
 Listing categories
 ...................
@@ -887,20 +887,37 @@ To create a new parameter category with constraints:
 Parameter definitions define the constraints for each parameter. Each parameter can have:
 
 - ``type``: int, float, text, boolean, dict, list, int[], float[], text[], boolean[], or any
-- ``values``: list of allowed values (enum)
+- ``values``: list of allowed values (numeric and text)
 - ``min``: minimum value (for numeric and text)
 - ``max``: maximum value (for numeric and text)
-- ``pattern``: regex pattern for text values
+- ``pattern``: regex pattern for text values (uses the python ``re`` module)
 - ``required``: boolean, whether the parameter is required
 - ``description``: string, description of the parameter
+
+All of the constraints above are optional. Any combination of them can be defined.
+If both ``values`` and ``min``/``max`` or ``pattern`` are defined, the values will take precedence and only those will be checked.
+If ``min``/``max`` and ``pattern`` are defined, both will be checked.
+
+``pattern`` only needs to match the beginning of the value, so the pattern ``abc`` also accepts ``abcdef``.
+To require the whole value to match, end the pattern with ``$``, for example ``^[0-9]+$``.
 
 Example:
 
 .. code-block:: shell
 
-    $ metacat category create -d "Test category" -r \
+    $ metacat category create -d "Test category" -r True \
         -p '{"run_number": {"type": "int", "min": 1, "max": 1000}, "status": {"type": "text", "values": ["good", "bad"]}}' \
         test_category
+
+Creating a subcategory is similar to above:
+
+.. code-block:: shell
+
+    $ metacat category create -d "Test subcategory" -r True \
+        -p '{"version": {"type": "int", "min": 0, "max": 4}}' \
+        test_category.subcategory
+
+The higher-level category must exist before the subcategory can be created.
 
 Only admins can create categories.
 
@@ -943,6 +960,8 @@ To remove a category:
 
     $ metacat category remove <category>
 
+All subcategories must be removed before the higher-level category can be removed.
+
 Only admins can remove categories.
 
 Metadata validation
@@ -957,14 +976,22 @@ a file with ``run_number`` outside that range will result in a validation error.
 When a category is marked as ``restricted``, only parameters in the category's definitions are allowed. 
 Attempting to add a metadata parameter not in the definitions will result in a validation error.
 
-When a category is marked as ``required``, that category must be present in the metadata.
-Attempting to add metadata without a required category will result in a validation error.
-A category can only be required if at least one of its parameters are required.
+When a category is marked as ``required``, the file metadata must contain all required parameters in that category.
+Attempting to add metadata without them will result in a validation error.
+A category can only be required if at least one of its parameters is required.
 
 When a definition is marked as ``required``, that parameter must be present in the metadata if the 
 category is present or marked as required. Attempting to add metadata without required parameters will 
 result in a validation error.
 
+A parameter is validated against the deepest existing category in its name. For example, ``a.b.x`` is
+checked against category ``a.b`` if it exists, otherwise against ``a``. If the parameter
+falls back to a restricted higher-level category, it is rejected unless that category defines it.
+
+Using a parameter from a subcategory also counts as using its higher-level categories, so their required parameters must be present too.
+
+When file metadata is updated, the metadata resulting from the update is validated, not only the new values.
+Files declared before a constraint was added must satisfy it on their next update.
 
 Query
 -----
