@@ -3,250 +3,8 @@
 <html>
 
 <head>
-
-        <meta name="robots" content="noindex">
-
-	<link rel="shortcut icon" href="{{GLOBAL_AppTopPath}}/static/images/favicon.png" type="image/x-icon"/>
-
-    <style type="text/css">
-
-        @font-face {
-          font-family: source_code;
-          src: url({{GLOBAL_AppTopPath}}/static/fonts/source-code-pro/SourceCodePro-Regular.ttf.woff);
-        }
-
-
-
-        body, td, th, p, div {
-            font: 14px arial;
-        }
-        td, th {
-            vertical-align: top
-        }
-        div#content {
-            margin-right: 30px;
-            margin-left: 30px;
-            margin-top: 20px;
-	    width: 100%;
-        }
-		
-	div#banner {
-		padding: 30px 10px;
-	}
-	
-	#b-anner td {
-		vertical-align: middle;
-		padding: 0px 20px;
-	}
-
-	div#body {
-            margin-right: 30px;
-            margin-left: 30px;
-            margin-top: 20px;
-            padding: 10px 10px;
-	}
-        
-        
-        table.data, table.file_metadata {
-            border-collapse: collapse;
-        }
-        
-        .placement td, th {
-            p-adding: 5px;
-        } 
-            
-        .placement th {
-            font-weight: bold;
-            text-align:  left;
-        }
-        
-        .link_menu td {
-            padding: 5px;
-        }
-        
-        .file_metadata td, .file_metadata th {
-            padding: 3px 5px;
-            b-order-top: 1px solid #CCC;
-            b-order-bottom: 1px solid #CCC;
-        }
-        
-        .data td, .data th {
-            padding: 3px 5px;
-            border: 1px solid #CCC;
-        }
-        
-        .data th {
-            font-weight: bold;
-            text-align: left;
-            vertical-align: bottom;
-        }
-        
-        .tabular td, .tabular th {
-            padding: 5px;
-        }
-
-        .tabular th {
-            font-weight: bold;
-            text-align:  right;
-        }
-        
-        td.left {
-            text-align: left;
-        }
-        td.right {
-            text-align: right;
-        }
-
-	.tabular th, .form th {
-		font-weight: bold;
-		text-align:  right;
-        color: #46A;
-	}
-
-	.form td {
-		text-align:  left;
-	}
-	.form td, .form th {
-		padding: 5px;
-	}
-
-        textarea {
-            font: 14px courier;
-            }
-            
-        i-nput {
-            font: 400 14px verdana;
-        }
-        
-    div#version {
-        color: gray;
-        font-size: 10px;
-        font-style: italic;
-        
-        position: fixed;
-        bottom: 3px;
-        right: 5px;
-    }
-    
-    div.headline {
-        border-top: 1px solid black;
-        border-bottom: 1px solid black;
-        font-weight: bold;
-        padding: 5px 15px;
-        font-size: 14pt;
-        margin-top: 15px;
-        margin-bottom: 15px;
-    }
-
-    #main_menu td, #main_menu th {
-	white-space: nowrap;
-	}
-
-    .code {
-        font: 12px;
-        font-family: source_code, monospace;
-        }
-        
-    pre.code {
-        background-color: #F8F8F8;
-        padding: 10px;
-        border: solid 1px #E0E0E0;
-        }
-        
-    p.message {
-		background-color: #DDD;
-		color: black;
-        padding: 15px 15px;
-		white-space: pre;
-    }
-    
-    .error {
-        c-olor: #A11;
-    }
-
-    p.error {
-		background-color: #FDD;
-		color: black;
-        b-order-left: solid 5px #A11;
-        padding: 15px 15px;
-		white-space: pre;
-    }
-        
-    a.button {
-        text-decoration: none;
-    }
-
-    .file_metadata th {
-        text-align: left;
-        font-weight: bold;
-        color: #888;
-    }
-    
-    .file_metadata td.fid, .file_metadata td.filename, .filename {
-        font-family:  verdana, sans-serif;
-        font-size: 10pt;
-    }
-    
-    .file_metadata td.attr_name, .file_metadata td.meta_whole {
-        padding-right:20px;
-    }
-    
-    .file_metadata td.attr_name, .file_metadata td.attr_count, pre.metadata, .attr_value {
-        font-family:  source_code, monospace;
-        font-size: 10pt;
-    }
-    
-    .file_metadata a:link, .file_metadata a:visited {
-            text-decoration: none;
-            color: #44A;
-        }
-    
-    #meta_stats_toggle {
-        font: 16px monospace;
-    }
-    
-    .query_text {
-        font-family:  source_code, monospace;
-        
-    }
-    
-    table.noborder {
-        border-spacing: 0;
-    }
-    
-    td.nopadding {
-        padding: 0;
-    }
-    
-    .copy_button {
-        border: none;
-        background-color: rgba(0,0,0,0);
-        vertical-align: top;
-        
-        d-isplay: flex;
-        a-lign-self: center;
-    }
-    
-    .copy_button img, img.copy_button {
-        vertical-align: middle;
-        height: 13;
-        width: 13;
-        opacity: 0.5;
-    }
-    
-    .copied_message {
-        display: block;
-        position: fixed;
-        background-color: rgba(240, 240, 240, 0.9);
-        padding: 2px 6px;
-        border: none;
-        border-radius: 5px;
-        opacity: 0.9;
-    }
-    
-    
-    </style>
-    
+    <meta name="robots" content="noindex">
+    <link rel="stylesheet" href="{{GLOBAL_AppTopPath}}/static/css/styles.css">
     <script src="{{GLOBAL_AppTopPath}}/static/js/request.js"></script>
     <script type="text/javascript">
         function fade(params)
@@ -313,46 +71,69 @@
 -->
     
 <div id="banner">
-	<table class="placement">
-		<tr>
-			<td style="vertical-align: middle; padding: 0px 20px;">
-				<img src="{{GLOBAL_AppTopPath}}/static/images/logo.png" heights=100 width=100>
-			</td>
-			<td style="vertical-align: middle; padding: 0px 20px; width:100%">
-				<h1>{{G_SiteTitle}}</h1>
-			    <div id="main_menu">
-					<table class="placement link_menu" width="100%">
-					<tr>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/users">users</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/roles">roles</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/namespaces">namepaces</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/datasets">datasets</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/find_file">find file</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/categories/index">categories</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/query">query</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/named_queries">named queries</a></td>
-					    <td><a href="{{GLOBAL_AppRootPath}}/gui/filters">filters</a></td>
-					    <td width="100%" align="right">
-							<a href="https://fermitools.github.io/metacat/" target="_new">docs</a>
-						</td>
-						<td>
-			                        {% if G_User %}
-			                            <span style="color:#AAA">logged in as {{G_User.Name or ""}}&nbsp;<a href="./user?username={{G_User.Username}}">{{G_User.Username}}</a>&nbsp;</span><a href="{{GLOBAL_AppRootPath}}/auth/logout?redirect={{GLOBAL_AppRootPath}}/gui/index">log out</a>
-			                        {% else %}
-			                            <a href="{{GLOBAL_AppRootPath}}/auth/login?redirect={{GLOBAL_AppRootPath}}/gui/index">log in</a>
-			                        {% endif %}
-						</td>
-					</tr>
-				</table>
-			    </div>
-			</td>
-		</tr>
-	</table>
+    <h3>
+	<img id="logo" src="{{GLOBAL_AppTopPath}}/static/images/logo.png" >
+	{{G_SiteTitle}}
+    </h3>
+    <h5>Admin</h5>
+    <span id="btn_users"><a href="{{GLOBAL_AppRootPath}}/gui/users">Users</a></span>
+    <span id="btn_roles"><a href="{{GLOBAL_AppRootPath}}/gui/roles">Roles</a></span>
+    <h5>Catalog</h5>
+    <span id="btn_namespaces"><a href="{{GLOBAL_AppRootPath}}/gui/namespaces">Namepaces</a></span>
+    <span id="btn_datasets"><a href="{{GLOBAL_AppRootPath}}/gui/datasets">Datasets</a></span>
+    <span id="btn_find"><a href="{{GLOBAL_AppRootPath}}/gui/find_file">Find file</a></span>
+    <h5>Schema</h5>
+    <span id="btn_categories"><a href="{{GLOBAL_AppRootPath}}/gui/categories/index">Categories</a></span>
+    <h5>Query</h5>
+    <span id="btn_query"><a href="{{GLOBAL_AppRootPath}}/gui/query">Workbench</a></span>
+    <span id="btn_named_query"><a href="{{GLOBAL_AppRootPath}}/gui/named_queries">Named Queries</a></span>
+    <span id="btn_filter"><a href="{{GLOBAL_AppRootPath}}/gui/filters">filters</a></span>
+    <h5>Help</h5>
+    <span id="btn_docs"><a href="https://fermitools.github.io/metacat/" target="_new">Documentation</a></span>
 </div>
+
+<script type="text/javascript">
+function search_for(s) {
+    let mybase = window.location.href;
+    let pos = mybase.search("/gui/")
+    mybase = mybase.substr(0, pos+5);
+
+    if ( !(s.startsWith("files ") || s.startsWith("datasets "))) {
+        /* not already a full query, make it a filename match */
+        s = "files where name ~ '" + s + "'"
+    }
+    url = mybase + 'query?action=run&query=' + encodeURIComponent(s)
+    document.location.href = url;
+}
+</script>
+
+<span id="searchbar">
+   <input id="searchbarinput" width=30% onchange="search_for(this.value)">
+</span>
+
+<select id="userinfo" onchange="window.location=this.value">
+{% if G_User %}
+    <option value=""> 
+	{{G_User.Username}}
+    </option>
+    <option value="./user?username={{G_User.Username}}">
+	<span id="username">Profile</span>
+   </option>
+   <option value="{{GLOBAL_AppRootPath}}/auth/logout?redirect={{GLOBAL_AppRootPath}}/gui/index">
+	<span id="logout">Log out</span>
+   </option>
+{% else %}
+    <option value="">Not Logged In<option>
+    <option value="{{GLOBAL_AppRootPath}}/auth/login?redirect={{GLOBAL_AppRootPath}}/gui/index" default>
+	<span id="log_in">Log in</span>
+   </option>
+{% endif %}
+</select>
+                                            
 
 <div id="body">
 
-    <div id="headline" style="clear:both">
+    <div id="headline">
 	<h2>{% block headline %}{% endblock %}</h2>
     </div>
     {% if message is defined and message %}
@@ -361,10 +142,14 @@
     {% if error is defined and error %}
         <p class=error>{{error}}</p>
     {% endif %}
-    <div id=content style="clear:both">{% block content %}{% endblock %}</div>
+    <div id=header>{% block header %}{% endblock %}</div>
+    <div id=content>{% block content %}{% endblock %}</div>
+    <div id=footer>
+         {% block footer %}{% endblock %}
+         <span id="version">MetaCat Version: {{G_Version}}</span>
+    </div>
 </div>	<!-- body -->
 
-<div id="version">Version: {{G_Version}}</div>
 </body>
 
 </html>

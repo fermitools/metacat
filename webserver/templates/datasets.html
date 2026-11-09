@@ -2,51 +2,37 @@
 
 {% block headline %}Datasets{% endblock %}
 
-{% block content %}
-
+{% block header %}
 <p>
-<a href="./create_dataset">create</a>
+<a id="createbutton" href="./create_dataset">create</a>
 </p>
 
 <!-- Info: {{info}} -->
 
 <form target="" method="GET">
     <!-- selection: [{{selection}}] -->
-    <table class="form">
-        <tr>
-            <th>Namespace</th>
-            <td>
-                <select name="selection" onchange="this.form.submit()">
-                    <option value="all">(all)</option>
-                    {% if not user is none %}
-                        <option value="user" {% if selection == "user" %}selected="selected"{% endif %}>owned by {{user.Username}}</option>
-                    {% endif %}
-                    <option value="" disabled="disabled">-- owned namespaces --</option>
-                    {% for namespace in owned_namespaces %}
-                        <option value="namespace:{{namespace}}" {% if selection == "namespace:"+namespace %}selected="selected"{% endif %}>{{namespace}}</option>
-                    {% endfor %}
-                    <option value="" disabled="disabled">-- other namespaces --</option>
-                    {% for namespace in other_namespaces %}
-                        <option value="namespace:{{namespace}}" {% if selection == "namespace:"+namespace %}selected="selected"{% endif %}>{{namespace}}</option>
-                    {% endfor %}
-                </select>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                Name Match
-            </td>
-            <td>
-		    <input name=namematch value="{{namematch}}">
-                 <input type="Submit" name="submit">
-            </td>
-        </tr>
-    </table>
+    <span class="de_emph">Namespace<span>
+    <select name="selection" onchange="this.form.submit()">
+        <option value="all">(all)</option>
+        {% if not user is none %}
+            <option value="user" {% if selection == "user" %}selected="selected"{% endif %}>owned by {{user.Username}}</option>
+        {% endif %}
+        <option value="" disabled="disabled">-- owned namespaces --</option>
+        {% for namespace in owned_namespaces %}
+            <option value="namespace:{{namespace}}" {% if selection == "namespace:"+namespace %}selected="selected"{% endif %}>{{namespace}}</option>
+        {% endfor %}
+        <option value="" disabled="disabled">-- other namespaces --</option>
+        {% for namespace in other_namespaces %}
+            <option value="namespace:{{namespace}}" {% if selection == "namespace:"+namespace %}selected="selected"{% endif %}>{{namespace}}</option>
+        {% endfor %}
+    </select>
+    <span class="de_emph"> Name Match</span>
+    <input name=namematch value="{{namematch}}">
+    <input type="Submit" name="submit">
 </form>
 
 {% set logged_in = not user is none %}
 
-{% if datasets %}
 
     {# disable
     <script type="text/javascript">
@@ -69,6 +55,9 @@
         </p>
     {% endif %}    
     
+{% endblock %}
+{% block content %}
+{% if datasets %}
     <table class="data">
     	<tr>
 		<th>Name<a href="./datasets?sort_by=Name&sort_asc=d&namematch={{namematch}}&selection={{selection}}" style="text-decoration: none">&dArr;</a><a href="./datasets?sort_by=Name&sort_asc=a&namematch={{namematch}}&selection={{selection}}" style="text-decoration: none">&uArr;</a></th>
@@ -138,23 +127,12 @@
             </tr>
     	{% endfor %}
     </table>
-    
-    <p style="color:gray">* - may not be accurate for non-frozen datasets: updated periodically, includes retired files</p>
-
-    {% if npages > 1 %}
-        <p>Page:&nbsp;
-            {%- for ipage, link in page_links -%}
-                {%- if ipage == "text" -%}
-                    {{link}}
-                {%- else -%}
-                    <a href="{{link}}">{{ipage+1}}</a>
-                {%- endif -%}&nbsp;
-            {%- endfor -%}
-        </p>
-    {% endif %}    
-    
 {% else %}
     <p>No datasets found</p>
 {% endif %}
+    
+{% endblock %}
 
+{% block footer %}
+<p class="de_emph"> * - may not be accurate for non-frozen datasets: updated periodically, includes retired files</p>
 {% endblock %}

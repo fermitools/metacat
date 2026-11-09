@@ -35,40 +35,37 @@
     
 <form method="GET" action="">
     <table class="form">
-        <tr><td colspan=3>&nbsp;</td></tr>
+        <tr><td class="de_emph" colspan=3>&nbsp;</td></tr>
         <tr>
-            <th>Default namespace:</th><td><input type="text" name="default_namespace"
+            <th>Default namespace:</th><td class="de_emph"><input type="text" name="default_namespace"
                     value="{{namespace or 'test'}}"/></td>
-            <td></td>
+            <td class="de_emph"></td>
         </tr>
         <tr>
-            <th>Include retired files:</th><td><input type="checkbox" name="include_retired_files"
+            <th>Include retired files:</th><td class="de_emph"><input type="checkbox" name="include_retired_files"
                     {% if include_retired_files %}checked="checked"{% endif %}/></td>
-            <td></td>
+            <td class="de_emph"></td>
         </tr>
         <tr>
             <th>Query:</th>
-            <td>
+            <td class="de_emph">
                 <textarea class="query_text" name="query" cols=80 rows=10 id="query_text">{{query}}</textarea>
             </td>
-            <td><p style="width:100%; text-align:right">
-					<a href="https://fermitools.github.io/metacat/mql.html" target="_new">MQL documentation</a>
-				</p>
+            <td class="de_emph">
+                <a class="docbutton" href="https://fermitools.github.io/metacat/mql.html" target="_new">MQL documentation</a>
             </td>
 
         </tr>
-        <tr>
-            <td></td>
-            <td><img src="{{GLOBAL_AppTopPath}}/static/images/copy.png" class="copy_button" onclick="copy_query_url()"/>&nbsp;<a href="javascript:copy_query_url()">copy query URL</a>&nbsp;&nbsp;&nbsp;<span
-                    style="color:gray"
-                    id="copied_message_display">
-                    </span>
+        <tr class="de_emph">
+            <td class="de_emph"></td>
+            <td class="tab_button"><button class="copy_button" onclick="copy_query_url()"/>copy query url</button>
             </td>
+            <td class="de_emph"></td>
         </tr>
         {#
         {% if allow_save_query %}
 		    <tr>
-			    <th>Save query as:</th><td>Namespace:&nbsp;<select name="save_namespace">
+			    <th>Save query as:</th><td class="de_emph">Namespace:&nbsp;<select name="save_namespace">
                     {%- for ns in namespaces %}
                         <option value="{{ns.Name}}" {{'selected="selected"' if ns.Name == namespace }}>{{ns.Name}}</option>
                     {% endfor -%}
@@ -77,20 +74,21 @@
                 Name:&nbsp<input type="text" name="save_name"/>&nbsp;&nbsp
                 {{- '' -}}
                 <input type="submit" name="action" value="save"/></td>
-                <td></td>
+                <td class="de_emph"></td>
 		    </tr>
         {% endif %}
         #}
-        <tr><td colspan=3>&nbsp;</td></tr>
+        <tr><td class="de_emph" colspan=3>&nbsp;</td></tr>
         <tr>
             <th>Show metadata as:</th>
-            <td><select name="view_meta_as">
+            <td class="de_emph"><select name="view_meta_as">
                             <option value="" {{'selected="selected"' if view_meta_as== ""}}>do not show</option>
                             <option value="json" {{'selected="selected"' if view_meta_as== "json"}}>JSON</option>
                             <option value="table" {{'selected="selected"' if view_meta_as== "table"}}>Table</option>
                             <option value="pprint" {{'selected="selected"' if view_meta_as== "pprint"}}>Python pprint</option>
                         </select>
             </td>
+            <td class="de_emph"></td>
         </tr>
         {% if allow_save_as_dataset %}
             <script type="text/javascript">
@@ -103,18 +101,20 @@
             </script>
             <tr>
                 <th>{{"Run" if not show_files else "Re-run"}} and save results as dataset:</th>
-                <td><input type=checkbox name="save_as_dataset" id="save_as_dataset" onchange="save_as_changed()"/>&nbsp;&nbsp;&nbsp;Namespace:&nbsp;<select name="save_as_dataset_namespace" id="save_as_dataset_namespace" disabled>
+                <td class="de_emph"><input type=checkbox name="save_as_dataset" id="save_as_dataset" onchange="save_as_changed()"/>&nbsp;&nbsp;&nbsp;Namespace:&nbsp;<select name="save_as_dataset_namespace" id="save_as_dataset_namespace" disabled>
                                     <option value=""></option>
                                     {% for ns in namespaces %}
                                         <option value="{{ns.Name}}">{{ns.Name}}</option>
                                     {% endfor %}
                                 </select>&nbsp;&nbsp;&nbsp;Name:&nbsp;<input type=text name="save_as_dataset_name" id="save_as_dataset_name" disabled/></td>
                 </td>
+            <td class="de_emph"></td>
             </tr>
         {% endif %}
         <tr>
-            <td></td>
-            <td><input type="submit" name="action" value="run"/></td>
+            <td class="de_emph"></td>
+            <td class="de_emph"><input type="submit" name="action" value="run"/></td>
+            <td class="de_emph"></td>
         </tr>
     </table>
 </form>
@@ -143,7 +143,7 @@
     <table class="file_metadata">
         {% for d in datasets|sort(attribute="Name") %}
             <tr>
-                <td class="filename"><a href="./dataset?namespace={{d.Namespace}}&name={{d.Name}}">{{d.Namespace}}:{{d.Name}}</a>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/>
+                <td class="filename"><a href="./dataset?namespace={{d.Namespace}}&name={{d.Name}}">{{d.Namespace}}:{{d.Name}}</a>&nbsp;<button class="copy_button" onclick="copy(event)">copy</button>
                 </td>
             </tr>
             {% if d.Metadata %}
@@ -288,10 +288,10 @@
     <table class="file_metadata">
         {% for f in files %}
             <tr>
-                <td class="filename"><a href="./show_file?fid={{f.FID}}">{{f.Namespace}}:{{f.Name}}</a>&nbsp;<img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/>
+                <td class="filename"><a href="./show_file?fid={{f.FID}}">{{f.Namespace}}:{{f.Name}}</a>&nbsp;<button class="copy_button" onclick="copy(event)">copy</button>
                 </td>
                 <td>
-                     (&nbsp;fid = <span class=code>{{f.FID}}</span><img class="copy_button" src="{{GLOBAL_AppTopPath}}/static/images/copy.png" onclick="copy(event)"/>&nbsp;)</td>
+                     (&nbsp;fid = <span class=code>{{f.FID}}</span><button class="copy_button" onclick="copy(event)">copy</button>&nbsp;)</td>
             </tr>
             {% if f.Metadata %}
                 {% if view_meta_as == "table" %}

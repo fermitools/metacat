@@ -2,17 +2,23 @@
 
 {% block headline %}Namespaces{% endblock %}
 
-{% block content %}
+{% block header %}
 
+<div>
 {% if logged_in %}
-    <p><a href="./create_namespace">create</a>&nbsp;&nbsp;&nbsp;
+    <p><a id="createbutton" href="./create_namespace">create</a>&nbsp;&nbsp;&nbsp;
         {%- if showing_all -%}
-            <a href="./namespaces?all=no">my namespaces</a></p>
+            <a id="allbutton" href="./namespaces?all=no">my namespaces</a></p>
         {%- else -%}
-            <a href="./namespaces?all=yes">all namespaces</a></p>
+            <a id="allbutton" href="./namespaces?all=yes">all namespaces</a></p>
         {%- endif -%}
     </p>
+    <br>
 {% endif %}
+
+</div>
+{% endblock %}
+{% block content %}
 
 <script type="text/javascript">
     var request_queue = new RequestQueue(5);
@@ -55,6 +61,9 @@
             #}
 	{% endfor %}
 </table>
+
+{% endblock %}
+{% block footer %}
 
 <p style="color:gray">* - may not be accurate: updated periodically, includes retired files</p>
 
