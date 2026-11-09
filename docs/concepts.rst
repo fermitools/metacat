@@ -107,7 +107,7 @@ The category can be either *required* or not. If required, the file metadata mus
 
 Ownership
 ---------
-MetaCat has the notion of object ownership. Namespaces are explicitly owned either by an
+MetaCat has the notion of object ownership. Namespaces and Parameter Categories are explicitly owned either by an
 individual user or by a *role* (group of users).
 The owner of a namespace automatically owns all the datasets, files and named queries in the namespace. 
 The following operations can only be performed by the object owner:
