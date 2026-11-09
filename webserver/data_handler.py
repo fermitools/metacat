@@ -33,7 +33,14 @@ def validate_param_definitions(definitions):
         invalid_keys = set(definition.keys()) - valid_param_defs
         if invalid_keys:
             errors.append("Parameter '%s' has unrecognized field(s): %s" % (name, ", ".join(sorted(invalid_keys))))
+        if "required" in definition and not isinstance(definition["required"], bool):
+            errors.append("Parameter '%s': 'required' must be true or false" % (name,))
     return errors
+
+def validate_category_flags(**flags):
+    # returns list of error messages for category flags which are specified but are not booleans
+    return ["Category '%s' flag must be true or false" % (name,)
+            for name, value in flags.items() if value is not None and not isinstance(value, bool)]
 
 class DataHandler(MetaCatHandler):
     
@@ -1177,37 +1184,53 @@ class DataHandler(MetaCatHandler):
 
         errors = []
         if "metadata" in data:
-            for k in data["metadata"].keys():
-                if '.' not in k:
-                    errors.append({
-                        "name": k,
-                        "message":f"Metadata parameter without a category: {k}"
-                    })
-
             if mode == "add-update":
-                new_metadata = f.Metadata.copy()
+                new_metadata = (f.Metadata or {}).copy()
                 new_metadata.update(data["metadata"])
             else:
                 new_metadata = data["metadata"]
 
-            # validate new metadata against file datasets
-            for ds_ns, ds_n in f.datasets:
-                ds = DBDataset(db, ds_ns, ds_n)
+            # validate the resulting metadata against categories, including
+            # parameters the file already has
+            for _, item_errors in DBParamCategory.validate_metadata_bulk(db, [new_metadata]):
+                errors.append({
+                    "fid": f.FID,
+                    "message": "Metadata category validation errors",
+                    "metadata_errors": item_errors
+                })
+
+            # validate the resulting metadata against file datasets
+            ds_errors = []
+            for ds_ns, ds_n in list(f.datasets):
+                ds = DBDataset.get(db, ds_ns, ds_n)
                 if ds is None:
                     return 500, f"Can not load dataset {ds_ns}:{ds_n}"
-                errors += ds.validate_file_metadata(new_metadata)
-        
+                ds_errors += ds.validate_file_metadata(new_metadata)
+            if ds_errors:
+                errors.append({
+                    "fid": f.FID,
+                    "message": "Dataset file metadata requirements validation errors",
+                    "metadata_errors": ds_errors
+                })
+
             if not errors:
                 f.Metadata = new_metadata
 
         if "checksums" in data:
-            self.validate_checksums(data, errors)
+            checksum_errors = []
+            self.validate_checksums(data, checksum_errors)
+            if checksum_errors:
+                errors.append({
+                    "fid": f.FID,
+                    "message": "Metadata checksum validation errors",
+                    "metadata_errors": checksum_errors
+                })
             if errors:
                 return METADATA_ERROR_CODE, json.dumps({
                     "message":          "Metadata validation errors",
                     "metadata_errors":  errors
                 }), "application/json"
-               
+
             if mode == "add-update":
                 new_checksums = (f.Checksums or {}).copy()
                 new_checksums.update(data["checksums"])
@@ -1622,8 +1645,8 @@ class DataHandler(MetaCatHandler):
         if not definitions:
             return 400, "Empty category definitions"
 
-        # Check that all given definitions are valid
-        definition_errors = validate_param_definitions(definitions)
+        # Check that all given definitions and flags are valid
+        definition_errors = validate_category_flags(restricted=restricted, required=required) + validate_param_definitions(definitions)
         if definition_errors:
             return 400, "; ".join(definition_errors)
 
@@ -1664,6 +1687,10 @@ class DataHandler(MetaCatHandler):
         description = params.get("description")
         definitions = params.get("definitions")
         mode = params.get("mode", "update")
+
+        flag_errors = validate_category_flags(restricted=restricted, required=required)
+        if flag_errors:
+            return 400, "; ".join(flag_errors)
 
         if owner_role is not None:
             cat.OwnerRole = owner_role
