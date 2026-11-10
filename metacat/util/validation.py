@@ -146,3 +146,37 @@ def validate_metadata(definitions, restricted, metadata={}, name=None, value=Non
                 errors.append((dname, "required parameter is missing"))
 
     return errors
+
+def validate_category_metadata(categories, metadata):
+    # categories: {path: {"definitions":..., "restricted":..., "required":...}}
+    # each parameter is validated against the deepest existing category in its path,
+    # falling back to the root category "." if no other category matches.
+    # Parameter names in the root category are the full metadata keys.
+    def full_name(path, pname):
+        return pname if path == "." else f"{path}.{pname}"
+
+    def is_ancestor_or_self(path, other):
+        return path == "." or other == path or other.startswith(path + ".")
+
+    errors = []
+    used = set()
+    for name, value in metadata.items():
+        if "." not in name:
+            errors.append((name, f"Invalid metadata parameter name: {name} - must be <category>.<name>"))
+            continue
+        path = name.rsplit(".", 1)[0]
+        while path not in categories and "." in path:
+            path = path.rsplit(".", 1)[0]
+        if path not in categories:
+            path = "."
+        if path in categories:
+            used.add(path)
+            cat = categories[path]
+            pname = name if path == "." else name[len(path)+1:]
+            errors += [(name, e) for _, e in validate_metadata(cat["definitions"], cat["restricted"], name=pname, value=value)]
+    for path, cat in categories.items():
+        if cat.get("required") or any(is_ancestor_or_self(path, u) for u in used):
+            for pname, d in (cat.get("definitions") or {}).items():
+                if d.get("required") and full_name(path, pname) not in metadata:
+                    errors.append((full_name(path, pname), f"required parameter '{pname}' is missing from category '{path}'"))
+    return errors

@@ -6,6 +6,12 @@ from metacat.webapi import MetaCatClient, MCError
 from metacat.ui.cli import CLI, CLICommand, InvalidOptions, InvalidArguments
 from metacat.ui.common import load_json
 
+def parse_bool(value, option):
+    v = value.strip().lower()
+    if v in ("true", "yes", "1"):   return True
+    if v in ("false", "no", "0"):   return False
+    raise InvalidArguments(f"{option} must be True or False, got: {value}")
+
 def print_category(data):
     print("Path:            ", data["path"])
     print("Description:     ", data.get("description") or "")
@@ -88,26 +94,8 @@ class CreateCommand(CLICommand):
     def __call__(self, command, client, opts, args):
         catname = args[0]
         description = opts.get("-d")
-        if "-r" in opts:
-            if opts.get("-r") == "True":
-                restricted = True
-            elif opts.get("-r") == "False":
-                restricted = False
-            else:
-                restricted = False
-        else:
-            restricted = False
-
-        required = "-n" in opts
-        if "-n" in opts:
-           if opts.get("-n") == "True":
-               required = True
-           elif opts.get("-n") == "False":
-               required = False
-           else:
-               required = False
-        else:
-            required = False
+        restricted = parse_bool(opts["-r"], "-r") if "-r" in opts else False
+        required = parse_bool(opts["-n"], "-n") if "-n" in opts else False
 
         owner = opts.get("-o")
 
@@ -116,6 +104,8 @@ class CreateCommand(CLICommand):
             defs = load_json(defs_file)
             if not isinstance(defs, dict):
                 raise InvalidArguments("Definitions must be a dictionary")
+        else:
+            defs = None
 
         cat = client.create_category(path=catname, owner_role=owner, restricted=restricted, required=required, description=description, definitions=defs)
         if "-j" in opts:
@@ -128,8 +118,8 @@ class UpdateCommand(CLICommand):
     MinArgs = 1
     Usage = """ [options] <category>        --update a category
     -d <description>                            - description of category
-    -r <True|False>                             - whether a category is restricted (cannot add extra fields to metadata), default False
-    -n <True|False>                             - whether a category is required (required field(s) must be present in metadata), default False
+    -r <True|False>                             - whether a category is restricted (cannot add extra fields to metadata), unchanged if not specified
+    -n <True|False>                             - whether a category is required (required field(s) must be present in metadata), unchanged if not specified
     -o <owner>                                  - owner of category, default current user
     -p <file|json>                              - parameter definitions as JSON file or inline JSON
     -m <update|replace>                         - mode for updating definitions, default update
@@ -143,9 +133,9 @@ class UpdateCommand(CLICommand):
         if opts.get("-d") is not None:
             updates["description"] = opts.get("-d")
         if opts.get("-r") is not None:
-            updates["restricted"] = bool(opts.get("-r"))
+            updates["restricted"] = parse_bool(opts["-r"], "-r")
         if opts.get("-n") is not None:
-            updates["required"] = bool(opts.get("-n"))
+            updates["required"] = parse_bool(opts["-n"], "-n")
         if opts.get("-o") is not None:
             updates["owner_role"] = opts.get("-o")
 

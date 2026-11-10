@@ -101,6 +101,7 @@ The purpose of the parameter category is to allow adding *metadata constraints* 
 * Allowed parameter values (range, enumeration, pattern)
 
 The category can be either *restricted* or not. If restricted, the category may not contain any parameters other than those listed in the category constraints.
+The category can be either *required* or not. If required, the file metadata must contain all required parameters in that category.
 
 .. _ownership:
 

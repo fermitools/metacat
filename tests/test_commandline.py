@@ -360,10 +360,16 @@ def test_metacat_category_unallowed_constraint(auth, tst_defs):
     tst_defs["badfield"] = {"type": "int", "bad": 2}
     with open("defs", "w") as defs:
         json.dump(tst_defs, defs)
-    with os.popen(f"metacat category update -p defs pytest_category") as fin:
+    with os.popen(f"metacat category update -p defs pytest_category 2>&1") as fin:
         data = fin.read()
     os.unlink("defs")
     assert data.find("unrecognized field") >= 0
+
+def test_metacat_category_required_not_boolean(auth):
+    # "required" given as a string instead of a boolean, should fail
+    with os.popen("""metacat category update -p '{"strfield":{"type":"int", "required":"true"}}' pytest_category 2>&1""") as fin:
+        data = fin.read()
+    assert data.find("'required' must be true or false") >= 0
 
 def test_metacat_category_validation(auth, tst_ds, tst_file_md_list):
     # adding metadata that fits the definitions, should succeed
@@ -390,7 +396,7 @@ def test_metacat_category_nonrestricted(auth, tst_ds, tst_file_md_list):
     # metadata includes an undefined parameter in a non-restricted category, should succeed
     ns = tst_file_md_list[2]["namespace"]
     name = tst_file_md_list[2]["name"]+"c"
-    md = '{"pytest_category.extra": 7.2}'
+    md = '{"pytest_category.extra": 7.2, "pytest_category.intfield": 2}'
     with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds}") as fin:
         data = fin.read()
     assert data.find(ns) >= 0
@@ -466,8 +472,96 @@ def test_metacat_category_requiredcat(auth, tst_ds, tst_file_md_list):
     assert data.find("Invalid metadata") >= 0
     assert data.find("missing from category") >= 0
 
-def test_metacat_category_remove(auth):
+def test_metacat_subcategory_create(auth):
+    with os.popen("""metacat category create -d 'testing pytest subcategory' -p '{"version":{"type":"int", "min":0, "max":4, "required":true},"other":{"type":"text", "values":["x","y","z"]}}' pytest_category.subcat""") as fin:
+        data = fin.read()
+    assert data.find("pytest_category.subcat") >= 0
+    assert data.find("version") >= 0
+
+def test_metacat_subcategory_create_2(auth):
+    # try to create malformatted subcategory, should fail
+    with os.popen("""metacat category create -d 'bad formatted subcategory' -p '{"x":{"type":"int"}}' pytest_category..sub 2>&1""") as fin:
+        data = fin.read()
+    assert data.find("Created") < 0
+    assert data.find("Invalid category path") >= 0
+
+def test_metacat_subcategory_validate(auth, tst_ds, tst_file_md_list):
+    # test declaring a new file without required parameter, should fail
+    ns = tst_file_md_list[0]["namespace"]
+    name = tst_file_md_list[0]["name"]+"sc"
+    md = '{"pytest_category.subcat.other":"x"}'
+    with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds} 2>&1") as fin:
+        data = fin.read()
+    assert data.find("Invalid metadata") >= 0
+    assert data.find("missing from category") >= 0
+
+def test_metacat_subcategory_validate2(auth, tst_ds, tst_file_md_list):
+    # test declaring a new file not following constraints, should fail
+    ns = tst_file_md_list[0]["namespace"]
+    name = tst_file_md_list[0]["name"]+"sc"
+    md = '{"pytest_category.subcat.version":"x"}'
+    with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds} 2>&1") as fin:
+        data = fin.read()
+    assert data.find("Invalid metadata") >= 0
+    assert data.find("validation errors") >= 0
+
+def test_metacat_subcategory_validate3(auth, tst_ds, tst_file_md_list):
+    # test declaring a new file following constraints, should succeed
+    # parent category and required category parameters must also be present
+    ns = tst_file_md_list[0]["namespace"]
+    name = tst_file_md_list[0]["name"]+"sc"
+    md = '{"pytest_category.subcat.version":0, "pytest_category.intfield":2, "pytest_category_rr.intfield":2}'
+    with os.popen(f"metacat file declare -m '{md}' {ns}:{name} {tst_ds} 2>&1") as fin:
+        data = fin.read()
+    assert data.find(f"{name}") >= 0
+    assert data.find("validation errors") < 0
+
+def test_metacat_subcategory_update(auth, tst_ds, tst_file_md_list):
+    # test updating an existing file not following constraints, should fail
+    ns = tst_file_md_list[3]["namespace"]
+    name = tst_file_md_list[3]["name"]+"c"
+    md = '{"pytest_category.subcat.version":"x"}'
+    with os.popen(f"metacat file update -j -m '{md}' {ns}:{name} {tst_ds} 2>&1") as fin:
+        data = fin.read()
+    assert data.find("Invalid metadata") >= 0
+
+def test_metacat_subcategory_update2(auth, tst_ds, tst_file_md_list):
+    # test updating an existing file without required parameter, should fail
+    ns = tst_file_md_list[3]["namespace"]
+    name = tst_file_md_list[3]["name"]+"c"
+    md = '{"pytest_category.subcat.other":"x"}'
+    with os.popen(f"metacat file update -j -m '{md}' {ns}:{name} {tst_ds} 2>&1") as fin:
+        data = fin.read()
+    assert data.find("Invalid metadata") >= 0
+
+def test_metacat_subcategory_update3(auth, tst_ds, tst_file_md_list):
+    # test updating an existing file following constraints, should succeed
+    # parent category parameters must also be present
+    ns = tst_file_md_list[3]["namespace"]
+    name = tst_file_md_list[3]["name"]+"c"
+    md = '{"pytest_category.subcat.version":0, "pytest_category.intfield":2}'
+    with os.popen(f"metacat file update -j -m '{md}' {ns}:{name} {tst_ds} 2>&1") as fin:
+        data = fin.read()
+    assert data.find(f"{name}") >= 0
+    assert data.find("validation errors") < 0
+
+def test_metacat_category_remove_sub(auth):
+    # try to remove a category that has a subcategory, should fail
+    with os.popen(f"metacat category remove pytest_category") as fin:
+        data = fin.read()
+    assert data.find("has subcategories") >= 1
+
+def test_metacat_category_remove_sub2(auth):
+    # remove subcategory first, then parent category removal should succeed
+    os.system(f"metacat category remove pytest_category.subcat")
     os.system(f"metacat category remove pytest_category")
+    with os.popen(f"metacat category list") as fin:
+        data = fin.read()
+    categories = data.split()
+    assert "pytest_category.subcat" not in categories
+    assert "pytest_category" not in categories
+
+def test_metacat_category_remove(auth):
     os.system(f"metacat category remove pytest_category_rr")
     with os.popen(f"metacat category list") as fin:
         data = fin.read()
