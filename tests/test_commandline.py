@@ -625,6 +625,14 @@ def test_metacat_named_query_create(auth, tst_ds):
         data = fin.read()
         # check output
 
+# metacat named_query create -m '{"color":"orange"}' -d "metadata and description test" mengel:tst_nq_20261106_1 'files from mengel:gen_cfg'
+def test_metacat_named_query_create_m_d(auth, tst_ds):
+    nqn = f"{os.environ['USER']}:tst_q_{start_ds}"
+    with os.popen(
+        f'metacat named_query create  -m {{"color":"orange"}} -d "my_description" {nqn}_md "files from {tst_ds}"', "r"
+    ) as fin:
+        data = fin.read()
+        # check output
 
 def test_metacat_named_query_show(auth, tst_ds):
     nqn = f"{os.environ['USER']}:tst_q_{start_ds}"
@@ -632,6 +640,13 @@ def test_metacat_named_query_show(auth, tst_ds):
         data = fin.read()
     assert data.find(f"files from {tst_ds}") >= 0
 
+def test_metacat_named_query_show_md(auth, tst_ds):
+    nqn = f"{os.environ['USER']}:tst_q_{start_ds}"
+    with os.popen(f"metacat named_query show -j {nqn}_md", "r") as fin:
+        data = fin.read()
+    assert data.find(f"files from {tst_ds}") >= 0
+    assert data.find('{"color": "orange"}') >= 0
+    assert data.find('my_description') >= 0
 
 def test_metacat_named_query_list(auth):
     nqn = f"{os.environ['USER']}:tst_q_{start_ds}"
