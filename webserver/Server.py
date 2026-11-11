@@ -209,7 +209,7 @@ def create_application(config=None, prefix=None):
     app = App(config, static_location=static_location, prefix=prefix)
     app.init()
 
-    fastapi_app = FastAPI(title="MetaCat", version=Version, docs_url=None, redoc_url=None, openapi_url=None)
+    fastapi_app = FastAPI(title="MetaCat", version=Version, docs_url="/docs", redoc_url=None, openapi_url="/openapi.json")
     fastapi_app.state.metacat_app = app
     install_exception_handlers(fastapi_app)
     fastapi_app.add_exception_handler(SanitizeException, sanitize_exception_handler)
@@ -241,7 +241,6 @@ app = create_application()
 # WSGI application, e.g. for mod_wsgi or uWSGI
 application = ASGIMiddleware(app) if app is not None else None
 
-
 if __name__ == "__main__":
     # running from shell
     import uvicorn
@@ -259,4 +258,10 @@ if __name__ == "__main__":
     port = int(opts.get("-p", config_file_data.get("port", 8080)))
     prefix = config_file_data.get("prefix")
     print(f"Starting the server on port {port} ...")   
-    uvicorn.run(create_application(config_file, prefix), host="0.0.0.0", port=port, log_level="info")
+    uvicorn.run(
+        create_application(config_file, prefix),
+        host="0.0.0.0",
+        port=port,
+        root_path=os.environ.get("SCRIPT_NAME",""),
+        log_level="info",
+    )

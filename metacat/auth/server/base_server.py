@@ -248,7 +248,7 @@ class BaseHandler(object):
 
     def scriptUri(self):
         # equivalent of the WSGI SCRIPT_NAME
-        return self.request.scope.get("root_path", "")
+        return self.request.scope.get("root_path", os.environ.get("SCRIPT_NAME", ""))
 
     def appRootPath(self):
         return self.App.app_root_path(self.request)

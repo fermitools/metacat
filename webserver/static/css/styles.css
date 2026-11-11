@@ -58,6 +58,7 @@ body {
     max-width: 98%;
     height: 98%;
     width: 98%;
+    overflow: hidden;
 }
 
 .de_emph {
@@ -185,7 +186,7 @@ body {
 
 #banner span { 
     display: block; 
-    padding: 1em; 
+    padding: 0.8em; 
 } 
 
 #banner span:hover { 
@@ -300,3 +301,4 @@ form table {
 #btn_named_query:before { content: "📝 "; }
 #btn_filter:before { content: "⚗ "; }
 #btn_docs:before { content: "📖 "; }
+#btn_api:before { content: "❂ "; }

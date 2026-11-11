@@ -117,7 +117,7 @@ class GUIAuthHandler(AuthHandler):
         exp = datetime.utcfromtimestamp(token.expiration)
         return self.render_to_response("show_token.html", token=token, expiration=exp, encoded=encoded)
 
-    @gui_auth_router.api_route("/do_login", methods=["GET", "POST"])
+    @gui_auth_router.post("/do_login")
     def do_login(self):
         # handle SciTokens here !!!
         form = self.form
