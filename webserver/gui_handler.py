@@ -143,7 +143,6 @@ class GUICategoryHandler(MetaCatHandler):
         if not me:
             self.redirect(self.scriptUri() + "/auth/login?redirect=" + self.scriptUri() + "/gui/categories/index")
         rpath = self.form["rpath"]
-        rpath = request.POST["rpath"]
         if '.' in rpath:
             self.redirect("./index?error=%s" % (quote_plus("Invalid relative category path. Can not contain dot."),))
         parent_path = self.form.get("parent_path")

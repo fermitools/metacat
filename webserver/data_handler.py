@@ -1117,7 +1117,6 @@ class DataHandler(MetaCatHandler):
                         return HTMLResponse(f"Permission to update files in namespace {namespace} denied", status_code=403)
                 except KeyError:
                     return HTMLResponse(f"Namespace {namespace} does not exist", status_code=404)
-
                 #
                 # update the metadata
                 #
