@@ -259,4 +259,4 @@ if __name__ == "__main__":
     port = int(opts.get("-p", config_file_data.get("port", 8080)))
     prefix = config_file_data.get("prefix")
     print(f"Starting the server on port {port} ...")   
-    uvicorn.run(create_application(config, prefix), host="0.0.0.0", port=port, log_level="info")
+    uvicorn.run(create_application(config_file, prefix), host="0.0.0.0", port=port, log_level="info")
