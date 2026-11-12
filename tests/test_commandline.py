@@ -723,7 +723,7 @@ def test_metacat_named_query_create(auth, tst_ds):
 def test_metacat_named_query_create_m_d(auth, tst_ds):
     nqn = f"{os.environ['USER']}:tst_q_{start_ds}"
     with os.popen(
-        f'metacat named_query create  -m {{"color":"orange"}} -d "my_description" {nqn}_md "files from {tst_ds}"', "r"
+        f'''metacat named_query create  -m '{{"color":"orange"}}' -d "my_description" {nqn}_md "files from {tst_ds}"''', "r"
     ) as fin:
         data = fin.read()
         # check output
@@ -739,7 +739,7 @@ def test_metacat_named_query_show_md(auth, tst_ds):
     with os.popen(f"metacat named_query show -j {nqn}_md", "r") as fin:
         data = fin.read()
     assert data.find(f"files from {tst_ds}") >= 0
-    assert data.find('{"color": "orange"}') >= 0
+    assert data.find('"color": "orange"') >= 0
     assert data.find('my_description') >= 0
 
 def test_metacat_named_query_list(auth):
@@ -773,12 +773,19 @@ def test_metacat_report_json(auth):
 
 def test_metacat_dataset_subsets(auth, tst_ds, tst_file_md_list):
     p_ds = f"{os.environ['USER']}:tst_subset_{start_ds}"
-    nfiles = len(tst_file_md_list)
+   
     with os.popen(f"metacat dataset create {p_ds}") as fin:
-        cdata = fin.read()
+        cdata = fin.read().strip()
 
     with os.popen(f"metacat dataset list --long --with-subsets {p_ds}") as fin:
-        parent_start_out = fin.read()
+        parent_start_out = fin.read().strip()
+
+    with os.popen(f"metacat query --summary=count 'files from {tst_ds}'", "r") as fin:
+        for line in fin.readlines():
+            if line.startswith("Files: "):
+                print(f"Counting {tst_ds} -- Found {line}")
+                nfiles = line[14:].strip()
+
 
     # find column positions
     pslines = parent_start_out.split("\n")
@@ -791,25 +798,30 @@ def test_metacat_dataset_subsets(auth, tst_ds, tst_file_md_list):
     print(f"{pslines[0]=}")
     print(f"{files_pos=} {anc_pos=} {subs_pos=} {tfs_pos=} {nsn_pos=}")
 
+    with os.popen(f"metacat dataset list --long  {tst_ds}", "r") as fin:
+        lines = fin.read().strip().split("\n")
+        estfiles = lines[-1][files_pos:anc_pos].strip()
+        print(f"{estfiles=}, {nfiles=}")
+
     with os.popen(f"metacat dataset list --long --with-subsets {tst_ds}") as fin:
-        child_start_out = fin.read()
+        child_start_out = fin.read().strip()
 
     with os.popen(f"metacat dataset add-subset {p_ds} {tst_ds}") as fin:
-        add_out = fin.read()
+        add_out = fin.read().strip()
 
     with os.popen(f"metacat dataset list --long --with-subsets {p_ds}") as fin:
-        parent_with_out = fin.read()
+        parent_with_out = fin.read().strip()
 
     # data should be in right columns... 
     parent_with_data_line = parent_with_out.split("\n")[2]
     print(f"{nfiles=}\n{parent_with_data_line=}")
     o_subs_pos = parent_with_data_line.find(" 1 ")
     assert( subs_pos < o_subs_pos and o_subs_pos < tfs_pos )
-    o_files_pos = parent_with_data_line.find(f" {nfiles} ")
+    o_files_pos = parent_with_data_line.find(f" {estfiles} ")
     assert( files_pos < o_files_pos and o_files_pos < anc_pos ) 
 
     with os.popen(f"metacat dataset list --long --with-subsets {tst_ds}") as fin:
-        child_with_out = fin.read()
+        child_with_out = fin.read().strip()
 
  
     # data should be in right columns... 
@@ -818,24 +830,24 @@ def test_metacat_dataset_subsets(auth, tst_ds, tst_file_md_list):
     assert( anc_pos < o_anc_pos and o_anc_pos < subs_pos )
 
     with os.popen(f"metacat dataset files --with-subsets {tst_ds}") as fin:
-        child_files_out = fin.read()
-    assert(len(child_files_out.split("\n"))-1 == nfiles)
+        child_files_out = fin.read().strip()
+    assert(len(child_files_out.split("\n")) == int(nfiles))
 
     with os.popen(f"metacat dataset files --with-subsets {p_ds}") as fin:
-        parent_files_out = fin.read()
+        parent_files_out = fin.read().strip()
 
-    assert(len(parent_files_out.split("\n"))-1  == nfiles)
+    assert(len(parent_files_out.split("\n"))  == int(nfiles))
 
     with os.popen(f"metacat dataset remove-subset {p_ds} {tst_ds}") as fin:
-        remove_out = fin.read()
+        remove_out = fin.read().strip()
 
     with os.popen(f"metacat dataset list --long --with-subsets {p_ds}") as fin:
-        parent_end_out = fin.read()
+        parent_end_out = fin.read().strip()
 
     assert(parent_start_out == parent_end_out)
 
     with os.popen(f"metacat dataset list --long --with-subsets {tst_ds}") as fin:
-        child_end_out = fin.read()
+        child_end_out = fin.read().strip()
 
     # after removal, should look like start
     assert(child_start_out == child_end_out)

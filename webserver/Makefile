@@ -7,8 +7,9 @@ TEMPLATES = base.html dataset_files.html dataset.html datasets.html login.html m
 build:	$(SERVER_DIR)
 	cp $(FILES) $(SERVER_DIR)
 	cd templates; cp $(TEMPLATES) $(SERVER_DIR)
-	mkdir -p $(SERVER_DIR)/static/js $(SERVER_DIR)/static/images
+	mkdir -p $(SERVER_DIR)/static/js $(SERVER_DIR)/static/images $(SERVER_DIR)/static/css
 	cp static/js/*.js $(SERVER_DIR)/static/js
+	cp static/css/*.css $(SERVER_DIR)/static/css
 	cp static/images/*.png static/images/*.jpg $(SERVER_DIR)/static/images
 	cp -R static/fonts $(SERVER_DIR)/static
 	
