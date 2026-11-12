@@ -104,6 +104,11 @@ body {
     text-transform: capitalize;
 }
 
+#allbutton:visited, #createbutton:visited, #searchbutton:visited, .docbutton:visited {
+    color: var(--button-fg);
+}
+
+
 .tab_button a {
     color: white;
     text-decoration: none;
