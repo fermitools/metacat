@@ -48,6 +48,10 @@ html {
    margin: 0;
 }
 
+h1 { font-weight: 500; }
+h2 { font-weight: 500; }
+h3 { font-weight: 500; }
+
 textarea {
     border: 1px solid black !important;
 }
