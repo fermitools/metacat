@@ -1,0 +1,14 @@
+# MetaCat server (and authentication server) dependencies
+fastapi
+fastapi-utils
+typing-inspect          # needed by fastapi_utils.cbv with pydantic 2
+python-multipart        # HTML form parsing for the GUI
+a2wsgi                  # WSGI wrapper for mod_wsgi/uWSGI deployments
+uvicorn                 # standalone ASGI server
+jinja2
+pyyaml
+psycopg2
+pythreader
+pyjwt
+requests
+lark
